@@ -1,0 +1,70 @@
+/* Auto-categorization rules */
+export const AUTO_RULES = [
+  { p: /colruyt/i, c: "boodschappen", s: "supermarkt", v: "certain" },
+  { p: /delhaize/i, c: "boodschappen", s: "supermarkt", v: "certain" },
+  { p: /aldi\b/i, c: "boodschappen", s: "supermarkt", v: "certain" },
+  { p: /lidl/i, c: "boodschappen", s: "supermarkt", v: "certain" },
+  { p: /albert\s*heijn/i, c: "boodschappen", s: "supermarkt", v: "certain" },
+  { p: /carrefour|crf\s*mkt/i, c: "boodschappen", s: "supermarkt", v: "high" },
+  { p: /okay\b/i, c: "boodschappen", s: "supermarkt", v: "high" },
+  { p: /groeipakket|fons\s.*vutg/i, c: "inkomen", s: "groeipakket", v: "certain" },
+  { p: /r\.?v\.?a\.?/i, c: "inkomen", s: "andere_inkomen", v: "certain" },
+  { p: /jobbonus|vlabel/i, c: "inkomen", s: "andere_inkomen", v: "certain" },
+  { p: /voxdale/i, c: "inkomen", s: "loon", v: "certain" },
+  { p: /kredietlasten/i, c: "wonen", s: "lening", v: "certain" },
+  { p: /beheren\s*rek.*coop/i, c: "financieel", s: "bankkosten", v: "certain" },
+  { p: /nmbs/i, c: "vervoer", s: "ov", v: "certain" },
+  { p: /de\s*lijn/i, c: "vervoer", s: "ov", v: "certain" },
+  { p: /proximus|telenet|orange|mobile\s*viking|scarlet/i, c: "wonen", s: "internet_telefonie", v: "high" },
+  { p: /netflix|disney\+|spotify|youtube.*prem|apple.*music|primevideo/i, c: "wonen", s: "abonnementen", v: "high" },
+  { p: /engie|luminus|ecopower|fluvius|total.*energ/i, c: "wonen", s: "energie", v: "high" },
+  { p: /water-link|pidpa|vivaqua|farys/i, c: "wonen", s: "energie", v: "high" },
+  { p: /frituur|frit\b/i, c: "eten_uit", s: "afhaal", v: "high" },
+  { p: /deliveroo|uber\s*eat|takeaway|thuisbezorg/i, c: "eten_uit", s: "afhaal", v: "high" },
+  { p: /apotheek|pharma/i, c: "gezondheid", s: "apotheek", v: "high" },
+  { p: /christelijke\s*mutualiteit/i, c: "gezondheid", s: "mutualiteit", v: "high" },
+  { p: /cambio/i, c: "vervoer", s: "deelwagen", v: "high" },
+  { p: /poppy/i, c: "vervoer", s: "deelwagen", v: "high" },
+  { p: /parking|parkeer|q-park|indigo/i, c: "vervoer", s: "parking", v: "high" },
+  { p: /ikea|leen\s*bakker|casa\b/i, c: "wonen", s: "meubels_interieur", v: "high" },
+  { p: /brico|gamma|hubo/i, c: "wonen", s: "doe_het_zelf", v: "high" },
+  { p: /coolblue|mediamarkt|media\s*markt|fnac/i, c: "aankopen", s: "electronica", v: "high" },
+];
+
+/* ═══ DESCRIPTION/MEDEDELING RULES ═══ */
+export const DESC_RULES = [
+  { p: /friet|frieten|frietjes/i, c: "eten_uit", s: "afhaal", v: "high" },
+  { p: /pizza/i, c: "eten_uit", s: "afhaal", v: "medium" },
+  { p: /sushi/i, c: "eten_uit", s: "horeca", v: "medium" },
+  { p: /restaurant|etentje|eten\b/i, c: "eten_uit", s: "horeca", v: "medium" },
+  { p: /cafe|koffie|drink/i, c: "eten_uit", s: "horeca", v: "medium" },
+  { p: /cadeau|verjaardag|gift\b/i, c: "aankopen", s: "cadeaus", v: "medium" },
+  { p: /dokter|arts|consultatie/i, c: "gezondheid", s: "dokter", v: "high" },
+  { p: /apotheek|medicijn|medicatie/i, c: "gezondheid", s: "apotheek", v: "high" },
+  { p: /trein|nmbs|rail/i, c: "vervoer", s: "ov", v: "high" },
+  { p: /taxi|uber\b/i, c: "vervoer", s: "taxi", v: "high" },
+  { p: /parking|parkeer/i, c: "vervoer", s: "parking", v: "high" },
+  { p: /benzine|diesel|laden|tankbeurt/i, c: "vervoer", s: "brandstof", v: "high" },
+  { p: /speelgoed|lego|playmobil/i, c: "kinderen", s: "speelgoed", v: "medium" },
+  { p: /school|schooluitstap/i, c: "kinderen", s: "schoolkosten", v: "medium" },
+  { p: /kapper|coiffeur|haircut/i, c: "persoonlijk", s: "kapper", v: "high" },
+  { p: /kleding|kledij|schoenen|shoes/i, c: "persoonlijk", s: "kledij_ward", v: "medium" },
+  { p: /huur\b|huurwoning/i, c: "wonen", s: "lening", v: "medium" },
+  { p: /vakantie|hotel|airbnb|booking/i, c: "ontspanning", s: "vakantie", v: "medium" },
+  { p: /sport|fitness|zwembad|gym/i, c: "ontspanning", s: "sport", v: "medium" },
+  { p: /bio|bioscoop|cinema|film/i, c: "ontspanning", s: "uitstapjes", v: "medium" },
+  { p: /bakker|brood|gebak|patisserie/i, c: "boodschappen", s: "bakker", v: "medium" },
+  { p: /terugbetaling|teruggave|remboursement/i, c: "inkomen", s: "andere_inkomen", v: "medium" },
+  { p: /loon|salaris|wedde/i, c: "inkomen", s: "loon", v: "high" },
+];
+
+export const AMT_RULES = [
+  { p: /amazon/i, a: 2.99, c: "wonen", s: "abonnementen", v: "high" },
+  { p: /amazon/i, a: 3.99, c: "wonen", s: "abonnementen", v: "high" },
+  { p: /amazon/i, a: 5.99, c: "wonen", s: "abonnementen", v: "high" },
+];
+
+export const MULTI = [
+  /bol\.?com/i, /paypal/i, /amazon/i, /aliexpress/i, /vinted/i,
+  /2dehands|tweedehands/i, /banksys/i, /corporate\s*benefits/i, /marketplace/i,
+];

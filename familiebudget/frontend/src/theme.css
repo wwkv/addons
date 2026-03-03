@@ -1,0 +1,283 @@
+/* ═══════════════════════════════════════════════
+   FamilieBudget Theme
+   ═══════════════════════════════════════════════ */
+
+/* ── Base tokens ── */
+:root {
+  /* Default = dark */
+  --bg: #1E1B17;
+  --card: #2A2520;
+  --border: #3D372F;
+  --text: #E8E0D4;
+  --muted: #8A8078;
+  --green: #7BC47F;
+  --red: #E8A080;
+  --accent: #C4956A;
+
+  /* Alpha variants (8-digit hex) */
+  --bg-30: #1E1B1730;
+  --bg-80: #1E1B1780;
+  --card-40: #2A252040;
+  --card-60: #2A252060;
+  --border-30: #3D372F30;
+  --accent-10: #C4956A10;
+  --accent-20: #C4956A20;
+  --accent-30: #C4956A30;
+  --accent-40: #C4956A40;
+  --muted-40: #8A807840;
+
+  /* Semantic colors */
+  --primary: #4A7C59;
+  --danger: #C06E52;
+  --type-vast: #5B9BD5;
+  --type-variabel: #6BAF6E;
+  --necessity-luxe: #D4845A;
+  --neutral: #6B7B8D;
+
+  /* Fonts */
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+[data-theme="light"] {
+  --bg: #F5F3F0;
+  --card: #FFFFFF;
+  --border: #E0DCD6;
+  --text: #2A2520;
+  --muted: #8A8078;
+  --green: #2D7A32;
+  --red: #C04A2B;
+  --accent: #B07840;
+
+  --bg-30: #F5F3F030;
+  --bg-80: #F5F3F080;
+  --card-40: #FFFFFF40;
+  --card-60: #FFFFFF60;
+  --border-30: #E0DCD630;
+  --accent-10: #B0784010;
+  --accent-20: #B0784020;
+  --accent-30: #B0784030;
+  --accent-40: #B0784040;
+  --muted-40: #8A807840;
+}
+
+/* ── Layout ── */
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  transition: background 0.3s;
+}
+
+.app-main {
+  padding: 12px 14px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.app-header {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--card);
+  border-radius: 7px;
+  border: 1px solid var(--border);
+}
+
+.card-padded {
+  background: var(--card);
+  border-radius: 7px;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+/* ── Buttons ── */
+.btn {
+  padding: 4px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px 2px;
+}
+
+/* ── Tables ── */
+.table-wrap {
+  background: var(--card);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--card);
+  cursor: pointer;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+}
+
+.table td {
+  padding: 5px 8px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--bg);
+}
+
+/* ── Forms ── */
+.input, .select {
+  padding: 3px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 9px;
+}
+
+/* ── Typography ── */
+.mono {
+  font-family: var(--font-mono);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-green {
+  color: var(--green);
+}
+
+.text-red {
+  color: var(--red);
+}
+
+/* ── Section headers ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  border: 1px solid var(--accent);
+  z-index: 9999;
+  animation: toast-in 0.3s ease;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+/* ── Loading ── */
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  opacity: 0.3;
+}
+
+/* ── Utility ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
