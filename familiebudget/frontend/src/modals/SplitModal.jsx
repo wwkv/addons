@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fmt } from '../utils/formatters.js';
+import { fmt, fD } from '../utils/formatters.js';
 import { resolveCatSub } from '../utils/helpers.js';
 import CatPicker from '../components/CatPicker.jsx';
 
