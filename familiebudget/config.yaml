@@ -1,8 +1,8 @@
 name: "FamilieBudget"
 description: "Persoonlijk budget- en financieel beheer voor het hele gezin"
-version: "1.0.3"
+version: "1.0.8"
 slug: "familiebudget"
-url: "https://github.com/ward/familiebudget"
+url: "https://github.com/wwkv/addons/familiebudget"
 arch:
   - aarch64
   - amd64
