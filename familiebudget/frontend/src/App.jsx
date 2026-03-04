@@ -157,6 +157,7 @@ export default function App() {
     setSavings({ knownBalance: 0, knownDate: new Date().toISOString().split("T")[0], pots: [] });
     try { await fetch('api/state/budgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: {} }) }); } catch (_) {}
     setShowDeleteConfirm(false);
+    setSettingsTab("regels");
     setShowSettings(false);
   };
 
@@ -923,7 +924,7 @@ export default function App() {
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>🧠 {Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
                     <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 10 }}>Geleerde patronen worden gebruikt voor automatische categorisatie.</div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
+                      <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
                       <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
                     </div>
                   </div>
@@ -959,7 +960,7 @@ export default function App() {
 
             </div>
 
-            <button onClick={() => { setShowExcludeAddPicker(false); setShowSettings(false); }} style={{ marginTop: 16, padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%", flexShrink: 0 }}>Sluiten</button>
+            <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ marginTop: 16, padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%", flexShrink: 0 }}>Sluiten</button>
           </div>
         </div>
       )}
