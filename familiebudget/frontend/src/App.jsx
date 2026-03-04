@@ -48,6 +48,7 @@ export default function App() {
   const [splitTx, setSplitTx] = useState(null);
   // const [askTx, setAskTx] = useState(null); // AskAI - disabled
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("regels");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
@@ -130,8 +131,10 @@ export default function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      // Fallback: client-side export
-      const data = { txs, cats, rules, settings, pending, blacklist, savings };
+      // Fallback: client-side export — also fetch budgets so they are included
+      let _budgets = {};
+      try { const br = await fetch('api/state/budgets'); const bd = await br.json(); _budgets = bd.value || {}; } catch (_) {}
+      const data = { txs, cats, rules, settings, pending, blacklist, savings, _budgets };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -152,7 +155,9 @@ export default function App() {
     setPending({});
     setBlacklist([]);
     setSavings({ knownBalance: 0, knownDate: new Date().toISOString().split("T")[0], pots: [] });
+    try { await fetch('api/state/budgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: {} }) }); } catch (_) {}
     setShowDeleteConfirm(false);
+    setSettingsTab("regels");
     setShowSettings(false);
   };
 
@@ -842,84 +847,120 @@ export default function App() {
       {/* Settings */}
       {showSettings && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 440, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", overflow: "auto" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 600, color: "var(--text)" }}>⚙️ Instellingen</h3>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Auto-categorisatie</label>
-              {[{ v: "voorzichtig", l: "🔒 Voorzichtig", d: "Enkel 100% zekere" }, { v: "normaal", l: "⚖️ Normaal", d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "🚀 Ambitieus", d: "Alles incl. mededeling" }].map(o => (
-                <label key={o.v} style={{ display: "flex", gap: 6, padding: "6px 8px", borderRadius: 5, border: settings.autoLevel === o.v ? "2px solid var(--accent)" : "1px solid var(--border)", cursor: "pointer", marginBottom: 3 }}>
-                  <input type="radio" checked={settings.autoLevel === o.v} onChange={() => setSettings(s => ({ ...s, autoLevel: o.v }))} style={{ accentColor: "var(--accent)" }} />
-                  <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
-                </label>
+          <div style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 600, color: "var(--text)", flexShrink: 0 }}>⚙️ Instellingen</h3>
+
+            {/* Tab bar */}
+            <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 7, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0 }}>
+              {[{ id: "regels", l: "🤖 Regels" }, { id: "patronen", l: "🧠 Patronen" }, { id: "data", l: "💾 Data" }].map(t => (
+                <button key={t.id} onClick={() => { setSettingsTab(t.id); setShowExcludeAddPicker(false); setShowDeleteConfirm(false); }} style={{ flex: 1, padding: "5px 8px", borderRadius: 5, border: "none", background: settingsTab === t.id ? "var(--border)" : "transparent", color: settingsTab === t.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t.l}</button>
               ))}
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>🧠 Patroon drempels</label>
-              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Normaal</div>
-                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    {[2, 3, 4, 5].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, patternThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.patternThreshold || 3) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.patternThreshold || 3) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+
+            {/* Tab content */}
+            <div style={{ overflow: "auto", flex: 1 }}>
+
+              {settingsTab === "regels" && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Auto-categorisatie</label>
+                    {[{ v: "voorzichtig", l: "🔒 Voorzichtig", d: "Enkel 100% zekere" }, { v: "normaal", l: "⚖️ Normaal", d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "🚀 Ambitieus", d: "Alles incl. mededeling" }].map(o => (
+                      <label key={o.v} style={{ display: "flex", gap: 6, padding: "6px 8px", borderRadius: 5, border: settings.autoLevel === o.v ? "2px solid var(--accent)" : "1px solid var(--border)", cursor: "pointer", marginBottom: 3 }}>
+                        <input type="radio" checked={settings.autoLevel === o.v} onChange={() => setSettings(s => ({ ...s, autoLevel: o.v }))} style={{ accentColor: "var(--accent)" }} />
+                        <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
+                      </label>
+                    ))}
                   </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Personen</div>
-                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    {[3, 4, 6, 8].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, personThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.personThreshold || 6) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.personThreshold || 6) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Spaarbuffer Maanden</label>
+                    <input type="number" min={3} max={10} value={settings.bufferMultiplier ?? 5} onChange={e => setSettings(s => ({ ...s, bufferMultiplier: Number(e.target.value) || 5 }))} style={{ padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11, width: 80 }} />
+                    <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)", marginTop: 4 }}>Aantal maanden nodig-uitgaven voor spaarbuffer doel</div>
                   </div>
-                </div>
-              </div>
-              <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)" }}>Aantal keer dezelfde categorie vóór automatisch patroon</div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Spaarbuffer Maanden</label>
-              <input type="number" min={3} max={10} value={settings.bufferMultiplier ?? 5} onChange={e => setSettings(s => ({ ...s, bufferMultiplier: Number(e.target.value) || 5 }))} style={{ padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11, width: 80 }} />
-              <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)", marginTop: 4 }}>Aantal maanden nodig-uitgaven voor spaarbuffer doel</div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>🧠 {Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</span>
-              <button onClick={() => setView("patterns")} style={{ marginLeft: 6, padding: "2px 8px", borderRadius: 3, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 9 }}>Beheer →</button>
-              <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ marginLeft: 4, padding: "2px 6px", borderRadius: 3, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 9 }}>Wis alles</button>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Volgende subcategorieën worden uitgesloten van het totaal:</label>
-              <div style={{ position: "relative", background: "var(--bg)", borderRadius: 6, padding: 8, paddingRight: 36, border: "1px solid var(--border)", minHeight: 44 }}>
-                <button type="button" onClick={() => setShowExcludeAddPicker(!showExcludeAddPicker)} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 5, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 14, fontWeight: 300, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }} title="Subcategorie toevoegen">+</button>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                  {cats.flatMap(c => c.subs.filter(s => s.excluded).map(s => ({ cat: c, sub: s }))).map(({ cat, sub }) => (
-                    <span key={sub.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, background: cat.color + "20", border: `1px solid ${cat.color}40`, fontSize: 10, color: "var(--text)" }}>
-                      {cat.name} › {sub.name}
-                      <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", fontSize: 12, lineHeight: 1 }} aria-label="Verwijderen">✕</button>
-                    </span>
-                  ))}
-                </div>
-                {showExcludeAddPicker && (
-                  <div style={{ marginTop: 10, padding: 10, background: "var(--card)", borderRadius: 8, border: "1px solid var(--border)", maxHeight: 280, overflow: "auto" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase" }}>Kies subcategorie om uit te sluiten</div>
-                    <CatGrid cats={cats} catUsage={catUsage} tx={{ categoryId: null, subCategoryId: null }} handleSelect={(catId, subId) => { setCats(p => p.map(c => c.id === catId ? { ...c, subs: c.subs.map(s => s.id === subId ? { ...s, excluded: true } : s) } : c)); setShowExcludeAddPicker(false); }} />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Data &amp; Backup</label>
-              <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van al je transacties, spaardoelen en instellingen.</p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={handleExportBackup} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)", background: "rgba(0,0,0,0.3)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>📤 Exporteer Data</button>
-                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🗑️ Verwijder alle data</button>
-              </div>
-              {showDeleteConfirm && (
-                <div style={{ marginTop: 12, padding: 14, borderRadius: 8, border: "1px solid #C06E52", background: "rgba(192,110,82,0.08)" }}>
-                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 600, color: "#C06E52" }}>⚠️ Ben je zeker?</p>
-                  <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, categorieën, patronen en spaardoelen worden gewist. Er wordt eerst automatisch een backup geëxporteerd.</p>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#C06E52", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
-                    <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Uitgesloten subcategorieën</label>
+                    <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 8 }}>Deze subcategorieën tellen niet mee in het totaal.</div>
+                    <div style={{ position: "relative", background: "var(--bg)", borderRadius: 6, padding: 8, paddingRight: 36, border: "1px solid var(--border)", minHeight: 44 }}>
+                      <button type="button" onClick={() => setShowExcludeAddPicker(!showExcludeAddPicker)} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 5, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 14, fontWeight: 300, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }} title="Subcategorie toevoegen">+</button>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                        {cats.flatMap(c => c.subs.filter(s => s.excluded).map(s => ({ cat: c, sub: s }))).map(({ cat, sub }) => (
+                          <span key={sub.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, background: cat.color + "20", border: `1px solid ${cat.color}40`, fontSize: 10, color: "var(--text)" }}>
+                            {cat.name} › {sub.name}
+                            <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", fontSize: 12, lineHeight: 1 }} aria-label="Verwijderen">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      {showExcludeAddPicker && (
+                        <div style={{ marginTop: 10, padding: 10, background: "var(--card)", borderRadius: 8, border: "1px solid var(--border)", maxHeight: 280, overflow: "auto" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase" }}>Kies subcategorie om uit te sluiten</div>
+                          <CatGrid cats={cats} catUsage={catUsage} tx={{ categoryId: null, subCategoryId: null }} handleSelect={(catId, subId) => { setCats(p => p.map(c => c.id === catId ? { ...c, subs: c.subs.map(s => s.id === subId ? { ...s, excluded: true } : s) } : c)); setShowExcludeAddPicker(false); }} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
+
+              {settingsTab === "patronen" && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Patroon drempels</label>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Normaal</div>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          {[2, 3, 4, 5].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, patternThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.patternThreshold || 3) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.patternThreshold || 3) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Personen</div>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          {[3, 4, 6, 8].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, personThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.personThreshold || 6) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.personThreshold || 6) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)" }}>Aantal keer dezelfde categorie vóór automatisch patroon</div>
+                  </div>
+                  <div style={{ padding: 12, background: "var(--bg)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>🧠 {Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
+                    <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 10 }}>Geleerde patronen worden gebruikt voor automatische categorisatie.</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
+                      <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {settingsTab === "data" && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Backup</label>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van al je transacties, budgetten, spaardoelen en instellingen.</p>
+                    <button onClick={handleExportBackup} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)", background: "rgba(0,0,0,0.3)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>📤 Exporteer Data</button>
+                  </div>
+                  <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#C06E52", display: "block", marginBottom: 6 }}>Gevarenzone</label>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Verwijder alle data permanent. Er wordt eerst automatisch een backup geëxporteerd.</p>
+                    {!showDeleteConfirm
+                      ? <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🗑️ Verwijder alle data</button>
+                      : (
+                        <div style={{ padding: 14, borderRadius: 8, border: "1px solid #C06E52", background: "rgba(192,110,82,0.08)" }}>
+                          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "#C06E52" }}>⚠️ Ben je zeker?</p>
+                          <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, budgetten, categorieën, patronen en spaardoelen worden gewist.</p>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#C06E52", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
+                            <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                          </div>
+                        </div>
+                      )
+                    }
+                  </div>
+                </div>
+              )}
+
             </div>
-            <button onClick={() => { setShowExcludeAddPicker(false); setShowSettings(false); }} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%" }}>Sluiten</button>
+
+            <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ marginTop: 16, padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%", flexShrink: 0 }}>Sluiten</button>
           </div>
         </div>
       )}
