@@ -48,6 +48,7 @@ export default function App() {
   const [splitTx, setSplitTx] = useState(null);
   // const [askTx, setAskTx] = useState(null); // AskAI - disabled
   const [showSettings, setShowSettings] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
   const [editComment, setEditComment] = useState(null);
@@ -141,6 +142,18 @@ export default function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
+  };
+
+  const handleDeleteAllData = async () => {
+    await handleExportBackup();
+    setTxs([]);
+    setCats(normalizeCats(DEFAULT_CATEGORIES));
+    setRules({});
+    setPending({});
+    setBlacklist([]);
+    setSavings({ knownBalance: 0, knownDate: new Date().toISOString().split("T")[0], pots: [] });
+    setShowDeleteConfirm(false);
+    setShowSettings(false);
   };
 
   const handleImportBackup = (event) => {
@@ -893,7 +906,18 @@ export default function App() {
               <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van al je transacties, spaardoelen en instellingen.</p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button onClick={handleExportBackup} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)", background: "rgba(0,0,0,0.3)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>📤 Exporteer Data</button>
+                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🗑️ Verwijder alle data</button>
               </div>
+              {showDeleteConfirm && (
+                <div style={{ marginTop: 12, padding: 14, borderRadius: 8, border: "1px solid #C06E52", background: "rgba(192,110,82,0.08)" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 600, color: "#C06E52" }}>⚠️ Ben je zeker?</p>
+                  <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, categorieën, patronen en spaardoelen worden gewist. Er wordt eerst automatisch een backup geëxporteerd.</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#C06E52", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
+                    <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                  </div>
+                </div>
+              )}
             </div>
             <button onClick={() => { setShowExcludeAddPicker(false); setShowSettings(false); }} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%" }}>Sluiten</button>
           </div>
