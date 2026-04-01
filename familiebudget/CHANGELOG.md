@@ -1,12 +1,20 @@
 # Changelog
 
+## [1.0.11] - 2026-04-01
+### Added
+- Added `repository.json` so the add-on is discoverable via the HA add-on store
+
 ## [1.0.10] - 2026-03-04
 ### Added
-- Delete all data button added to settings menu
+- Budget tab data is now included in export and wiped by "Verwijder alle data"
+- Settings modal redesigned as a tabbed layout (Regels / Patronen / Data)
 
-## [1.0.9] - 2026-03-03
+## [1.0.9] - 2026-03-04
 ### Fixed
-- SplitModal not working
+- Fixed split transaction feature crashing due to missing `fD` import
+### Added
+- Added "Verwijder alle data" button in settings with automatic backup before deletion
+- Added `.gitignore` and `launch.json` dev server configurations
 
 ## [1.0.8] - 2026-03-02
 ### Fixed
