@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.12] - 2026-04-03
+### Fixed
+- Data no longer lost after update — database now stored in HA persistent config directory
+
 ## [1.0.11] - 2026-04-01
 ### Added
 - Added `repository.json` so the add-on is discoverable via the HA add-on store
