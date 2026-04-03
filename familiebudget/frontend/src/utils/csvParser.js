@@ -18,7 +18,7 @@ export function parseCSV(text) {
     return result;
   };
   const h = parseLine(hdr).map(x => x.toLowerCase().replace(/['"]/g, ""));
-  const isPayPal = h.includes("naam") || h.includes("name") || h.includes("bruto");
+  const isPayPal = h.includes("naam") || h.includes("name") || h.some(x => x.includes("bruto"));
   const di = h.findIndex(x => x.includes("datum"));
   const ai = isPayPal
     ? h.findIndex(x => x.includes("bruto") || x.includes("gross"))
@@ -26,11 +26,20 @@ export function parseCSV(text) {
   const ci = isPayPal
     ? h.findIndex(x => x.includes("naam") || x.includes("name"))
     : h.findIndex(x => x.includes("tegenpartij") && !x.includes("rekening") && !x.includes("adres"));
-  const ti = h.findIndex(x => x.includes("type"));
+  // Support both old ("type") and new ("omschrijving") PayPal column layouts
+  const ti = h.findIndex(x => x.includes("type") || x === "omschrijving");
   const mi = isPayPal
-    ? h.findIndex(x => x.includes("itemtitel") || x.includes("item title") || x === "type")
+    ? h.findIndex(x => x.includes("itemtitel") || x.includes("item title") || x === "omschrijving" || x === "type")
     : h.findIndex(x => x.includes("mededeling"));
   if (di === -1 || ai === -1) return [];
+
+  // Detect date format: if any date has the second segment > 12 it must be M/DD/YYYY (US format)
+  const isUSDateFormat = lines.slice(1).some(l => {
+    const val = (parseLine(l)[di] || "").replace(/['"]/g, "");
+    const dp = val.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+    return dp && parseInt(dp[2]) > 12;
+  });
+
   const txs = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = parseLine(lines[i]);
@@ -45,9 +54,11 @@ export function parseCSV(text) {
     if (!dp) continue;
     const amt = isPayPal ? parseEuropeanAmount(cols[ai] ?? "") : parseFloat((cols[ai] || "0").replace(",", "."));
     if (isNaN(amt)) continue;
+    const day = isUSDateFormat ? dp[2] : dp[1];
+    const month = isUSDateFormat ? dp[1] : dp[2];
     txs.push({
       id: `tx_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-      date: `${dp[3]}-${dp[2].padStart(2, "0")}-${dp[1].padStart(2, "0")}`,
+      date: `${dp[3]}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`,
       amount: amt,
       counterparty: counterpartyVal,
       type: typeVal,
