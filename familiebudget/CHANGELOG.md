@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.13] - 2026-04-03
+### Fixed
+- PayPal import: detect US date format (M/D/YYYY) automatically so March transactions are no longer misread as invalid dates
+- PayPal import: support new "Omschrijving" column layout so "Bankstorting" rows are correctly filtered in both old and new PayPal CSV exports
+
 ## [1.0.12] - 2026-04-03
 ### Fixed
 - Data no longer lost after update — database now stored in HA persistent config directory
