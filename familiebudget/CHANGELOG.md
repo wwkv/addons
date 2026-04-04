@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.15] - 2026-04-04
+### Fixed
+- Desktop layout: header year/theme/settings buttons no longer overlap nav tabs
+- Dashboard: pie chart legends no longer get cut off in narrow panels
+### Added
+- Electron desktop app: self-contained `.exe` (Windows) and `.dmg` (macOS) installers built automatically on each GitHub release — no Home Assistant required
+
 ## [1.0.14] - 2026-04-04
 ### Fixed
 - PayPal auto-categorization: now runs autoCat() when a Crelan match exists but has no category assigned
