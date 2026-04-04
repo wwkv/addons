@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.16] - 2026-04-04
+### Fixed
+- Electron build CI: add missing `repository` field to `package.json` and pass `--publish never` to prevent electron-builder from trying to publish directly (upload is handled by the workflow instead)
+
 ## [1.0.15] - 2026-04-04
 ### Fixed
 - Desktop layout: header year/theme/settings buttons no longer overlap nav tabs
