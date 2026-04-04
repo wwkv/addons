@@ -20,15 +20,10 @@ process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
 process.env.PORT = String(PORT);
 
 // ── Resolve backend path ──
-// In a packaged app, backend files are unpacked from asar to a real directory
-// so that ESM dynamic import() and native modules (.node) can load them.
-// In dev, they live next to the electron/ folder as normal.
+// asar is disabled so all files are real paths on disk.
+// app.getAppPath() returns the app directory in both dev and packaged builds.
 function getServerPath() {
-  if (app.isPackaged) {
-    // app.asar.unpacked/ sits next to app.asar inside Resources/
-    return path.join(process.resourcesPath, 'app.asar.unpacked', 'backend', 'server.js');
-  }
-  return path.join(__dirname, '..', 'backend', 'server.js');
+  return path.join(app.getAppPath(), 'backend', 'server.js');
 }
 
 // ── Start Express server (ESM module via dynamic import) ──

@@ -1,6 +1,6 @@
 {
   "name": "familiebudget-desktop",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "FamilieBudget – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,
@@ -18,12 +18,7 @@
     "appId": "be.ward.familiebudget",
     "productName": "FamilieBudget",
     "copyright": "Copyright © 2026",
-    "asar": true,
-    "asarUnpack": [
-      "backend/**/*",
-      "**/node_modules/better-sqlite3/**",
-      "**/*.node"
-    ],
+    "asar": false,
     "files": [
       "electron/**/*",
       "backend/**/*",
