@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.17] - 2026-04-04
+### Fixed
+- Electron: app bounced in dock and never opened because ESM `import()` cannot read files from inside the asar virtual filesystem; backend files are now unpacked to a real directory (`app.asar.unpacked/backend/`) and `main.js` resolves the correct path when packaged
+- Electron: startup errors now show a dialog with the error message instead of silently quitting
+
 ## [1.0.16] - 2026-04-04
 ### Fixed
 - Electron build CI: add missing `repository` field to `package.json` and pass `--publish never` to prevent electron-builder from trying to publish directly (upload is handled by the workflow instead)

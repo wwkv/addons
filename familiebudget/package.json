@@ -1,6 +1,6 @@
 {
   "name": "familiebudget-desktop",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "FamilieBudget – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,
@@ -20,6 +20,7 @@
     "copyright": "Copyright © 2026",
     "asar": true,
     "asarUnpack": [
+      "backend/**/*",
       "**/node_modules/better-sqlite3/**",
       "**/*.node"
     ],

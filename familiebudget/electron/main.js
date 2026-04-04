@@ -8,7 +8,7 @@
  * user-data folder (e.g. %APPDATA%/FamilieBudget on Windows).
  */
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 
@@ -19,9 +19,21 @@ let mainWindow = null;
 process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
 process.env.PORT = String(PORT);
 
+// ── Resolve backend path ──
+// In a packaged app, backend files are unpacked from asar to a real directory
+// so that ESM dynamic import() and native modules (.node) can load them.
+// In dev, they live next to the electron/ folder as normal.
+function getServerPath() {
+  if (app.isPackaged) {
+    // app.asar.unpacked/ sits next to app.asar inside Resources/
+    return path.join(process.resourcesPath, 'app.asar.unpacked', 'backend', 'server.js');
+  }
+  return path.join(__dirname, '..', 'backend', 'server.js');
+}
+
 // ── Start Express server (ESM module via dynamic import) ──
 async function startServer() {
-  const serverPath = path.join(__dirname, '..', 'backend', 'server.js');
+  const serverPath = getServerPath();
   // file:// URL is required for ESM imports on Windows too
   await import('file://' + serverPath.replace(/\\/g, '/'));
 }
@@ -79,6 +91,10 @@ app.whenReady().then(async () => {
     createWindow();
   } catch (err) {
     console.error('[Electron] Startup failed:', err.message);
+    dialog.showErrorBox(
+      'FamilieBudget kon niet starten',
+      `De backend server kon niet worden gestart.\n\n${err.message}\n\nServer pad: ${getServerPath()}`
+    );
     app.quit();
   }
 });
