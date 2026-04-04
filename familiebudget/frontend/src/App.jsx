@@ -743,14 +743,14 @@ export default function App() {
 
       {/* ─── HEADER ─── */}
       <header className="app-header">
-        <div style={{ flex: 1, display: "flex", gap: 3, alignItems: "center", justifyContent: "flex-start", minWidth: 0 }}>
+        <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
           <input type="file" ref={fRef} onChange={handleSmartImport} accept=".csv,.json,.txt" style={{ display: "none" }} />
           <button onClick={() => fRef.current && fRef.current.click()} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}>Importeer</button>
           {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#B5597B", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Sorteer ({uncatN})</button>}
         </div>
-        <nav className="app-nav" style={{ display: "flex", gap: 1, background: "var(--card)", borderRadius: 7, padding: 2, border: "1px solid var(--border)", flexShrink: 0 }}>
+        <nav className="app-nav" style={{ display: "flex", gap: 1, background: "var(--card)", borderRadius: 7, padding: 2, border: "1px solid var(--border)", flex: "1 1 0", minWidth: 0, overflowX: "auto" }}>
           {[{ id: "dashboard", l: "📊 Overzicht" }, { id: "budget", l: "💰 Budget" }, { id: "transactions", l: "📋 Transacties" }, { id: "categories", l: "🏷️ Categorieën" }, { id: "patterns", l: "🧠 Patronen" }, { id: "savings", l: "🐖 Sparen" }].map(tab => (
-            <button key={tab.id} onClick={() => setView(tab.id)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: view === tab.id ? "var(--border)" : "transparent", color: view === tab.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, position: tab.id === "savings" ? "relative" : undefined }}>
+            <button key={tab.id} onClick={() => setView(tab.id)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: view === tab.id ? "var(--border)" : "transparent", color: view === tab.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, whiteSpace: "nowrap", position: tab.id === "savings" ? "relative" : undefined }}>
               {tab.l}
               {tab.id === "savings" && unassignedSavings > 0 && (
                 <div style={{ position: "absolute", top: "4px", right: "4px", width: "10px", height: "10px", backgroundColor: "#4ade80", borderRadius: "50%", boxShadow: "0 0 8px rgba(74, 222, 128, 0.8)" }} />
@@ -758,7 +758,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div style={{ flex: 1, display: "flex", gap: 3, alignItems: "center", justifyContent: "flex-end", minWidth: 0 }}>
+        <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
           <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
           <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>{settings.darkMode ? "☀️" : "🌙"}</button>
           <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>

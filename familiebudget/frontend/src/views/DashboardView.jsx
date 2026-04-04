@@ -27,14 +27,14 @@ export default function DashboardView({ txs, expanded, year, month, cats, catSta
 
       <div className="dashboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 24, marginBottom: 14, height: 540 }}>
         {/* Row 1: Main Pie (col-span-2) + Fixed vs Variable */}
-        <div style={{ gridColumn: "span 2", background: "var(--card)", borderRadius: 7, padding: 14, border: "1px solid var(--border)", height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ gridColumn: "span 2", background: "var(--card)", borderRadius: 7, padding: 14, border: "1px solid var(--border)", height: "100%", minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
             <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Verdeling Uitgaven {month ? `— ${mN(month)} ${year}` : year}</h3>
             {month && <button onClick={() => setMonth("")} style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 9 }}>Heel jaar</button>}
           </div>
           <Pie size={200} data={cats.filter(c => c.type !== "inkomsten" && catStats[c.id] && catStats[c.id].total > 0).sort((a, b) => catStats[b.id].total - catStats[a.id].total).map(c => ({ name: c.name, value: catStats[c.id].total, color: c.color }))} />
         </div>
-        <div style={{ gridColumn: "span 1", background: "var(--card)", borderRadius: 7, padding: 12, border: "1px solid var(--border)", height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ gridColumn: "span 1", background: "var(--card)", borderRadius: 7, padding: 12, border: "1px solid var(--border)", height: "100%", minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <h3 style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--text)" }}>Vaste vs Variabele Kosten</h3>
           <Pie size={130} data={[{ name: "Vast", value: typeStats.vast, color: "#5B9BD5" }, { name: "Variabel", value: typeStats.variabel, color: "#6BAF6E" }, { name: "Onbekend", value: typeStats.onbekend, color: "#888" }].filter(d => d.value > 0)} />
         </div>
@@ -59,7 +59,7 @@ export default function DashboardView({ txs, expanded, year, month, cats, catSta
             })}
           </div>
         </div>
-        <div style={{ gridColumn: "span 1", background: "var(--card)", borderRadius: 7, padding: 12, border: "1px solid var(--border)", height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ gridColumn: "span 1", background: "var(--card)", borderRadius: 7, padding: 12, border: "1px solid var(--border)", height: "100%", minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <h3 style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--text)" }}>Noodzakelijk vs Luxe</h3>
           <Pie size={130} data={[{ name: "Nodig", value: necessityStats.nodig, color: "#6BAF6E" }, { name: "Luxe", value: necessityStats.luxe, color: "#D4845A" }, { name: "Onbekend", value: necessityStats.onbekend, color: "#888" }].filter(d => d.value > 0)} />
         </div>
