@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.14] - 2026-04-04
+### Fixed
+- PayPal auto-categorization: now runs autoCat() when a Crelan match exists but has no category assigned
+- Mobile layout: header nav scrolls horizontally on small screens; A+/A− zoom buttons hidden on mobile
+- Mobile layout: Sorteer button no longer wraps to two lines
+- Mobile layout: Dashboard grid collapses to single column on small screens
+- Mobile layout: Transaction table scrolls horizontally instead of squishing
+- Mobile layout: Budget table scrolls horizontally; column header, Netto Balans, and Inkomsten/Uitgaven rows are sticky
+- Mobile layout: Patronen tables scroll horizontally
+- Mobile layout: Sparen stats bar wraps instead of overflowing
+
 ## [1.0.13] - 2026-04-03
 ### Fixed
 - PayPal import: detect US date format (M/D/YYYY) automatically so March transactions are no longer misread as invalid dates

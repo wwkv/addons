@@ -122,19 +122,19 @@ export default function BudgetTab({ cats }) {
 
     return (
       <>
-        <div style={{ ...catCellStyle(0), cursor: "pointer", background: "var(--card-60)" }} onClick={() => setIsOpen((o) => !o)}>
+        <div style={{ ...catCellStyle(0), cursor: "pointer", background: "var(--card-60)", position: "sticky", top: 52, zIndex: 2 }} onClick={() => setIsOpen((o) => !o)}>
           {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <span style={{ fontWeight: 700, fontSize: 11, color: barColor }}>{label}</span>
         </div>
         {TABLE_MONTHS.map((_, i) => (
-          <div key={`${label}-sum-${i}`} style={{ ...cellStyle(), cursor: "pointer", background: "var(--card-60)", position: "relative" }} onClick={() => setIsOpen((o) => !o)}>
+          <div key={`${label}-sum-${i}`} style={{ ...cellStyle(), cursor: "pointer", background: "var(--card-60)", position: "sticky", top: 52, zIndex: 2 }} onClick={() => setIsOpen((o) => !o)}>
             <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 9 }}>
               €{Math.round(allSums[i] || 0).toLocaleString("nl-BE", { maximumFractionDigits: 0 })}
             </span>
             <div style={{ position: "absolute", bottom: 0, left: 0, height: "3px", width: `${(Math.max(0, allSums[i]) / maxAllSums) * 80}%`, borderRadius: "9999px", background: barColor, opacity: 0.5, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />
           </div>
         ))}
-        <div style={{ ...cellStyle(), cursor: "pointer", background: "var(--card-60)" }} onClick={() => setIsOpen((o) => !o)}>
+        <div style={{ ...cellStyle(), cursor: "pointer", background: "var(--card-60)", position: "sticky", top: 52, zIndex: 2 }} onClick={() => setIsOpen((o) => !o)}>
           <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 600, fontSize: 9 }}>
             €{Math.round(yearTotal).toLocaleString("nl-BE", { maximumFractionDigits: 0 })}
           </span>
@@ -265,31 +265,33 @@ export default function BudgetTab({ cats }) {
       </div>
 
       <div style={{ background: "var(--card)", borderRadius: 6, border: "1px solid var(--border)", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: GRID_TEMPLATE, gap: 8, width: "100%", alignItems: "stretch", fontSize: 10 }}>
-          <div style={{ ...catCellStyle(0), ...cellStyle(true), justifyContent: "flex-start", textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3 }}>Categorie</div>
+        <div style={{ overflow: "auto", maxHeight: "calc(100vh - 180px)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: GRID_TEMPLATE, rowGap: 0, columnGap: 8, minWidth: 700, alignItems: "stretch", fontSize: 10, background: "var(--card)" }}>
+          <div style={{ ...catCellStyle(0), ...cellStyle(true), justifyContent: "flex-start", textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3, position: "sticky", top: 0, zIndex: 4 }}>Categorie</div>
           {TABLE_MONTHS.map((m) => (
-            <div key={`h-${m}`} style={{ ...cellStyle(true), textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3 }}>{m}</div>
+            <div key={`h-${m}`} style={{ ...cellStyle(true), textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3, position: "sticky", top: 0, zIndex: 4 }}>{m}</div>
           ))}
-          <div key="h-total" style={{ ...cellStyle(true), textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3 }}>Totaal Jaar</div>
+          <div key="h-total" style={{ ...cellStyle(true), textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3, position: "sticky", top: 0, zIndex: 4 }}>Totaal Jaar</div>
           {/* NETTO BALANS ROW */}
-          <div style={{ ...catCellStyle(0), ...cellStyle(true), justifyContent: "flex-start", background: "var(--card)" }}>
+          <div style={{ ...catCellStyle(0), ...cellStyle(true), justifyContent: "flex-start", background: "var(--card)", position: "sticky", top: 24, zIndex: 3 }}>
             <span style={{ fontWeight: 800, color: "var(--text)" }}>Netto Balans</span>
           </div>
           {netBalance.map((amount, i) => (
-            <div key={`net-${i}`} style={{ ...cellStyle(true), background: "var(--card)", position: "relative" }}>
+            <div key={`net-${i}`} style={{ ...cellStyle(true), background: "var(--card)", position: "sticky", top: 24, zIndex: 3 }}>
               <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 10, color: netBalanceColor(amount) }}>
                 €{Math.round(amount).toLocaleString("nl-BE", { maximumFractionDigits: 0 })}
               </span>
               <div style={{ position: "absolute", bottom: 0, left: 0, height: "3px", width: `${(Math.abs(amount) / maxNet) * 80}%`, borderRadius: "9999px", background: netBalanceColor(amount), opacity: 0.5, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />
             </div>
           ))}
-          <div style={{ ...cellStyle(true), background: "var(--card)" }}>
+          <div style={{ ...cellStyle(true), background: "var(--card)", position: "sticky", top: 24, zIndex: 3 }}>
             <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 800, fontSize: 10, color: netBalanceColor(netBalanceYearTotal) }}>
               €{Math.round(netBalanceYearTotal).toLocaleString("nl-BE", { maximumFractionDigits: 0 })}
             </span>
           </div>
           {renderSection("Inkomsten", incomeOpen, setIncomeOpen, incomeCats, incomeBudgets, setIncomeBudgets, "var(--green)")}
           {renderSection("Uitgaven", expenseOpen, setExpenseOpen, expenseCats, expenseBudgets, setExpenseBudgets, "#C06E52")}
+        </div>
         </div>
       </div>
     </div>

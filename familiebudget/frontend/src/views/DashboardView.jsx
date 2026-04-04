@@ -25,7 +25,7 @@ export default function DashboardView({ txs, expanded, year, month, cats, catSta
     <>
       <SummaryCards expanded={expanded} year={year} uncatN={uncatN} cats={cats} setFCat={setFCat} setView={setView} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 24, marginBottom: 14, height: 540 }}>
+      <div className="dashboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 24, marginBottom: 14, height: 540 }}>
         {/* Row 1: Main Pie (col-span-2) + Fixed vs Variable */}
         <div style={{ gridColumn: "span 2", background: "var(--card)", borderRadius: 7, padding: 14, border: "1px solid var(--border)", height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>

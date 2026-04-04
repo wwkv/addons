@@ -92,8 +92,8 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
   const inputStyle = { padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11 };
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", marginBottom: 16, border: "1px solid var(--border)", borderRadius: 6, background: "var(--card-40)", fontSize: 11, color: "var(--text)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, padding: "8px 12px", marginBottom: 16, border: "1px solid var(--border)", borderRadius: 6, background: "var(--card-40)", fontSize: 11, color: "var(--text)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ color: "var(--muted)" }}>Startsaldo (1 Jan):</span>
           <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(jan1Balance)}</span>
           <span style={{ color: "var(--muted)" }}>|</span>

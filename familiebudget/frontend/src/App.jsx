@@ -430,7 +430,12 @@ export default function App() {
         if (crelanMatch) {
           const base = { ...tx, _matchedId: crelanMatch.id };
           if (crelanMatch.categoryId) return { ...base, categoryId: crelanMatch.categoryId, subCategoryId: crelanMatch.subCategoryId ?? null, _d: false, _v: "matched" };
-          return { ...base, _d: false, _v: "crelan_match" };
+          // Crelan match found but no category — try autoCat using the PayPal merchant name
+          const m = autoCat(tx);
+          if (!m) return { ...base, _d: false, _v: "crelan_match" };
+          if (m.flag) return { ...base, _d: false, _v: m.flag };
+          if (m.confidence === "suggestion") return { ...base, _d: false, _v: "suggestion", _sc: m.categoryId, _ss: m.subCategoryId };
+          return { ...base, categoryId: m.categoryId, subCategoryId: m.subCategoryId, _d: false, _v: m.confidence };
         }
         const m = autoCat(tx);
         if (!m) return { ...tx, _d: false, _v: "none" };
@@ -741,9 +746,9 @@ export default function App() {
         <div style={{ flex: 1, display: "flex", gap: 3, alignItems: "center", justifyContent: "flex-start", minWidth: 0 }}>
           <input type="file" ref={fRef} onChange={handleSmartImport} accept=".csv,.json,.txt" style={{ display: "none" }} />
           <button onClick={() => fRef.current && fRef.current.click()} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}>Importeer</button>
-          {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#B5597B", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}>Sorteer ({uncatN})</button>}
+          {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#B5597B", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Sorteer ({uncatN})</button>}
         </div>
-        <nav style={{ display: "flex", gap: 1, background: "var(--card)", borderRadius: 7, padding: 2, border: "1px solid var(--border)", flexShrink: 0 }}>
+        <nav className="app-nav" style={{ display: "flex", gap: 1, background: "var(--card)", borderRadius: 7, padding: 2, border: "1px solid var(--border)", flexShrink: 0 }}>
           {[{ id: "dashboard", l: "📊 Overzicht" }, { id: "budget", l: "💰 Budget" }, { id: "transactions", l: "📋 Transacties" }, { id: "categories", l: "🏷️ Categorieën" }, { id: "patterns", l: "🧠 Patronen" }, { id: "savings", l: "🐖 Sparen" }].map(tab => (
             <button key={tab.id} onClick={() => setView(tab.id)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: view === tab.id ? "var(--border)" : "transparent", color: view === tab.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, position: tab.id === "savings" ? "relative" : undefined }}>
               {tab.l}
@@ -756,8 +761,8 @@ export default function App() {
         <div style={{ flex: 1, display: "flex", gap: 3, alignItems: "center", justifyContent: "flex-end", minWidth: 0 }}>
           <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
           <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>{settings.darkMode ? "☀️" : "🌙"}</button>
-          <button onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>
-          <button onClick={() => setSettings(s => ({ ...s, zoom: Math.max((s.zoom || 100) - 25, 75) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A−</button>
+          <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>
+          <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.max((s.zoom || 100) - 25, 75) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A−</button>
           <button onClick={() => setShowSettings(true)} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>⚙️</button>
         </div>
       </header>
