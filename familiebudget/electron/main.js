@@ -15,10 +15,6 @@ const http = require('http');
 const PORT = 3001;
 let mainWindow = null;
 
-// ── Must be set before any backend module is imported ──
-process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
-process.env.PORT = String(PORT);
-
 // ── Resolve backend path ──
 // asar is disabled so all files are real paths on disk.
 // app.getAppPath() returns the app directory in both dev and packaged builds.
@@ -81,6 +77,11 @@ function createWindow() {
 // ── App lifecycle ──
 app.whenReady().then(async () => {
   try {
+    // app.getPath() requires the app to be ready — set env vars here,
+    // before startServer() imports db.js which reads them at module load time
+    process.env.DATA_DIR = path.join(app.getPath('userData'), 'data');
+    process.env.PORT = String(PORT);
+
     await startServer();
     await waitForServer();
     createWindow();

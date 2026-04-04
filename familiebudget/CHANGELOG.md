@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.19] - 2026-04-04
+### Fixed
+- Electron: app crashed silently before showing any error dialog because `app.getPath('userData')` was called synchronously at module load time, before the app was ready; moved env var setup inside `app.whenReady()`
+
 ## [1.0.18] - 2026-04-04
 ### Fixed
 - Electron: app still bounced without opening because ESM `import()` cannot resolve modules across the asar virtual filesystem boundary (e.g. `express` in `app.asar` was unreachable from unpacked `backend/`); disabled asar entirely so all files are real paths on disk
