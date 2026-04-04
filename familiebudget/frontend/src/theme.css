@@ -273,18 +273,24 @@
   opacity: 0.3;
 }
 
+/* ── Nav scrollbar hidden at all sizes ── */
+.app-nav {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.app-nav::-webkit-scrollbar {
+  display: none;
+}
+.app-nav button {
+  flex-shrink: 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .app-nav {
     order: 3;
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    flex-shrink: 1 !important;
-  }
-  .app-nav::-webkit-scrollbar {
-    display: none;
+    flex: 1 1 100% !important;
   }
   .zoom-controls {
     display: none;
