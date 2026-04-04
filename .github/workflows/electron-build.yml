@@ -69,9 +69,6 @@ jobs:
       - name: Build Electron app – ${{ matrix.platform }}
         working-directory: familiebudget
         run: npm run electron:build:${{ matrix.platform }}
-        env:
-          # electron-builder uses GH_TOKEN to publish to GitHub releases
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Upload installer to the GitHub release ────────────────────────────
       - name: Upload installer to release

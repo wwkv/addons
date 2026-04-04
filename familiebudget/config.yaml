@@ -1,6 +1,6 @@
 name: "FamilieBudget"
 description: "Persoonlijk budget- en financieel beheer voor het hele gezin"
-version: "1.0.15"
+version: "1.0.16"
 slug: "familiebudget"
 url: "https://github.com/wwkv/addons/familiebudget"
 arch:

@@ -1,14 +1,18 @@
 {
   "name": "familiebudget-desktop",
-  "version": "1.0.14",
+  "version": "1.0.16",
   "description": "FamilieBudget – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wwkv/addons.git"
+  },
   "scripts": {
     "electron:start": "electron .",
-    "electron:build:win": "electron-builder --win",
-    "electron:build:mac": "electron-builder --mac",
-    "electron:build:linux": "electron-builder --linux"
+    "electron:build:win": "electron-builder --win --publish never",
+    "electron:build:mac": "electron-builder --mac --publish never",
+    "electron:build:linux": "electron-builder --linux --publish never"
   },
   "build": {
     "appId": "be.ward.familiebudget",
