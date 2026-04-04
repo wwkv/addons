@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.18] - 2026-04-04
+### Fixed
+- Electron: app still bounced without opening because ESM `import()` cannot resolve modules across the asar virtual filesystem boundary (e.g. `express` in `app.asar` was unreachable from unpacked `backend/`); disabled asar entirely so all files are real paths on disk
+
 ## [1.0.17] - 2026-04-04
 ### Fixed
 - Electron: app bounced in dock and never opened because ESM `import()` cannot read files from inside the asar virtual filesystem; backend files are now unpacked to a real directory (`app.asar.unpacked/backend/`) and `main.js` resolves the correct path when packaged
