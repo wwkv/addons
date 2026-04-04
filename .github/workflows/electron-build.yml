@@ -1,0 +1,91 @@
+name: Build Electron Desktop App
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach assets to (leave empty to just build)"
+        required: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact_glob: "familiebudget/dist/*.exe"
+            artifact_label: "Windows installer (.exe)"
+          - os: macos-latest
+            platform: mac
+            artifact_glob: "familiebudget/dist/*.dmg"
+            artifact_label: "macOS disk image (.dmg)"
+
+    runs-on: ${{ matrix.os }}
+    name: Build – ${{ matrix.artifact_label }}
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node.js ───────────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # ── Build the React frontend ──────────────────────────────────────────
+      - name: Install frontend dependencies
+        working-directory: familiebudget/frontend
+        run: npm ci
+
+      - name: Build frontend (Vite)
+        working-directory: familiebudget/frontend
+        run: npm run build
+
+      # ── Copy frontend build into backend/public ───────────────────────────
+      - name: Copy frontend build → backend/public (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p familiebudget/backend/public
+          cp -r familiebudget/frontend/dist/* familiebudget/backend/public/
+
+      - name: Copy frontend build → backend/public (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path familiebudget/backend/public | Out-Null
+          Copy-Item -Recurse -Force familiebudget/frontend/dist/* familiebudget/backend/public/
+
+      # ── Build the Electron installer ──────────────────────────────────────
+      - name: Install root (Electron) dependencies
+        working-directory: familiebudget
+        run: npm ci
+
+      - name: Build Electron app – ${{ matrix.platform }}
+        working-directory: familiebudget
+        run: npm run electron:build:${{ matrix.platform }}
+        env:
+          # electron-builder uses GH_TOKEN to publish to GitHub releases
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Upload installer to the GitHub release ────────────────────────────
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+        with:
+          files: ${{ matrix.artifact_glob }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Also upload as workflow artifact for workflow_dispatch runs ───────
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FamilieBudget-${{ matrix.platform }}
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: warn
