@@ -273,6 +273,35 @@
   opacity: 0.3;
 }
 
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .app-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 1 !important;
+  }
+  .app-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .zoom-controls {
+    display: none;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: unset !important;
+    height: auto !important;
+    gap: 12px;
+  }
+  .dashboard-grid > div {
+    grid-column: span 1 !important;
+    height: auto !important;
+    min-height: 260px;
+  }
+}
+
 /* ── Utility ── */
 .sr-only {
   position: absolute;

@@ -23,7 +23,8 @@ export default function PatternsView({
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 6 }}>⏳ In afwachting ({Object.keys(pending).length})</div>
           <div style={{ background: "var(--card)", borderRadius: 7, border: "1px solid var(--accent-30)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse" }}>
               <thead><tr style={{ borderBottom: "2px solid var(--border)" }}>
                 <th onClick={() => { if (pendingSort.field === "pattern") setPendingSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setPendingSort({ field: "pattern", dir: "asc" }); }} style={{ padding: "5px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Patroon {pendingSort.field === "pattern" ? (pendingSort.dir === "asc" ? "↑" : "↓") : ""}</th>
                 <th onClick={() => { if (pendingSort.field === "category") setPendingSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setPendingSort({ field: "category", dir: "asc" }); }} style={{ padding: "5px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Categorie {pendingSort.field === "category" ? (pendingSort.dir === "asc" ? "↑" : "↓") : ""}</th>
@@ -75,6 +76,7 @@ export default function PatternsView({
                 );
               })}</tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -96,7 +98,8 @@ export default function PatternsView({
             )}
           </div>
           <div style={{ background: "var(--card)", borderRadius: 7, border: "1px solid var(--border)", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 400, borderCollapse: "collapse" }}>
             <thead><tr style={{ borderBottom: "2px solid var(--border)" }}>
               <th onClick={() => { if (rulesSort.field === "pattern") setRulesSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setRulesSort({ field: "pattern", dir: "asc" }); }} style={{ padding: "6px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Patroon {rulesSort.field === "pattern" ? (rulesSort.dir === "asc" ? "↑" : "↓") : ""}</th>
               <th onClick={() => { if (rulesSort.field === "category") setRulesSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setRulesSort({ field: "category", dir: "asc" }); }} style={{ padding: "6px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Categorie {rulesSort.field === "category" ? (rulesSort.dir === "asc" ? "↑" : "↓") : ""}</th>
@@ -123,6 +126,7 @@ export default function PatternsView({
               );
             })}</tbody>
           </table>
+          </div>
         </div>
         </>
       )}

@@ -43,7 +43,7 @@ export default function TransactionsView({
 
       <div style={{ background: "var(--card)", borderRadius: 7, overflow: "hidden", border: "1px solid var(--border)" }}>
         <div style={{ overflow: "auto", maxHeight: "calc(100vh - 160px)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: 520, borderCollapse: "collapse" }}>
             <thead><tr>
               {[{ f: "date", l: "Datum", w: "68px" }, { f: "amount", l: "Bedrag", w: "78px" }, { f: "counterparty", l: "Tegenpartij" }, { f: "category", l: "Categorie", w: "170px" }, { f: "tags", l: "Tags", w: "28px" }].map(col => (
                 <th key={col.f} onClick={() => { if (sort.field === col.f) setSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setSort({ field: col.f, dir: "desc" }); }} style={{ padding: "6px 5px", textAlign: "left", fontSize: 9, fontWeight: 700, cursor: "pointer", userSelect: "none", width: col.w || "auto", color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.5, background: "var(--card)", position: "sticky", top: 0, zIndex: 4, borderBottom: "2px solid var(--border)" }}>
