@@ -835,7 +835,7 @@ export default function App() {
       {tinderMode && <TinderMode txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }} onAssign={(id, c, s) => assign(id, c, s, false)} onSkip={(id) => assign(id, "nog_te_verwerken", "te_categoriseren", false)} onUndo={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null } : t))} onClose={() => setTinderMode(false)} />}
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
-      {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} expanded={expanded} year={year} month={month} onClose={() => setCatDetail(null)} />}
+      {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} month={month} onClose={() => setCatDetail(null)} />}
 
       {/* Recalc loading overlay */}
       {recalcState.running && (

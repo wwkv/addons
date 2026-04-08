@@ -3,13 +3,13 @@ import { fmt, fD, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import Pie from '../components/Pie.jsx';
 
-export default function CatDetailModal({ catId, cats, catStats, expanded, year, month, onClose }) {
+export default function CatDetailModal({ catId, cats, catStats, totalExp, expanded, year, month, onClose }) {
   const cat = cats.find(c => c.id === catId);
   if (!cat) return null;
   const stat = catStats[cat.id];
   if (!stat) return null;
   const shades = ["CC", "AA", "88", "66", "44"];
-  const subData = cat.subs.filter(s => stat.subs[s.id] > 0).map((s, idx) => ({ name: s.name, value: stat.subs[s.id], color: cat.color + shades[idx % shades.length] }));
+  const subData = cat.subs.filter(s => stat.subs[s.id] > 0).map((s, idx) => ({ name: s.name, value: stat.subs[s.id], color: cat.color + shades[idx % shades.length] })).sort((a, b) => b.value - a.value);
   let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && t.amount < 0);
   if (month) catTxs = catTxs.filter(t => t.date.slice(5, 7) === month);
   catTxs.sort((a, b) => b.date.localeCompare(a.date));
@@ -20,7 +20,7 @@ export default function CatDetailModal({ catId, cats, catStats, expanded, year, 
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: cat.color }}>{cat.name}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-        <Pie data={subData} size={170} />
+        <Pie data={subData} size={170} legendTotal={totalExp} />
         <div style={{ marginTop: 14, maxHeight: 250, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
             <thead><tr style={{ borderBottom: "1px solid var(--border)" }}>
