@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import CatGrid from './CatGrid.jsx';
 
-export default function CatPicker({ tx, cats, catUsage, onSelect, compact}) {
+export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
   const [open, setOpen] = useState(false);
-  const [flipUp, setFlipUp] = useState(false);
+  const [menuStyle, setMenuStyle] = useState({ visibility: "hidden" });
   const ref = useRef(null);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
@@ -11,21 +12,56 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact}) {
   const sub = cat ? cat.subs.find(s => s.id === tx.subCategoryId) : null;
   const hasSplits = tx.splits && tx.splits.length > 1;
 
+  // Recalculate menu position every time it opens
   useLayoutEffect(() => {
     if (!open || !buttonRef.current || !menuRef.current) return;
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const menuRect = menuRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - buttonRect.bottom;
-    const needsFlip = spaceBelow < menuRect.height + 8;
-    setFlipUp(needsFlip);
+    const br  = buttonRef.current.getBoundingClientRect();
+    const menuW = 560;
+    const menuH = 420; // matches maxHeight
+    const pad = 8;
+
+    // ── Vertical: open below if room, otherwise above, always clamped ──
+    const spaceBelow = window.innerHeight - br.bottom - pad;
+    const spaceAbove = br.top - pad;
+    let top;
+    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+      top = br.bottom + pad;
+    } else {
+      top = br.top - menuH - pad;
+    }
+    // Clamp so menu never escapes viewport
+    top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
+
+    // ── Horizontal: right-align with button, clamped to viewport ──
+    let right = window.innerWidth - br.right;
+    right = Math.max(pad, Math.min(right, window.innerWidth - menuW - pad));
+
+    setMenuStyle({
+      position: "fixed",
+      top,
+      right,
+      zIndex: 1000,
+      background: "var(--card)",
+      border: "1px solid var(--border)",
+      borderRadius: 10,
+      padding: 8,
+      width: menuW,
+      maxHeight: menuH,
+      overflow: "auto",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+      visibility: "visible",
+    });
   }, [open]);
 
+  // Close on outside click
   useEffect(() => {
-    if (!open) {
-      setFlipUp(false);
-      return;
-    }
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    if (!open) { setMenuStyle({ visibility: "hidden" }); return; }
+    const handler = (e) => {
+      if (
+        ref.current && !ref.current.contains(e.target) &&
+        menuRef.current && !menuRef.current.contains(e.target)
+      ) setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
@@ -55,11 +91,16 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact}) {
 
   return (
     <div style={{ position: "relative" }} ref={ref}>
-      <button ref={buttonRef} onClick={() => setOpen(!open)} style={{ padding: compact ? "3px 7px" : "5px 10px", borderRadius: 6, border: btnBorder, background: btnBg, color: "var(--text)", cursor: "pointer", fontSize: compact ? 10 : 12, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen(!open)}
+        style={{ padding: compact ? "3px 7px" : "5px 10px", borderRadius: 6, border: btnBorder, background: btnBg, color: "var(--text)", cursor: "pointer", fontSize: compact ? 10 : 12, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+      >
         {btnLabel}
       </button>
-      {open && (
-        <div ref={menuRef} style={{ position: "absolute", right: 0, zIndex: 100, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: 8, width: 560, maxHeight: 420, overflow: "auto", boxShadow: "0 8px 30px rgba(0,0,0,0.4)", ...(flipUp ? { bottom: "100%", marginBottom: 4 } : { top: "100%", marginTop: 4 }) }}>
+
+      {open && createPortal(
+        <div ref={menuRef} style={menuStyle}>
           {/* Favorites */}
           {favs.length > 0 && (
             <div style={{ marginBottom: 6 }}>
@@ -82,7 +123,8 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact}) {
           <div style={{ marginTop: 6, fontSize: 8, opacity: 0.35, color: "var(--text)", textAlign: "center" }}>
             ⌘+klik of ⇧+klik = patroon onthouden
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

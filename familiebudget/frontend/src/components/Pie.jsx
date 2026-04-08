@@ -1,7 +1,8 @@
 import { fmt } from '../utils/formatters.js';
 
-export default function Pie({ data, size = 190 }) {
+export default function Pie({ data, size = 190, legendTotal }) {
   const total = data.reduce((s, d) => s + d.value, 0);
+  const pctBase = legendTotal ?? total;
   if (total === 0) return null;
   const r = 80, cx = 100, cy = 100;
   let cum = -Math.PI / 2;
@@ -12,7 +13,7 @@ export default function Pie({ data, size = 190 }) {
     const x1 = Math.cos(start) * r + cx, y1 = Math.sin(start) * r + cy;
     const x2 = Math.cos(start + angle) * r + cx, y2 = Math.sin(start + angle) * r + cy;
     const mid = start + angle / 2;
-    return { ...d, path: `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${angle > Math.PI ? 1 : 0},1 ${x2},${y2} Z`, pct: ((d.value / total) * 100).toFixed(0), mid };
+    return { ...d, path: `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${angle > Math.PI ? 1 : 0},1 ${x2},${y2} Z`, pct: ((d.value / pctBase) * 100).toFixed(0), mid };
   });
   return (
     <div style={{ display: "flex", flexDirection: size <= 140 ? "column" : "row", gap: size <= 140 ? 8 : 12, alignItems: size <= 140 ? "flex-start" : "center", flexWrap: "wrap" }}>
