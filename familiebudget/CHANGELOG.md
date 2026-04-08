@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.20] - 2026-04-08
+### Fixed
+- Auto-categorization: `/r\.?v\.?a\.?/` matched `rva` inside `vervaldag`, silently misfiling "vervaldag krediet" transactions as Inkomsten › Andere; regex now uses lookbehind/lookahead so RVA only matches as a standalone token
+- Auto-categorization: `huur\b` matched the end of `verhuur`, potentially misfiling rental income as Wonen › Lening; fixed to `\bhuur\b`
+- Auto-categorization: `eten\b` matched inside `winkelketen`; fixed to `\beten\b`
+- CatPicker dropdown cut off at top/bottom of screen; replaced flip logic with viewport-clamped positioning (open below if room, otherwise above, always clamped)
+- Dashboard percentage mismatch between pie chart and category bar list; income categories are now excluded from `totalExp`
+- Category detail modal: subcategories now sorted by size (largest first), and percentages are relative to total expenses instead of the category total
+- Category detail modal: clicking outside the modal now closes it; background scroll is locked while open
+- CatPicker dropdown clipped by scroll containers; rebuilt with React portal + `position: fixed`
+- Electron: daily backup crashed on second launch because today's backup already existed; now skips gracefully
+- Electron: app reopened after closing; now always quits on window-all-closed (all platforms)
+### Added
+- Auto-categorization: new rule for `vervaldag krediet` / `échéance crédit` descriptions → Wonen › Lening (certain confidence)
+- Transactions: right-click context menu now includes "🔍 Toon alle transacties: [tegenpartij]" — filters to that counterparty across all years, clearing all other filters
+- Year dropdown: added "Alle jaren" option to view transactions across all years at once
+- GitHub Actions: upgraded Node.js from 20 to 22
+
 ## [1.0.19] - 2026-04-04
 ### Fixed
 - Electron: app crashed silently before showing any error dialog because `app.getPath('userData')` was called synchronously at module load time, before the app was ready; moved env var setup inside `app.whenReady()`

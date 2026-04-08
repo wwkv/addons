@@ -759,7 +759,7 @@ export default function App() {
           ))}
         </nav>
         <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
-          <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
+          <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}><option value="">Alle jaren</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
           <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>{settings.darkMode ? "☀️" : "🌙"}</button>
           <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>
           <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.max((s.zoom || 100) - 25, 75) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A−</button>
@@ -781,6 +781,7 @@ export default function App() {
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
           items={[
+            { label: `🔍 Toon alle transacties: "${contextMenu.tx.counterparty.trim().slice(0, 22)}"`, onClick: () => { setView("transactions"); setSearch(contextMenu.tx.counterparty.trim()); setMonth(""); setFCat(""); setStartDate(""); setEndDate(""); setYear(""); setContextMenu(null); } },
             { label: "Copy Category", disabled: !contextMenu.tx.categoryId, onClick: () => setCatClipboard({ categoryId: contextMenu.tx.categoryId, subCategoryId: contextMenu.tx.subCategoryId }) },
             { label: "Paste Category", disabled: !catClipboard?.categoryId, onClick: () => { const targetIds = sel.size > 0 ? [...sel] : [contextMenu.tx.id]; bulkAssign(catClipboard.categoryId, catClipboard.subCategoryId, targetIds); } },
             { label: "Aan blacklist toevoegen", onClick: () => {

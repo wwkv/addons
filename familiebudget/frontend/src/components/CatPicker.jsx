@@ -15,24 +15,38 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
   // Recalculate menu position every time it opens
   useLayoutEffect(() => {
     if (!open || !buttonRef.current || !menuRef.current) return;
-    const br = buttonRef.current.getBoundingClientRect();
-    const mr = menuRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - br.bottom;
-    const flip = spaceBelow < mr.height + 8;
+    const br  = buttonRef.current.getBoundingClientRect();
+    const menuW = 560;
+    const menuH = 420; // matches maxHeight
+    const pad = 8;
+
+    // ── Vertical: open below if room, otherwise above, always clamped ──
+    const spaceBelow = window.innerHeight - br.bottom - pad;
+    const spaceAbove = br.top - pad;
+    let top;
+    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+      top = br.bottom + pad;
+    } else {
+      top = br.top - menuH - pad;
+    }
+    // Clamp so menu never escapes viewport
+    top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
+
+    // ── Horizontal: right-align with button, clamped to viewport ──
+    let right = window.innerWidth - br.right;
+    right = Math.max(pad, Math.min(right, window.innerWidth - menuW - pad));
 
     setMenuStyle({
       position: "fixed",
-      right: Math.max(4, window.innerWidth - br.right),
-      ...(flip
-        ? { bottom: window.innerHeight - br.top + 4 }
-        : { top: br.bottom + 4 }),
+      top,
+      right,
       zIndex: 1000,
       background: "var(--card)",
       border: "1px solid var(--border)",
       borderRadius: 10,
       padding: 8,
-      width: 560,
-      maxHeight: 420,
+      width: menuW,
+      maxHeight: menuH,
       overflow: "auto",
       boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
       visibility: "visible",
