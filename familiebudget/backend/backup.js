@@ -13,6 +13,10 @@ export function createBackup(db) {
   const timestamp = new Date().toISOString().split('T')[0];
   const backupPath = join(BACKUP_DIR, `budget-${timestamp}.db`);
   try {
+    if (existsSync(backupPath)) {
+      console.log(`[Backup] Already exists for today, skipping.`);
+      return backupPath;
+    }
     db.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
     console.log(`[Backup] Created: budget-${timestamp}.db`);
     pruneOldBackups();
