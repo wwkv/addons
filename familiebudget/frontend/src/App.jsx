@@ -684,7 +684,7 @@ export default function App() {
     return s;
   }, [expanded, cats, year, month]);
 
-  const totalExp = Object.values(catStats).reduce((s, c) => s + c.total, 0);
+  const totalExp = cats.filter(c => c.type !== "inkomsten" && catStats[c.id]).reduce((s, c) => s + catStats[c.id].total, 0);
   const uncatN = useMemo(() => txs.filter(t => t.date.startsWith(year) && !t.categoryId).length, [txs, year]);
 
   /* Unassigned savings: for Sparen tab notification dot */
