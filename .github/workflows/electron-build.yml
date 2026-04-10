@@ -9,6 +9,9 @@ on:
         description: "Release tag to attach assets to (leave empty to just build)"
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
