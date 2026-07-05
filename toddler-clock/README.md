@@ -43,12 +43,17 @@ toddler-clock/
 
 Requires [PlatformIO](https://platformio.org/) (`pip install platformio`).
 
+Three boards are supported (pin maps in `src/config.h`, tables in
+[docs/wiring.md](docs/wiring.md)): `esp32-devkit-v1` (classic 38-pin WROOM
+devkit), `lilygo-t-a7670` (T-A7670x R2 — its 18650 holder doubles as battery
+backup), and `esp32-s3-devkitc-1`.
+
 ```bash
 cd firmware
-pio run                    # compile
-pio run -t uploadfs        # flash the web app (LittleFS)
-pio run -t upload          # flash the firmware
-pio device monitor         # watch the serial log
+pio run -e esp32-devkit-v1              # compile (pick your board's env)
+pio run -e esp32-devkit-v1 -t uploadfs  # flash the web app (LittleFS)
+pio run -e esp32-devkit-v1 -t upload    # flash the firmware
+pio device monitor                      # watch the serial log
 ```
 
 Every push to `toddler-clock/firmware/` is also compiled by the

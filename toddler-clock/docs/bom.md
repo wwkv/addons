@@ -7,7 +7,7 @@ is available in NL/BE webshops if you prefer faster shipping over price.
 
 | # | Part | Spec / example | ~Price | Notes |
 |---|------|----------------|--------|-------|
-| 1 | ESP32-S3 devkit | ESP32-S3-DevKitC-1 **N8R8** (8 MB flash, 8 MB PSRAM) | €8–12 | LilyGo T7-S3 also fine (has LiPo circuit → cheap battery-backup path) |
+| 1 | ESP32 board | **€0 if you have spares** — ESP32 DevKit v1 (38-pin) and LilyGo T-A7670x R2 are both supported (`pio run -e esp32-devkit-v1` / `-e lilygo-t-a7670`) | €0–12 | T-A7670's 18650 holder = built-in battery backup (see wiring.md). Buy an ESP32-S3-DevKitC-1 N8R8 (€8–12) only if you later want offline wake-word |
 | 2 | Projection TFT ×2 | 1.3" **IPS** ST7789, 240×240, SPI, 7-pin | €4–6 ea | **Buy two**: one gets its backlight peeled (expect to sacrifice one learning). Must be IPS — TN washes out projected black. Alternate candidate: 1.54" ST7789 IPS 240×240 (bigger active area = brighter image, slightly bigger optics) |
 | 3 | Projector LED | 3 W white LED on star PCB (or 1 W to start) | €1–2 | Neutral white ~4000 K projects colors nicely |
 | 4 | LED driver | logic-level MOSFET (IRLZ44N / AO3400 board) + 700 mA CC buck module (e.g. Mini360 + resistor, or dedicated 700 mA LED driver with PWM/EN input) | €2–4 | PWM from ESP32 into the EN/PWM pin; MOSFET low-side switch if the driver has no enable |

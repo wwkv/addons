@@ -51,6 +51,15 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n[boot] toddler projection clock");
 
+#ifdef BOARD_LILYGO_T_A7670
+  // The LTE modem is unused: keep its power rail disabled so it never
+  // boots (idle modem otherwise wastes ~10s of mA and pulls the battery).
+  pinMode(PIN_MODEM_POWERON, OUTPUT);
+  digitalWrite(PIN_MODEM_POWERON, LOW);
+  pinMode(PIN_MODEM_PWRKEY, OUTPUT);
+  digitalWrite(PIN_MODEM_PWRKEY, LOW);
+#endif
+
   if (!LittleFS.begin(true)) {
     Serial.println("[boot] LittleFS mount failed");
   }

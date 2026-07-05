@@ -60,7 +60,11 @@ namespace triggers {
 
 void begin() {
 #if HAS_BUTTON
+#ifdef PIN_BUTTON_EXTERNAL_PULLUP
+  pinMode(PIN_BUTTON, INPUT);  // input-only pin, external 10k pull-up
+#else
   pinMode(PIN_BUTTON, INPUT_PULLUP);
+#endif
 #endif
 #if HAS_TOF
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);

@@ -14,6 +14,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - esp32-s3-devkitc-1
+          - esp32-devkit-v1
+          - lilygo-t-a7670
     defaults:
       run:
         working-directory: toddler-clock/firmware
@@ -33,21 +40,21 @@ jobs:
           path: |
             ~/.platformio
             toddler-clock/firmware/.pio
-          key: pio-${{ runner.os }}-${{ hashFiles('toddler-clock/firmware/platformio.ini') }}
+          key: pio-${{ runner.os }}-${{ matrix.env }}-${{ hashFiles('toddler-clock/firmware/platformio.ini') }}
 
       - name: Install PlatformIO
         run: pip install platformio
 
       - name: Build firmware
-        run: pio run
+        run: pio run -e ${{ matrix.env }}
 
       - name: Build web app filesystem image
-        run: pio run -t buildfs
+        run: pio run -e ${{ matrix.env }} -t buildfs
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: toddler-clock-firmware
+          name: toddler-clock-firmware-${{ matrix.env }}
           path: |
-            toddler-clock/firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin
-            toddler-clock/firmware/.pio/build/esp32-s3-devkitc-1/littlefs.bin
+            toddler-clock/firmware/.pio/build/${{ matrix.env }}/firmware.bin
+            toddler-clock/firmware/.pio/build/${{ matrix.env }}/littlefs.bin

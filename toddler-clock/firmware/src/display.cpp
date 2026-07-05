@@ -17,7 +17,11 @@ class ProjectionPanel : public lgfx::LGFX_Device {
   ProjectionPanel() {
     {
       auto cfg = bus_.config();
+#if CONFIG_IDF_TARGET_ESP32
+      cfg.spi_host = SPI3_HOST;  // VSPI (GPIO18/23) on classic ESP32
+#else
       cfg.spi_host = SPI2_HOST;
+#endif
       cfg.spi_mode = 3;  // most CS-less 240x240 ST7789 modules want mode 3
       cfg.freq_write = 40000000;
       cfg.pin_sclk = PIN_TFT_SCK;

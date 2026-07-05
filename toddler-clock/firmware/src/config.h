@@ -13,8 +13,48 @@
 #define HAS_RTC 0      // DS3231 (off until wired)
 
 // ---------------------------------------------------------------------------
-// Pins (ESP32-S3-DevKitC-1, see docs/wiring.md)
+// Pins — per board, see docs/wiring.md for the full tables
 // ---------------------------------------------------------------------------
+#if defined(BOARD_LILYGO_T_A7670)
+// LilyGo T-A7670x R2 (ESP32-WROVER-E). The A7670 modem reserves GPIO
+// 4/5/12/25/26/27/33, battery/solar ADC 35/36, PSRAM 16/17. Lamp and ring
+// reuse the SD-slot pins (13/14) — leave the SD slot empty.
+constexpr int PIN_TFT_SCK = 18;
+constexpr int PIN_TFT_MOSI = 23;
+constexpr int PIN_TFT_CS = -1;  // tie the module's CS to GND (if it has one)
+constexpr int PIN_TFT_DC = 19;
+constexpr int PIN_TFT_RST = 32;
+
+constexpr int PIN_LAMP_PWM = 13;
+constexpr int PIN_RING_DATA = 14;
+constexpr int PIN_BUTTON = 34;  // input-only: needs external 10k pull-up!
+#define PIN_BUTTON_EXTERNAL_PULLUP 1
+
+constexpr int PIN_I2C_SDA = 21;
+constexpr int PIN_I2C_SCL = 22;
+
+// Hold the unused LTE modem powered off (saves power, keeps it silent).
+constexpr int PIN_MODEM_POWERON = 12;
+constexpr int PIN_MODEM_PWRKEY = 4;
+
+#elif CONFIG_IDF_TARGET_ESP32
+// Classic ESP32-WROOM DevKit v1 (38-pin). Avoids straps 0/2/12/15,
+// input-only 34-39, and flash pins 6-11.
+constexpr int PIN_TFT_SCK = 18;
+constexpr int PIN_TFT_MOSI = 23;
+constexpr int PIN_TFT_CS = 5;  // set -1 for 7-pin modules without CS
+constexpr int PIN_TFT_DC = 27;
+constexpr int PIN_TFT_RST = 26;
+
+constexpr int PIN_LAMP_PWM = 25;
+constexpr int PIN_RING_DATA = 13;
+constexpr int PIN_BUTTON = 14;
+
+constexpr int PIN_I2C_SDA = 21;
+constexpr int PIN_I2C_SCL = 22;
+
+#else
+// ESP32-S3-DevKitC-1
 constexpr int PIN_TFT_SCK = 12;
 constexpr int PIN_TFT_MOSI = 11;
 constexpr int PIN_TFT_CS = 10;  // set -1 for 7-pin modules without CS
@@ -27,6 +67,7 @@ constexpr int PIN_BUTTON = 6;
 
 constexpr int PIN_I2C_SDA = 1;
 constexpr int PIN_I2C_SCL = 2;
+#endif
 
 // ---------------------------------------------------------------------------
 // Hardware constants
