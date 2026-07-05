@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "display.h"
+#include "mqtt.h"
 #include "nightlight.h"
 #include "settings.h"
 #include "state.h"
@@ -24,6 +25,17 @@ String stateJson() {
   JsonDocument doc;
   doc["symbol"] = stateManager.get().symbol;
   doc["nightlightOn"] = stateManager.get().nightlightOn;
+
+  // Live-tunable config rides along so every client (and the hero preview)
+  // stays in sync while someone else drags a slider.
+  JsonObject nl = doc["nightlight"].to<JsonObject>();
+  nl["r"] = settings.nightlight.r;
+  nl["g"] = settings.nightlight.g;
+  nl["b"] = settings.nightlight.b;
+  nl["brightness"] = settings.nightlight.brightness;
+  nl["timeoutS"] = settings.nightlight.timeoutS;
+  doc["lampBrightness"] = settings.lampBrightness;
+  doc["scheduleEnabled"] = settings.scheduleEnabled;
 
   JsonArray icons = doc["icons"].to<JsonArray>();
   size_t n;
@@ -54,6 +66,38 @@ String stateJson() {
   String out;
   serializeJson(doc, out);
   return out;
+}
+
+// Hot-path commands arrive over the WebSocket so taps and slider drags feel
+// instant (REST stays for cold paths: settings, icons, reboot).
+void handleWsCommand(const char* data, size_t len) {
+  JsonDocument doc;
+  if (deserializeJson(doc, data, len) != DeserializationError::Ok) return;
+  const char* cmd = doc["cmd"] | "";
+
+  if (strcmp(cmd, "symbol") == 0 && doc["id"].is<const char*>()) {
+    stateManager.setSymbol(doc["id"].as<String>());
+    // stateManager.onChange fan-out broadcasts + publishes.
+  } else if (strcmp(cmd, "nightlight") == 0 && doc["on"].is<bool>()) {
+    stateManager.setNightlight(doc["on"]);
+  } else if (strcmp(cmd, "nlconfig") == 0) {
+    auto& nl = settings.nightlight;
+    if (doc["r"].is<uint8_t>()) nl.r = doc["r"];
+    if (doc["g"].is<uint8_t>()) nl.g = doc["g"];
+    if (doc["b"].is<uint8_t>()) nl.b = doc["b"];
+    if (doc["brightness"].is<uint8_t>()) nl.brightness = doc["brightness"];
+    if (doc["timeoutS"].is<uint16_t>()) nl.timeoutS = doc["timeoutS"];
+    nightlight::apply();
+    settings.requestSave();
+    webserver::broadcastState();
+    mqtt::publishState();
+  } else if (strcmp(cmd, "lamp") == 0 && doc["brightness"].is<int>()) {
+    settings.lampBrightness = constrain(doc["brightness"].as<int>(), 0, 100);
+    display::applySettings();
+    settings.requestSave();
+    webserver::broadcastState();
+    mqtt::publishState();
+  }
 }
 
 String sanitizeName(String name) {
@@ -159,8 +203,17 @@ namespace webserver {
 
 void begin() {
   ws.onEvent([](AsyncWebSocket*, AsyncWebSocketClient* client, AwsEventType type,
-                void*, uint8_t*, size_t) {
-    if (type == WS_EVT_CONNECT) client->text(stateJson());
+                void* arg, uint8_t* data, size_t len) {
+    if (type == WS_EVT_CONNECT) {
+      client->text(stateJson());
+    } else if (type == WS_EVT_DATA) {
+      auto* info = (AwsFrameInfo*)arg;
+      // Commands are small; only accept complete single-frame text messages.
+      if (info->final && info->index == 0 && info->len == len &&
+          info->opcode == WS_TEXT) {
+        handleWsCommand((const char*)data, len);
+      }
+    }
   });
   server.addHandler(&ws);
 

@@ -69,6 +69,11 @@ The firmware runs fine on a bare devkit with only the TFT attached — every
 sensor/output is behind a feature flag in `src/config.h`, so you can flash
 and play with the web app before the rest of the hardware arrives.
 
+You can even try the app without any hardware:
+`pip install aiohttp && python3 tools/mock_device.py` serves the real web app
+at `http://localhost:8080` with a simulated device behind it (`--wiggle`
+fakes toddler button presses so you can watch the live preview react).
+
 ## Hardware bring-up checklist
 
 Work through these as parts arrive; each step is independently testable.
@@ -101,6 +106,9 @@ Work through these as parts arrive; each step is independently testable.
 - [x] Design + parts list
 - [x] Firmware scaffold: WiFi/AP setup, web app, symbol rendering, night
       light, button + wave triggers, schedules, MQTT/HA discovery, NTP+RTC, OTA
+- [x] Playful parent app: live ceiling preview, swipeable panels, big squishy
+      controls, haptics, two-way WebSocket control (`tools/mock_device.py`
+      runs it without hardware)
 - [ ] Hardware bring-up (waiting on parts)
 - [ ] Enclosure STLs (after parts are measured)
 - [ ] Nice-to-have: clap/wake-word activation, battery backup

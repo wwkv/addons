@@ -137,11 +137,31 @@ never disagree about what the device is doing.
 
 ### Control surface
 
-- **Web app** (`firmware/data/`): vanilla HTML/JS, no build step. Symbol
-  grid, night light controls, schedule editor, settings (WiFi, MQTT,
-  brightness, mirror, test pattern), custom icon upload.
-- **REST**: `GET/POST /api/state`, `GET/POST /api/settings`,
-  `GET /api/icons`, `POST /api/icons` (PNG upload), `WS /ws` for live sync.
+- **Web app** (`firmware/data/www/`): vanilla HTML/JS, no build step, all
+  assets inline (SVG icons, data-URI favicon). Playful mobile-first UI:
+  a live "ceiling view" hero showing what's projected right now, three
+  swipeable full-screen panels (Symbol / Night light / Schedule) via CSS
+  scroll-snap, big squishy buttons, hue + brightness sliders, haptic
+  feedback, and a hold-1s "grown-up corner" for WiFi/MQTT/projector
+  settings. Develop it without hardware: `python3 tools/mock_device.py`
+  serves the app with a fake device behind it.
+
+- **WebSocket `/ws` — hot paths.** On connect (and after every change) the
+  server pushes the full state JSON to all clients, so multiple phones, HA,
+  the schedule, and the toddler's button always converge. Clients send
+  commands as single-frame JSON text messages:
+
+  | Command | Effect |
+  |---------|--------|
+  | `{"cmd":"symbol","id":"sun"}` | project a symbol (`off`, `clock`, `test`, built-in, `custom:<file>`) |
+  | `{"cmd":"nightlight","on":true}` | night light on/off |
+  | `{"cmd":"nlconfig","r":..,"g":..,"b":..,"brightness":..,"timeoutS":..}` | live color/brightness/timeout while dragging (any subset) |
+  | `{"cmd":"lamp","brightness":0-100}` | projector lamp brightness |
+
+- **REST — cold paths**: `GET/POST /api/state`, `GET/POST /api/settings`
+  (WiFi, MQTT, mirror, schedule), `POST /api/icons` (PNG upload),
+  `DELETE /api/icons?name=`, `POST /api/reboot`.
+
 - **MQTT**: `toddlerclock/...` topics with HA discovery, so in HA it appears
   as a device with a symbol selector + night light — automations like
   *"07:00 → sun icon"* are plain HA automations, no extra code.

@@ -2,79 +2,121 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0e0f1e">
 <title>Toddler Clock</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M30 4a20 20 0 1 0 14 34A20 20 0 0 1 30 4z' fill='%23cdd3ff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div id="offline" class="offline" hidden>Reconnecting to the clock…</div>
+
 <header>
-  <h1>🌙 Toddler Clock</h1>
-  <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">connecting…</span></div>
+  <div class="status"><span id="statusDot" class="dot"></span><span id="deviceTime">--:--</span></div>
+  <h1>Toddler&nbsp;Clock</h1>
+  <button id="gearBtn" class="gear" title="Hold to open grown-up corner"></button>
 </header>
 
-<main>
-  <section class="card">
-    <h2>Ceiling symbol</h2>
-    <div id="symbolGrid" class="grid"></div>
+<!-- Live ceiling preview: always shows what the device is doing right now -->
+<section id="hero" class="hero">
+  <div class="stars"></div>
+  <div id="heroRing" class="hero-ring"></div>
+  <button id="heroSymbol" class="hero-symbol" title="Tap to switch off / back on"></button>
+  <div id="heroCaption" class="hero-caption">…</div>
+</section>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-panel="0">Symbol</button>
+  <button class="tab" data-panel="1">Night light</button>
+  <button class="tab" data-panel="2">Schedule</button>
+</nav>
+
+<main id="panels" class="panels">
+
+  <section class="panel" id="panelSymbol">
+    <div id="symbolGrid" class="symbol-grid"></div>
+    <input type="file" id="iconFile" accept="image/png" hidden>
   </section>
 
-  <section class="card">
-    <h2>Night light</h2>
-    <div class="row">
-      <button id="nlToggle" class="big-toggle">Off</button>
-      <input type="color" id="nlColor" title="Color">
+  <section class="panel" id="panelLight">
+    <button id="lamp" class="lamp">
+      <svg viewBox="0 0 48 48" class="lamp-svg"><path d="M24 4a14 14 0 0 0-8 25.4c1.6 1.2 2.6 2.9 3 4.6h10c.4-1.7 1.4-3.4 3-4.6A14 14 0 0 0 24 4z" fill="currentColor"/><rect x="18" y="36" width="12" height="3.4" rx="1.7" fill="currentColor" opacity=".75"/><rect x="19" y="41" width="10" height="3.4" rx="1.7" fill="currentColor" opacity=".55"/></svg>
+    </button>
+    <div id="lampHint" class="lamp-hint">tap the lamp</div>
+
+    <label class="slider-label">Color</label>
+    <input type="range" id="hue" class="hue" min="0" max="360" value="30">
+
+    <label class="slider-label">Brightness</label>
+    <div class="bright-row">
+      <span class="bright-ico dim"></span>
+      <input type="range" id="nlBrightness" min="5" max="255" value="60">
+      <span class="bright-ico bright"></span>
     </div>
-    <label>Brightness <input type="range" id="nlBrightness" min="5" max="255"></label>
-    <label>Auto-off
-      <select id="nlTimeout">
-        <option value="0">never</option>
-        <option value="300">5 min</option>
-        <option value="900">15 min</option>
-        <option value="1800">30 min</option>
-        <option value="3600">1 hour</option>
-      </select>
-    </label>
-  </section>
 
-  <section class="card">
-    <h2>Schedule <label class="inline"><input type="checkbox" id="schedEnabled"> enabled</label></h2>
-    <div id="schedList"></div>
-    <button id="schedAdd" class="secondary">+ Add entry</button>
-    <p class="hint">Or automate the symbol from Home Assistant instead.</p>
-  </section>
-
-  <section class="card">
-    <h2>Custom icons</h2>
-    <p class="hint">240×240 PNG on a black background projects best.</p>
-    <input type="file" id="iconFile" accept="image/png">
-  </section>
-
-  <details class="card">
-    <summary><h2>Settings</h2></summary>
-    <h3>Projector</h3>
-    <label>Lamp brightness <span id="lampVal"></span>%
-      <input type="range" id="lampBrightness" min="0" max="100"></label>
-    <p class="hint">Keep this low: less light also means a blacker background.</p>
-    <label class="inline"><input type="checkbox" id="mirror"> mirror image (projection lens flips it)</label>
-    <button id="testPattern" class="secondary">Show test pattern</button>
-
-    <h3>WiFi</h3>
-    <label>Network name <input type="text" id="wifiSsid" autocomplete="off"></label>
-    <label>Password <input type="password" id="wifiPass"></label>
-
-    <h3>MQTT / Home Assistant</h3>
-    <label>Broker host <input type="text" id="mqttHost" placeholder="homeassistant.local"></label>
-    <label>Port <input type="number" id="mqttPort" value="1883"></label>
-    <label>Username <input type="text" id="mqttUser"></label>
-    <label>Password <input type="password" id="mqttPass"></label>
-
-    <div class="row">
-      <button id="saveSettings">Save settings</button>
-      <button id="reboot" class="danger">Reboot</button>
+    <label class="slider-label">Switches itself off after</label>
+    <div class="pills" id="timeoutPills">
+      <button data-s="0">Stays on</button>
+      <button data-s="300">5 min</button>
+      <button data-s="900">15 min</button>
+      <button data-s="1800">30 min</button>
+      <button data-s="3600">1 hour</button>
     </div>
-  </details>
+  </section>
+
+  <section class="panel" id="panelSchedule">
+    <div class="sched-head">
+      <span>Automatic symbols</span>
+      <button id="schedToggle" class="switch" role="switch" aria-checked="true"><span></span></button>
+    </div>
+    <div id="schedList" class="sched-list"></div>
+    <button id="schedAdd" class="add-row">+ Add a time</button>
+    <p class="hint">Tip: with Home Assistant connected you can also automate the symbol from there.</p>
+  </section>
+
 </main>
 
+<!-- Icon picker sheet (for schedule rows) -->
+<div id="pickerSheet" class="sheet" hidden>
+  <div class="sheet-card">
+    <h2>Pick a symbol</h2>
+    <div id="pickerGrid" class="symbol-grid compact"></div>
+  </div>
+</div>
+
+<!-- Grown-up corner -->
+<div id="settingsSheet" class="sheet" hidden>
+  <div class="sheet-card">
+    <h2>Grown-up corner</h2>
+
+    <h3>Projector</h3>
+    <label class="slider-label">Lamp brightness — keep low: darker background too <b id="lampVal"></b>%</label>
+    <input type="range" id="lampBrightness" min="0" max="100">
+    <label class="check"><input type="checkbox" id="mirror"> Mirror the image (lens flips it)</label>
+    <button id="testPattern" class="ghost">Show focus test pattern</button>
+
+    <h3>Custom icons</h3>
+    <div id="customList" class="custom-list"></div>
+
+    <h3>WiFi</h3>
+    <label>Network <input type="text" id="wifiSsid" autocomplete="off"></label>
+    <label>Password <input type="password" id="wifiPass" placeholder="(unchanged)"></label>
+
+    <h3>Home Assistant (MQTT)</h3>
+    <label>Broker host <input type="text" id="mqttHost" placeholder="homeassistant.local"></label>
+    <label>Port <input type="number" id="mqttPort"></label>
+    <label>Username <input type="text" id="mqttUser"></label>
+    <label>Password <input type="password" id="mqttPass" placeholder="(unchanged)"></label>
+
+    <div class="sheet-actions">
+      <button id="saveSettings">Save</button>
+      <button id="reboot" class="danger">Reboot</button>
+    </div>
+  </div>
+</div>
+
+<script src="icons.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
