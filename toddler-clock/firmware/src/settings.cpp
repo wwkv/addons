@@ -45,8 +45,10 @@ void Settings::fromJson(JsonObjectConst obj) {
   if (obj["mqttPort"].is<uint16_t>()) mqttPort = obj["mqttPort"];
   if (obj["mqttUser"].is<const char*>()) mqttUser = obj["mqttUser"].as<String>();
   if (obj["mqttPass"].is<const char*>()) mqttPass = obj["mqttPass"].as<String>();
-  if (obj["lampBrightness"].is<uint8_t>())
-    lampBrightness = min<uint8_t>(obj["lampBrightness"], 100);
+  if (obj["lampBrightness"].is<uint8_t>()) {
+    uint8_t v = obj["lampBrightness"];
+    lampBrightness = v > 100 ? 100 : v;
+  }
   if (obj["mirror"].is<bool>()) mirror = obj["mirror"];
   if (obj["scheduleEnabled"].is<bool>()) scheduleEnabled = obj["scheduleEnabled"];
 
