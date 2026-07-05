@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toddler Clock</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🌙 Toddler Clock</h1>
+  <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">connecting…</span></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Ceiling symbol</h2>
+    <div id="symbolGrid" class="grid"></div>
+  </section>
+
+  <section class="card">
+    <h2>Night light</h2>
+    <div class="row">
+      <button id="nlToggle" class="big-toggle">Off</button>
+      <input type="color" id="nlColor" title="Color">
+    </div>
+    <label>Brightness <input type="range" id="nlBrightness" min="5" max="255"></label>
+    <label>Auto-off
+      <select id="nlTimeout">
+        <option value="0">never</option>
+        <option value="300">5 min</option>
+        <option value="900">15 min</option>
+        <option value="1800">30 min</option>
+        <option value="3600">1 hour</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>Schedule <label class="inline"><input type="checkbox" id="schedEnabled"> enabled</label></h2>
+    <div id="schedList"></div>
+    <button id="schedAdd" class="secondary">+ Add entry</button>
+    <p class="hint">Or automate the symbol from Home Assistant instead.</p>
+  </section>
+
+  <section class="card">
+    <h2>Custom icons</h2>
+    <p class="hint">240×240 PNG on a black background projects best.</p>
+    <input type="file" id="iconFile" accept="image/png">
+  </section>
+
+  <details class="card">
+    <summary><h2>Settings</h2></summary>
+    <h3>Projector</h3>
+    <label>Lamp brightness <span id="lampVal"></span>%
+      <input type="range" id="lampBrightness" min="0" max="100"></label>
+    <p class="hint">Keep this low: less light also means a blacker background.</p>
+    <label class="inline"><input type="checkbox" id="mirror"> mirror image (projection lens flips it)</label>
+    <button id="testPattern" class="secondary">Show test pattern</button>
+
+    <h3>WiFi</h3>
+    <label>Network name <input type="text" id="wifiSsid" autocomplete="off"></label>
+    <label>Password <input type="password" id="wifiPass"></label>
+
+    <h3>MQTT / Home Assistant</h3>
+    <label>Broker host <input type="text" id="mqttHost" placeholder="homeassistant.local"></label>
+    <label>Port <input type="number" id="mqttPort" value="1883"></label>
+    <label>Username <input type="text" id="mqttUser"></label>
+    <label>Password <input type="password" id="mqttPass"></label>
+
+    <div class="row">
+      <button id="saveSettings">Save settings</button>
+      <button id="reboot" class="danger">Reboot</button>
+    </div>
+  </details>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

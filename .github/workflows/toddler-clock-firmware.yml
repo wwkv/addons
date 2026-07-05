@@ -1,0 +1,53 @@
+name: Toddler Clock Firmware
+
+on:
+  push:
+    paths:
+      - "toddler-clock/firmware/**"
+      - ".github/workflows/toddler-clock-firmware.yml"
+  pull_request:
+    paths:
+      - "toddler-clock/firmware/**"
+      - ".github/workflows/toddler-clock-firmware.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: toddler-clock/firmware
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            toddler-clock/firmware/.pio
+          key: pio-${{ runner.os }}-${{ hashFiles('toddler-clock/firmware/platformio.ini') }}
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: pio run
+
+      - name: Build web app filesystem image
+        run: pio run -t buildfs
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toddler-clock-firmware
+          path: |
+            toddler-clock/firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin
+            toddler-clock/firmware/.pio/build/esp32-s3-devkitc-1/littlefs.bin
