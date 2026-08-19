@@ -1,7 +1,7 @@
 import { fmt } from '../utils/formatters.js';
 import { isSubExcluded } from '../utils/helpers.js';
 
-export default function SummaryCards({ expanded, year, uncatN, cats, setFCat, setView }) {
+export default function SummaryCards({ expanded, year, uncatN, cats, setFCats, setView }) {
   const yt = expanded.filter(t => t.date.startsWith(year));
   const notExcluded = t => !isSubExcluded(cats, t.categoryId, t.subCategoryId);
   const inc = yt.filter(t => t.amount > 0 && notExcluded(t)).reduce((a, t) => a + t.amount, 0);
@@ -10,7 +10,7 @@ export default function SummaryCards({ expanded, year, uncatN, cats, setFCat, se
     { l: "Inkomen " + year, v: fmt(inc), c: "#4A7C59" },
     { l: "Uitgaven " + year, v: fmt(-exp), c: "#C06E52" },
     { l: "Balans", v: fmt(inc - exp), c: inc - exp >= 0 ? "#4A7C59" : "#C06E52" },
-    { l: "Te categoriseren", v: `${uncatN}`, c: uncatN > 0 ? "var(--accent)" : "#4A7C59", click: uncatN > 0 ? () => { setFCat("_none"); setView("transactions"); } : undefined },
+    { l: "Te categoriseren", v: `${uncatN}`, c: uncatN > 0 ? "var(--accent)" : "#4A7C59", click: uncatN > 0 ? () => { setFCats(["_none"]); setView("transactions"); } : undefined },
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 7, marginBottom: 14 }}>

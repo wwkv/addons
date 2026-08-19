@@ -1,6 +1,10 @@
 export default function CatGrid({ cats, catUsage, tx, handleSelect }) {
-  const nonExp = cats.filter(c => ["inkomsten", "transfers", "overige"].includes(c.type) && c.id !== "nog_te_verwerken");
-  const expCats = cats.filter(c => c.type === "uitgaven" && c.id !== "nog_te_verwerken");
+  const visibleCats = cats
+    .filter(c => c.id !== "nog_te_verwerken" && !c.archived)
+    .map(c => ({ ...c, subs: c.subs.filter(s => !s.archived) }))
+    .filter(c => c.subs.length > 0);
+  const nonExp = visibleCats.filter(c => ["inkomsten", "transfers", "overige"].includes(c.type));
+  const expCats = visibleCats.filter(c => c.type === "uitgaven");
   const weight = (c) => c.subs.length + 1;
   const col1 = [...nonExp], col2 = [], col3 = [];
   let total1 = col1.reduce((s, c) => s + weight(c), 0), total2 = 0, total3 = 0;

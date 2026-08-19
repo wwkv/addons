@@ -36,10 +36,10 @@ export default function App() {
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
-  const [month, setMonth] = useState("");
+  const [months, setMonths] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [fCat, setFCat] = useState("");
+  const [fCats, setFCats] = useState([]);
   const [sort, setSort] = useState({ field: "date", dir: "desc" });
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(new Set());
@@ -308,6 +308,7 @@ export default function App() {
   }, []);
 
   const learnRule = useCallback((tx, catId, subId, force, incrementBy = 1) => {
+    if (!catId || !subId) return;
     if (subId === "te_categoriseren" || catId === "nog_te_verwerken") return;
     if (blacklist.some(b => b.trim().toLowerCase() === tx.counterparty.trim().toLowerCase())) return;
     const cp = tx.counterparty.toLowerCase();
@@ -391,12 +392,24 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const parsed = parseCSV(ev.target.result);
-      if (!parsed.length) { setImportErr("Geen transacties gevonden."); return; }
+      if (!parsed.length) {
+        const raw = ev.target.result;
+        const isPPReconciliation = /BALANCE_RECONCILIATION_REPORT/i.test(raw) || /^"?RH"?,/.test(raw.trim());
+        setImportErr(isPPReconciliation
+          ? "Geen transacties gevonden.\n\nDit is een PayPal 'Balance Reconciliation Report' — dat bestand bevat nooit transacties, ongeacht de gekozen periode.\n\nGa in plaats daarvan naar PayPal → Activiteit ('Activity') → Alle transacties/rapport downloaden, en exporteer die CSV."
+          : "Geen transacties gevonden.\n\nOndersteunde bestanden: Crelan CSV-export, of de PayPal 'Activiteit downloaden' CSV (niet een 'Balance Reconciliation Report').");
+        return;
+      }
       const dupKey = (t) => `${t.date}_${t.amount}_${(t.counterparty || "").toLowerCase().trim()}`;
-      const existingKeys = new Set(txs.map(dupKey));
+      const existingByKey = new Map(txs.map(t => [dupKey(t), t]));
       const withCats = parsed.map(tx => {
-        const isDupe = existingKeys.has(dupKey(tx));
-        if (isDupe) return { ...tx, _d: true, _v: "dupe", _isDuplicate: true };
+        const existingMatch = existingByKey.get(dupKey(tx));
+        if (existingMatch) {
+          if (tx.source === "paypal" && !existingMatch.paypalMerged) {
+            return { ...tx, _d: true, _v: "dupe_backfill", _isDuplicate: true, _backfillId: existingMatch.id };
+          }
+          return { ...tx, _d: true, _v: "dupe", _isDuplicate: true };
+        }
         let crelanMatch = null;
         if (tx.source === "paypal") {
           const candidates = txs.filter(ex => {
@@ -474,6 +487,7 @@ export default function App() {
     };
     const matchedPayPal = preview.filter(t => !t._d && t.source === "paypal" && t._matchedId);
     const toInsert = preview.filter(t => !t._d && !(t.source === "paypal" && !t._matchedId) && t.source !== "paypal");
+    const backfillOnly = preview.filter(t => t._backfillId);
     setTxs(prev => {
       let next = [...prev];
       for (const row of matchedPayPal) {
@@ -481,10 +495,13 @@ export default function App() {
         if (existing) {
           next = next.map(t =>
             t.id === row._matchedId
-              ? { ...t, counterparty: row.counterparty, description: row.description ?? t.description, categoryId: row.categoryId ?? t.categoryId, subCategoryId: row.subCategoryId ?? t.subCategoryId, splits: null }
+              ? { ...t, counterparty: row.counterparty, description: row.description ?? t.description, categoryId: row.categoryId ?? t.categoryId, subCategoryId: row.subCategoryId ?? t.subCategoryId, splits: null, paypalMerged: true }
               : t
           );
         }
+      }
+      for (const row of backfillOnly) {
+        next = next.map(t => t.id === row._backfillId && !t.paypalMerged ? { ...t, paypalMerged: true } : t);
       }
       return [...next, ...toInsert.map(strip)];
     });
@@ -533,19 +550,18 @@ export default function App() {
   const filtered = useMemo(() => {
     let f = [...txs];
     if (year) f = f.filter(t => t.date.startsWith(year));
-    if (month) f = f.filter(t => t.date.slice(5, 7) === month);
+    if (months.length) f = f.filter(t => months.includes(t.date.slice(5, 7)));
     if (startDate) f = f.filter(t => t.date >= startDate);
     if (endDate) f = f.filter(t => t.date <= endDate);
-    if (fCat === "_none") f = f.filter(t => !t.categoryId);
-    else if (fCat) f = f.filter(t => t.categoryId === fCat);
-    if (search) { const s = search.toLowerCase(); f = f.filter(t => t.counterparty.toLowerCase().includes(s) || t.description.toLowerCase().includes(s) || (t.comment || "").toLowerCase().includes(s)); }
+    if (fCats.length) f = f.filter(t => (fCats.includes("_none") && !t.categoryId) || fCats.includes(t.categoryId));
+    if (search) { const s = search.toLowerCase(); f = f.filter(t => t.counterparty.toLowerCase().includes(s) || t.description.toLowerCase().includes(s) || (t.comment || "").toLowerCase().includes(s) || (t.paypalMerged && "paypal".includes(s))); }
     const { field, dir } = sort;
     const tagOrder = (t) => { const { sub } = resolveCatSub(cats, t.categoryId, t.subCategoryId); const ty = sub ? (sub.type || "variabel") : "zzz"; const ne = sub ? (sub.necessity || "nodig") : "zzz"; return `${ty === "vast" ? "0" : ty === "variabel" ? "1" : "2"}-${ne === "nodig" ? "0" : ne === "luxe" ? "1" : "2"}`; };
     f.sort((a, b) => { let c = 0; if (field === "date") c = a.date.localeCompare(b.date); else if (field === "amount") c = a.amount - b.amount; else if (field === "counterparty") c = a.counterparty.localeCompare(b.counterparty); else if (field === "category") c = (a.categoryId || "zzz").localeCompare(b.categoryId || "zzz"); else if (field === "tags") c = tagOrder(a).localeCompare(tagOrder(b)); return dir === "asc" ? c : -c; });
     return f;
-  }, [txs, year, month, startDate, endDate, fCat, search, sort, cats]);
+  }, [txs, year, months, startDate, endDate, fCats, search, sort, cats]);
 
-  const sortFilterKey = JSON.stringify([sort.field, sort.dir, fCat, month, search, year, startDate, endDate]);
+  const sortFilterKey = JSON.stringify([sort.field, sort.dir, fCats, months, search, year, startDate, endDate]);
   if (lastSortFilterRef.current !== sortFilterKey) {
     lastSortFilterRef.current = sortFilterKey;
     displayedOrderRef.current = filtered.map(t => t.id);
@@ -643,17 +659,17 @@ export default function App() {
 
   const catStats = useMemo(() => {
     let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId));
-    if (month) et = et.filter(t => t.date.slice(5, 7) === month);
+    if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
     const s = {};
     for (const c of cats) { if (c.type === "inkomsten") continue; const ct = et.filter(t => t.categoryId === c.id); const tot = ct.reduce((a, t) => a + Math.abs(t.amount), 0); const subs = {}; for (const sub of c.subs) subs[sub.id] = ct.filter(t => t.subCategoryId === sub.id).reduce((a, t) => a + Math.abs(t.amount), 0); s[c.id] = { total: tot, subs, count: ct.length }; }
     s._uncat = { total: et.filter(t => !t.categoryId).reduce((a, t) => a + Math.abs(t.amount), 0), count: et.filter(t => !t.categoryId).length };
     return s;
-  }, [expanded, cats, year, month]);
+  }, [expanded, cats, year, months]);
 
   /* Fixed vs Variable: aggregate ONLY by subcategory.type — Vast, Variabel, Onbekend */
   const typeStats = useMemo(() => {
     let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0);
-    if (month) et = et.filter(t => t.date.slice(5, 7) === month);
+    if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
     const s = { vast: 0, variabel: 0, onbekend: 0 };
     for (const t of et) {
       const cat = cats.find(c => c.id === t.categoryId);
@@ -665,12 +681,12 @@ export default function App() {
       else s.variabel += Math.abs(t.amount);
     }
     return s;
-  }, [expanded, cats, year, month]);
+  }, [expanded, cats, year, months]);
 
   /* Necessity vs Luxury: aggregate ONLY by subcategory.necessity — Nodig, Luxe, Onbekend */
   const necessityStats = useMemo(() => {
     let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0);
-    if (month) et = et.filter(t => t.date.slice(5, 7) === month);
+    if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
     const s = { nodig: 0, luxe: 0, onbekend: 0 };
     for (const t of et) {
       const cat = cats.find(c => c.id === t.categoryId);
@@ -682,7 +698,7 @@ export default function App() {
       else s.nodig += Math.abs(t.amount);
     }
     return s;
-  }, [expanded, cats, year, month]);
+  }, [expanded, cats, year, months]);
 
   const totalExp = cats.filter(c => c.type !== "inkomsten" && catStats[c.id]).reduce((s, c) => s + catStats[c.id].total, 0);
   const uncatN = useMemo(() => txs.filter(t => t.date.startsWith(year) && !t.categoryId).length, [txs, year]);
@@ -781,9 +797,14 @@ export default function App() {
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
           items={[
-            { label: `🔍 Toon alle transacties: "${contextMenu.tx.counterparty.trim().slice(0, 22)}"`, onClick: () => { setView("transactions"); setSearch(contextMenu.tx.counterparty.trim()); setMonth(""); setFCat(""); setStartDate(""); setEndDate(""); setYear(""); setContextMenu(null); } },
+            { label: `🔍 Toon alle transacties: "${contextMenu.tx.counterparty.trim().slice(0, 22)}"`, onClick: () => { setView("transactions"); setSearch(contextMenu.tx.counterparty.trim()); setMonths([]); setFCats([]); setStartDate(""); setEndDate(""); setYear(""); setContextMenu(null); } },
             { label: "Copy Category", disabled: !contextMenu.tx.categoryId, onClick: () => setCatClipboard({ categoryId: contextMenu.tx.categoryId, subCategoryId: contextMenu.tx.subCategoryId }) },
             { label: "Paste Category", disabled: !catClipboard?.categoryId, onClick: () => { const targetIds = sel.size > 0 ? [...sel] : [contextMenu.tx.id]; bulkAssign(catClipboard.categoryId, catClipboard.subCategoryId, targetIds); } },
+            { label: "🚫 Verwijder categorie" + (sel.size > 1 ? "s" : ""), disabled: sel.size <= 1 && !contextMenu.tx.categoryId, onClick: () => {
+              const targetIds = sel.size > 0 ? sel : new Set([contextMenu.tx.id]);
+              setTxs(p => p.map(t => targetIds.has(t.id) ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t));
+              setContextMenu(null);
+            } },
             { label: "Aan blacklist toevoegen", onClick: () => {
               const cp = contextMenu.tx.counterparty.trim();
               if (!blacklist.some(b => b.trim().toLowerCase() === cp.toLowerCase())) {
@@ -833,10 +854,10 @@ export default function App() {
       )}
 
       {/* ─── MODALS ─── */}
-      {tinderMode && <TinderMode txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }} onAssign={(id, c, s) => assign(id, c, s, false)} onSkip={(id) => assign(id, "nog_te_verwerken", "te_categoriseren", false)} onUndo={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null } : t))} onClose={() => setTinderMode(false)} />}
+      {tinderMode && <TinderMode txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }} onAssign={(id, c, s) => assign(id, c, s, false)} onSkip={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t))} onUndo={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null } : t))} onClose={() => setTinderMode(false)} />}
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
-      {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} month={month} onClose={() => setCatDetail(null)} />}
+      {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} months={months} onClose={() => setCatDetail(null)} />}
 
       {/* Recalc loading overlay */}
       {recalcState.running && (
@@ -975,7 +996,7 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 400, width: "90%", border: "1px solid var(--border)" }}>
             <h3 style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 600, color: "var(--accent)" }}>⚠️</h3>
-            <p style={{ fontSize: 12, color: "var(--text)", margin: "0 0 12px" }}>{importErr}</p>
+            <p style={{ fontSize: 12, color: "var(--text)", margin: "0 0 12px", whiteSpace: "pre-line" }}>{importErr}</p>
             <button onClick={() => setImportErr(null)} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
           </div>
         </div>
@@ -986,7 +1007,7 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "var(--card)", borderRadius: 12, padding: 18, maxWidth: 860, width: "95%", maxHeight: "88vh", overflow: "auto", border: "1px solid var(--border)" }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{preview[0]?.source === "paypal" ? "PayPal Import" : "Crelan Import"}</h2>
-            <p style={{ margin: "0 0 8px", fontSize: 10, opacity: 0.6, color: "var(--text)" }}>{preview.length} tx · {preview.filter(t => t._d).length} dupl · {preview.filter(t => t.categoryId).length} gecat · {preview.filter(t => !t.categoryId && !t._d).length} te doen</p>
+            <p style={{ margin: "0 0 8px", fontSize: 10, opacity: 0.6, color: "var(--text)" }}>{preview.length} tx · {preview.filter(t => t._d).length} dupl · {preview.filter(t => t.categoryId).length} gecat · {preview.filter(t => !t.categoryId && !t._d).length} te doen{preview.some(t => t._backfillId) ? ` · ${preview.filter(t => t._backfillId).length} te markeren als PayPal` : ""}</p>
             <div style={{ maxHeight: 420, overflow: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
                 <thead><tr style={{ position: "sticky", top: 0, zIndex: 3 }}>
@@ -998,12 +1019,13 @@ export default function App() {
                 </tr></thead>
                 <tbody>{sortedPreview.map(tx => {
                   const isDupe = tx._d;
+                  const isBackfill = tx._v === "dupe_backfill";
                   const isPayPalIgnored = tx.source === "paypal" && !tx._matchedId && !isDupe;
                   const hideCatPicker = isDupe || isPayPalIgnored;
                   const cat = cats.find(c => c.id === (tx.categoryId || tx._sc));
                   const sub = cat ? cat.subs.find(s => s.id === (tx.subCategoryId || tx._ss)) : null;
                   return (
-                    <tr key={tx.id} style={{ borderBottom: "1px solid var(--bg)", opacity: isDupe ? 0.2 : isPayPalIgnored ? 0.5 : 1 }}>
+                    <tr key={tx.id} style={{ borderBottom: "1px solid var(--bg)", opacity: isBackfill ? 0.85 : isDupe ? 0.2 : isPayPalIgnored ? 0.5 : 1 }}>
                       <td style={{ padding: "3px 5px", fontFamily: "'DM Mono',monospace", fontSize: 9 }}>{fD(tx.date)}</td>
                       <td style={{ padding: "3px 5px", fontFamily: "'DM Mono',monospace", fontSize: 9, color: tx.amount > 0 ? "var(--green)" : "var(--red)" }}>{fmt(tx.amount)}</td>
                       <td style={{ padding: "3px 5px", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1018,7 +1040,9 @@ export default function App() {
                         </div>
                       )}</td>
                       <td style={{ padding: "3px", textAlign: "center", fontSize: 9 }}>
-                        {tx._isDuplicate ? (
+                        {isBackfill ? (
+                          <span style={{ padding: "1px 5px", borderRadius: 4, background: "#0070BA", color: "#fff", fontSize: 8 }}>🏷️ Markeer als PayPal</span>
+                        ) : tx._isDuplicate ? (
                           <span style={{ padding: "1px 5px", borderRadius: 4, background: "#666", color: "#fff", fontSize: 8 }}>🚫 Duplicaat</span>
                         ) : tx.source === "paypal" ? (
                           tx._matchedId && tx.categoryId ? (
@@ -1041,7 +1065,7 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 10, justifyContent: "flex-end" }}>
               <button onClick={() => { setImporting(false); setPreview(null); }} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
-              <button onClick={confirmImport} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>✓ Importeer {preview.filter(t => !t._d && !(t.source === "paypal" && !t._matchedId)).length}</button>
+              <button onClick={confirmImport} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>✓ Importeer {preview.filter(t => !t._d && !(t.source === "paypal" && !t._matchedId)).length}{preview.some(t => t._backfillId) ? ` (+${preview.filter(t => t._backfillId).length} markeren)` : ""}</button>
             </div>
           </div>
         </div>
@@ -1067,11 +1091,11 @@ export default function App() {
         {/* ═══ DASHBOARD ═══ */}
         {view === "dashboard" && (
           <DashboardView
-            txs={txs} expanded={expanded} year={year} month={month} cats={cats}
+            txs={txs} expanded={expanded} year={year} months={months} cats={cats}
             catStats={catStats} typeStats={typeStats}
             necessityStats={necessityStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
-            setFCat={setFCat} setView={setView} setMonth={setMonth} setCatDetail={setCatDetail}
+            setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
           />
         )}
 
@@ -1083,10 +1107,10 @@ export default function App() {
         {/* ═══ TRANSACTIONS ═══ */}
         {view === "transactions" && (
           <TransactionsView
-            displayed={displayed} month={month} fCat={fCat} cats={cats}
+            displayed={displayed} months={months} fCats={fCats} cats={cats}
             sel={sel} sort={sort} search={search} startDate={startDate} endDate={endDate}
             settings={settings} catUsage={catUsage}
-            setMonth={setMonth} setFCat={setFCat} setStartDate={setStartDate}
+            setMonths={setMonths} setFCats={setFCats} setStartDate={setStartDate}
             setEndDate={setEndDate} setSearch={setSearch} setSort={setSort} setSel={setSel}
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
@@ -1096,7 +1120,7 @@ export default function App() {
 
         {/* ═══ CATEGORIES ═══ */}
         {view === "categories" && (
-          <CategoriesView cats={cats} txs={txs} setCats={setCats} setCatDetail={setCatDetail} />
+          <CategoriesView cats={cats} txs={txs} setCats={setCats} setTxs={setTxs} setCatDetail={setCatDetail} />
         )}
 
         {/* ═══ PATTERNS ═══ */}
