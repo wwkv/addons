@@ -3,7 +3,7 @@ import { fmt, fD, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import Pie from '../components/Pie.jsx';
 
-export default function CatDetailModal({ catId, cats, catStats, totalExp, expanded, year, month, onClose }) {
+export default function CatDetailModal({ catId, cats, catStats, totalExp, expanded, year, months, onClose }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -15,7 +15,7 @@ export default function CatDetailModal({ catId, cats, catStats, totalExp, expand
   const shades = ["CC", "AA", "88", "66", "44"];
   const subData = cat.subs.filter(s => stat.subs[s.id] > 0).map((s, idx) => ({ name: s.name, value: stat.subs[s.id], color: cat.color + shades[idx % shades.length] })).sort((a, b) => b.value - a.value);
   let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && t.amount < 0);
-  if (month) catTxs = catTxs.filter(t => t.date.slice(5, 7) === month);
+  if (months.length) catTxs = catTxs.filter(t => months.includes(t.date.slice(5, 7)));
   catTxs.sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center" }}>

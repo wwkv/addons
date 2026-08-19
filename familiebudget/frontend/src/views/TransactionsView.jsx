@@ -1,20 +1,25 @@
+import { useMemo } from "react";
 import { X } from "lucide-react";
 import { fmt, fD, mN } from '../utils/formatters.js';
 import { resolveCatSub } from '../utils/helpers.js';
 import HoverTip from '../components/HoverTip.jsx';
 import CatPicker from '../components/CatPicker.jsx';
+import MultiSelect from '../components/MultiSelect.jsx';
 
 export default function TransactionsView({
-  displayed, month, fCat, cats, sel, sort, search, startDate, endDate, settings, catUsage,
-  setMonth, setFCat, setStartDate, setEndDate, setSearch, setSort, setSel,
+  displayed, months, fCats, cats, sel, sort, search, startDate, endDate, settings, catUsage,
+  setMonths, setFCats, setStartDate, setEndDate, setSearch, setSort, setSel,
   setSplitTx, setEditComment, setContextMenu,
   assign, bulkAssign, handleRowClick, searchInputRef,
 }) {
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(m => ({ value: m, label: mN(m) })), []);
+  const catOptions = useMemo(() => [{ value: "_none", label: "⚠️ Ongecategoriseerd" }, ...cats.map(c => ({ value: c.id, label: c.name, color: c.color }))], [cats]);
+
   return (
     <div>
       <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <select value={month} onChange={e => setMonth(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 9 }}><option value="">Alle maanden</option>{Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(m => <option key={m} value={m}>{mN(m)}</option>)}</select>
-        <select value={fCat} onChange={e => setFCat(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 9 }}><option value="">Alle cat.</option><option value="_none">⚠️ Ongecategoriseerd</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <MultiSelect allLabel="Alle maanden" options={monthOptions} selected={months} onChange={setMonths} width={140} />
+        <MultiSelect allLabel="Alle cat." options={catOptions} selected={fCats} onChange={setFCats} width={220} />
         <label style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 9, color: "var(--muted)" }}>
           <span style={{ whiteSpace: "nowrap" }}>Van</span>
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 9 }} />
@@ -76,6 +81,7 @@ export default function TransactionsView({
                       <HoverTip text={tx.description || "Geen mededeling"}>
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{tx.counterparty}</span>
                       </HoverTip>
+                      {tx.paypalMerged && <span title="Samengevoegd via PayPal-import" style={{ fontSize: 7, padding: "0 4px", borderRadius: 2, background: "#0070BA30", color: "#0070BA", fontWeight: 700, flexShrink: 0 }}>PP</span>}
                     </div>
                     {tx.comment && <div style={{ fontSize: 8, opacity: 0.5, marginTop: 1, color: "var(--accent)" }}>💬 {tx.comment}</div>}
                   </td>

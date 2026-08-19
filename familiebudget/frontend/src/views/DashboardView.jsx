@@ -11,7 +11,8 @@ function Bar({ v, max, color, h = 18}) {
   );
 }
 
-export default function DashboardView({ txs, expanded, year, month, cats, catStats, typeStats, necessityStats, totalExp, mStats, uncatN, fRef, setFCat, setView, setMonth, setCatDetail }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, typeStats, necessityStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail }) {
+  const monthLabel = months.length === 1 ? `— ${mN(months[0])} ${year}` : months.length > 1 ? `— ${months.length} maanden, ${year}` : year;
   if (txs.length === 0) return (
     <div style={{ textAlign: "center", padding: "60px 20px" }}>
       <div style={{ fontSize: 44, marginBottom: 14 }}>📥</div>
@@ -23,14 +24,14 @@ export default function DashboardView({ txs, expanded, year, month, cats, catSta
 
   return (
     <>
-      <SummaryCards expanded={expanded} year={year} uncatN={uncatN} cats={cats} setFCat={setFCat} setView={setView} />
+      <SummaryCards expanded={expanded} year={year} uncatN={uncatN} cats={cats} setFCats={setFCats} setView={setView} />
 
       <div className="dashboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 24, marginBottom: 14, height: 540 }}>
         {/* Row 1: Main Pie (col-span-2) + Fixed vs Variable */}
         <div style={{ gridColumn: "span 2", background: "var(--card)", borderRadius: 7, padding: 14, border: "1px solid var(--border)", height: "100%", minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
-            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Verdeling Uitgaven {month ? `— ${mN(month)} ${year}` : year}</h3>
-            {month && <button onClick={() => setMonth("")} style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 9 }}>Heel jaar</button>}
+            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Verdeling Uitgaven {monthLabel}</h3>
+            {months.length > 0 && <button onClick={() => setMonths([])} style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 9 }}>Heel jaar</button>}
           </div>
           <Pie size={200} data={cats.filter(c => c.type !== "inkomsten" && catStats[c.id] && catStats[c.id].total > 0).sort((a, b) => catStats[b.id].total - catStats[a.id].total).map(c => ({ name: c.name, value: catStats[c.id].total, color: c.color }))} />
         </div>
@@ -83,7 +84,7 @@ export default function DashboardView({ txs, expanded, year, month, cats, catSta
                 <div
                   key={m}
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0", opacity: isEmpty ? 0.35 : 1, cursor: s.cnt > 0 ? "pointer" : "default" }}
-                  onClick={() => { if (s.cnt > 0) setMonth(m); }}
+                  onClick={() => { if (s.cnt > 0) setMonths([m]); }}
                   title={isEmpty ? "" : `Inkomsten ${fmt(s.inc)} − Uitgaven ${fmt(-s.exp)} = ${fmt(net)}`}
                 >
                   <span style={{ width: 28, fontSize: 9, fontWeight: 500, color: "var(--text)", flexShrink: 0 }}>{mN(m)}</span>

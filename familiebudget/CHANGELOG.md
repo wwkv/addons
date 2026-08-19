@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.21] - 2026-08-20
+### Added
+- Transactions: month and category filters now support selecting multiple values at once (previously single-select only)
+- PayPal import: merged transactions are now flagged with `paypalMerged`, shown as a "PP" badge next to the counterparty, and findable by searching "paypal" even though the counterparty was renamed to the real merchant
+- PayPal import: re-importing a historical PayPal CSV retroactively backfills the `paypalMerged` marker onto transactions that were merged before this feature existed, shown as "🏷️ Markeer als PayPal" in the import preview
+- Transactions: right-click → "🚫 Verwijder categorie" clears a transaction's category, making it uncategorized again
+- Categories tab: rename, delete (with a transaction-count warning), and archive for both categories and subcategories — archived items are hidden from the category picker but stay visible (dimmed) in the Categories tab and remain intact in stats/history
+- New `IDEAS.md` backlog file for future feature ideas
+### Fixed
+- PayPal import: uploading a "Balance Reconciliation Report" (a different PayPal export format with no transaction data) now shows a clear explanation and points to the correct export instead of a generic "no transactions found" message
+- Tinder mode: skipping a transaction now leaves it truly uncategorized instead of dumping it into the "Nog te verwerken" parking category
+
 ## [1.0.20] - 2026-04-08
 ### Fixed
 - Auto-categorization: `/r\.?v\.?a\.?/` matched `rva` inside `vervaldag`, silently misfiling "vervaldag krediet" transactions as Inkomsten › Andere; regex now uses lookbehind/lookahead so RVA only matches as a standalone token
