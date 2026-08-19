@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.22] - 2026-08-20
+### Fixed
+- HA add-on build: added missing `build.yaml` — Supervisor was no longer falling back to a default base image when none was specified, so `docker build` failed with "base name ($BUILD_FROM) should not be blank" and the 1.0.21 update could not install
+
 ## [1.0.21] - 2026-08-20
 ### Added
 - Transactions: month and category filters now support selecting multiple values at once (previously single-select only)
