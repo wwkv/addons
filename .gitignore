@@ -2,3 +2,4 @@ node_modules/
 .DS_Store
 familiebudget/backend/data/
 familiebudget/frontend/dist/
+familiebudget/backend/public/

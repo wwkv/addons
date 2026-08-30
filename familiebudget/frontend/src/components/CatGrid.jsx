@@ -1,4 +1,5 @@
-export default function CatGrid({ cats, catUsage, tx, handleSelect }) {
+export default function CatGrid({ cats, catUsage, tx, handleSelect, mobile }) {
+  const numCols = mobile ? 2 : 3;
   const visibleCats = cats
     .filter(c => c.id !== "nog_te_verwerken" && !c.archived)
     .map(c => ({ ...c, subs: c.subs.filter(s => !s.archived) }))
@@ -6,13 +7,16 @@ export default function CatGrid({ cats, catUsage, tx, handleSelect }) {
   const nonExp = visibleCats.filter(c => ["inkomsten", "transfers", "overige"].includes(c.type));
   const expCats = visibleCats.filter(c => c.type === "uitgaven");
   const weight = (c) => c.subs.length + 1;
-  const col1 = [...nonExp], col2 = [], col3 = [];
-  let total1 = col1.reduce((s, c) => s + weight(c), 0), total2 = 0, total3 = 0;
+  const columns = Array.from({ length: numCols }, () => []);
+  const totals = Array(numCols).fill(0);
+  columns[0] = [...nonExp];
+  totals[0] = columns[0].reduce((s, c) => s + weight(c), 0);
   for (const c of expCats) {
     const w = weight(c);
-    if (total1 <= total2 && total1 <= total3) { col1.push(c); total1 += w; }
-    else if (total2 <= total3) { col2.push(c); total2 += w; }
-    else { col3.push(c); total3 += w; }
+    let target = 0;
+    for (let i = 1; i < numCols; i++) if (totals[i] < totals[target]) target = i;
+    columns[target].push(c);
+    totals[target] += w;
   }
   const sortSubs = (c) => [...c.subs].sort((a, b) => ((catUsage || {})[b.id] || 0) - ((catUsage || {})[a.id] || 0));
   const renderCat = (c) => (
@@ -22,10 +26,8 @@ export default function CatGrid({ cats, catUsage, tx, handleSelect }) {
     </div>
   );
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{col1.map(renderCat)}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{col2.map(renderCat)}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{col3.map(renderCat)}</div>
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${numCols}, 1fr)`, gap: 4 }}>
+      {columns.map((col, i) => <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>{col.map(renderCat)}</div>)}
     </div>
   );
 }

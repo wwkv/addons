@@ -89,6 +89,7 @@
 /* ── Layout ── */
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh; /* mobile Safari's collapsing address bar shrinks 100vh's target after the fact, which can leave a fixed bottom bar detached from the real bottom of the screen */
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -106,6 +107,7 @@
 .app-body {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-content {
@@ -387,7 +389,8 @@
     display: none;
   }
 
-  /* Icon rail becomes a bottom tab bar */
+  /* Icon rail becomes a bottom tab bar. Height/padding include the iOS
+     home-indicator safe area so icons never sit under it or behind it. */
   .app-rail {
     position: fixed;
     bottom: 0;
@@ -395,11 +398,11 @@
     right: 0;
     top: auto;
     width: 100%;
-    height: 62px;
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
     flex-direction: row;
     align-items: center;
     justify-content: space-around;
-    padding: 0 6px;
+    padding: 0 6px calc(6px + env(safe-area-inset-bottom, 0px));
     border-right: none;
     border-top: 1px solid var(--border);
     z-index: 60;
@@ -413,8 +416,12 @@
   .rail-btn.mobile-settings {
     order: 10;
   }
+  .rail-btn {
+    width: 44px;
+    height: 44px;
+  }
   .app-main {
-    padding-bottom: 84px;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Floating quick-categorize action */
@@ -422,7 +429,7 @@
     display: flex;
     position: fixed;
     right: 18px;
-    bottom: 78px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -434,6 +441,21 @@
     box-shadow: 0 10px 24px var(--accent-40);
     cursor: pointer;
     z-index: 70;
+  }
+
+  /* Settings becomes a full-screen page instead of a floating dialog, to
+     match the weight of every other bottom-bar destination. */
+  .settings-overlay {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+  .settings-panel {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

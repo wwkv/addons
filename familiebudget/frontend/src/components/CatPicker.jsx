@@ -13,6 +13,18 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
   const sub = cat ? cat.subs.find(s => s.id === tx.subCategoryId) : null;
   const hasSplits = tx.splits && tx.splits.length > 1;
 
+  // Below this width the desktop floating menu (fixed 560px, positioned
+  // next to the button) doesn't fit the screen at all — it renders as a
+  // desktop-sized popup on a phone. Below that width, use a full-width
+  // bottom sheet instead of button-relative math.
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   // Recalculate menu position on open, and keep it pinned to the button
   // afterwards — window resize, internal table scroll, and CSS `zoom`
   // changes (from the app's A+/A- controls) all change the button's
@@ -21,6 +33,27 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
   // one signal that reliably covers all of them.
   useLayoutEffect(() => {
     if (!open || !buttonRef.current || !menuRef.current) return;
+
+    if (isMobile) {
+      setMenuStyle({
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: "auto",
+        zIndex: 1000,
+        background: "var(--card)",
+        borderTop: "1px solid var(--border)",
+        borderRadius: "16px 16px 0 0",
+        padding: "10px 10px calc(10px + env(safe-area-inset-bottom, 0px))",
+        width: "100%",
+        maxHeight: "75vh",
+        overflow: "auto",
+        boxShadow: "0 -10px 40px rgba(0,0,0,0.4)",
+        visibility: "visible",
+      });
+      return;
+    }
 
     const recompute = () => {
       const br = buttonRef.current.getBoundingClientRect();
@@ -76,9 +109,11 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
       window.removeEventListener("resize", recompute);
       window.removeEventListener("scroll", recompute, true);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
-  // Close on outside click
+  // Close on outside click/tap. touchstart is needed alongside mousedown
+  // because some mobile browsers delay the synthesized mousedown enough
+  // that a fast tap outside wouldn't otherwise close the menu promptly.
   useEffect(() => {
     if (!open) { setMenuStyle({ visibility: "hidden" }); return; }
     const handler = (e) => {
@@ -88,7 +123,11 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
       ) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [open]);
 
   const favs = useMemo(() => {
@@ -145,8 +184,8 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
           <button onClick={(e) => handleSelect("nog_te_verwerken", "te_categoriseren", e)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", padding: "5px 8px", background: "var(--bg)", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 7, fontSize: 10.5, fontStyle: "italic", marginBottom: 8 }}>
             <Package size={12} />Nog te verwerken
           </button>
-          {/* 3-column grid */}
-          <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={handleSelect} />
+          {/* 3-column grid (2 on mobile, where there's less width to work with) */}
+          <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={handleSelect} mobile={isMobile} />
           <div style={{ marginTop: 8, fontSize: 9, opacity: 0.4, color: "var(--text)", textAlign: "center" }}>
             ⌘+klik of ⇧+klik = patroon onthouden
           </div>

@@ -902,9 +902,12 @@ export default function App() {
 
       {/* Settings */}
       {showSettings && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}><Settings size={18} strokeWidth={1.8} />Instellingen</h3>
+        <div className="settings-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="settings-panel" style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Settings size={18} strokeWidth={1.8} />Instellingen</span>
+              <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer" }}><X size={18} /></button>
+            </h3>
 
             {/* Tab bar */}
             <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 9, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0 }}>
