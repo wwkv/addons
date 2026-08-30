@@ -2,8 +2,10 @@ import { Inbox, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import { isSubExcluded } from '../utils/helpers.js';
+import MonthSelector from '../components/MonthSelector.jsx';
+import ComparePanel from '../components/ComparePanel.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, years }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -53,7 +55,9 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
 
   return (
     <>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Overzicht</h1>
+      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 14px" }}>Overzicht</h1>
+
+      <MonthSelector months={months} setMonths={setMonths} mStats={mStats} year={year} />
 
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 22px 8px", marginBottom: 14 }}>
         <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Netto{monthLabel ? ` — ${monthLabel} ${year}` : year ? ` — ${year}` : ""}</div>
@@ -88,13 +92,15 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         </div>
       </div>
 
+      <ComparePanel expanded={expanded} cats={cats} year={year} months={months} years={years} />
+
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 15, padding: "17px 19px", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, flexShrink: 0 }}>Grootste uitgaven</div>
         <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
           {ranked.map(({ cat, total }) => (
             <div key={cat.id} onClick={() => setCatDetail(cat.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, cursor: "pointer" }}>
               <div style={{ width: 176, flex: "0 0 176px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text)" }} title={cat.name}>{cat.name}</div>
-              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#20242F", overflow: "hidden" }}>
+              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
                 <div style={{ width: `${Math.max(2, (total / rankMax) * 100)}%`, height: "100%", borderRadius: 4, background: cat.color }} />
               </div>
               <div style={{ width: 84, flex: "0 0 84px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: "var(--muted)", fontSize: 11.5 }}>{fmt(-total)}</div>
@@ -104,9 +110,6 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           {ranked.length === 0 && <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 12 }}>Geen uitgaven in deze periode</div>}
         </div>
       </div>
-      {months.length > 0 && (
-        <button onClick={() => setMonths([])} style={{ marginTop: 10, alignSelf: "flex-start", padding: "5px 11px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--accent)", cursor: "pointer", fontSize: 10.5, fontWeight: 600 }}>Heel jaar tonen</button>
-      )}
     </>
   );
 }

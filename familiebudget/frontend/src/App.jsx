@@ -1122,7 +1122,7 @@ export default function App() {
             catStats={catStats} typeStats={typeStats}
             necessityStats={necessityStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
-            setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
+            setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail} years={years}
           />
         )}
 
