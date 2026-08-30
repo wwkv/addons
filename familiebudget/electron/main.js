@@ -63,6 +63,14 @@ function createWindow() {
 
   mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
 
+  // Disable trackpad pinch-to-zoom: it scales the visual viewport independently
+  // from the layout viewport, so position:fixed elements placed via
+  // getBoundingClientRect() (dropdowns, menus) end up rendered in the wrong
+  // spot on screen after an accidental pinch gesture.
+  mainWindow.webContents.once('dom-ready', () => {
+    mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
+  });
+
   // Open external links in the default browser, not inside the app
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(`http://127.0.0.1:${PORT}`)) shell.openExternal(url);
