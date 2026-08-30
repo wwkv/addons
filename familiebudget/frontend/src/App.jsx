@@ -6,7 +6,7 @@ import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Br
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
 import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI } from './utils/rules.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
-import { normalizeCats, isSubExcluded, resolveCatSub } from './utils/helpers.js';
+import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
 
 /* Components */
@@ -15,7 +15,6 @@ import CatGrid from './components/CatGrid.jsx';
 import CatPicker from './components/CatPicker.jsx';
 
 /* Modals */
-import TinderMode from './modals/TinderMode.jsx';
 import ProcessingFlow from './modals/ProcessingFlow.jsx';
 import OnboardingFlow from './modals/OnboardingFlow.jsx';
 import SplitModal from './modals/SplitModal.jsx';
@@ -48,7 +47,6 @@ export default function App() {
   const lastClickedIndexRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const [splitTx, setSplitTx] = useState(null);
-  // const [askTx, setAskTx] = useState(null); // AskAI - disabled
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState("regels");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -101,10 +99,7 @@ export default function App() {
           if (p.settings) setSettings(p.settings);
           if (p.pending) setPending(p.pending);
           if (p.blacklist) setBlacklist(p.blacklist);
-          if (p.savings) {
-            const s = p.savings;
-            setSavings({ knownBalance: s.knownBalance ?? s.baseBalance ?? 0, knownDate: s.knownDate ?? s.baseDate ?? new Date().toISOString().split("T")[0], pots: s.pots || [] });
-          }
+          if (p.savings) setSavings(normalizeSavings(p.savings));
         }
       } catch (e) { /* first load */ }
       setLoaded(true);
@@ -120,33 +115,52 @@ export default function App() {
     return () => clearTimeout(t);
   }, [txs, cats, rules, settings, loaded, pending, blacklist, savings]);
 
+  const downloadBlob = (blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `budget-backup-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportBackup = async () => {
     try {
       const r = await fetch('api/backup/export', { method: 'POST' });
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `budget-backup-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // fetch only rejects on network failure, so an HTTP 500 would otherwise
+      // be downloaded as a "backup" that actually contains an error object.
+      if (!r.ok) throw new Error(`Export failed: HTTP ${r.status}`);
+      downloadBlob(await r.blob());
     } catch (err) {
       // Fallback: client-side export — also fetch budgets so they are included
       let _budgets = {};
       try { const br = await fetch('api/state/budgets'); const bd = await br.json(); _budgets = bd.value || {}; } catch (_) {}
       const data = { txs, cats, rules, settings, pending, blacklist, savings, _budgets };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `budget-backup-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
     }
+  };
+
+  /* Restore a parsed backup. The backend call is what actually restores
+     budgets (they live under their own `budgets` state key, not in `main`)
+     and what triggers the pre-import safety snapshot — so a failure here
+     must be surfaced, not silently swallowed. */
+  const applyBackupData = async (data) => {
+    const r = await fetch('api/backup/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(`Import failed: HTTP ${r.status}`);
+
+    if (data.txs) setTxs(data.txs);
+    if (data.cats) setCats(normalizeCats(data.cats));
+    if (data.rules) setRules(data.rules);
+    if (data.settings) setSettings(data.settings);
+    if (data.pending) setPending(data.pending);
+    if (data.blacklist) setBlacklist(data.blacklist);
+    if (data.savings) setSavings(normalizeSavings(data.savings));
   };
 
   const handleDeleteAllData = async () => {
@@ -161,47 +175,6 @@ export default function App() {
     setShowDeleteConfirm(false);
     setSettingsTab("regels");
     setShowSettings(false);
-  };
-
-  const handleImportBackup = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!window.confirm("Weet je zeker dat je deze backup wilt importeren? Dit overschrijft AL je huidige data (transacties, categorieën, patronen, spaarpotjes, budgetten en instellingen).")) {
-      event.target.value = null;
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        // Send to backend first
-        try {
-          await fetch('api/backup/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-          });
-        } catch (err) {
-          console.warn('Backend import failed, applying locally:', err);
-        }
-        // Then apply to local state
-        if (data.txs) setTxs(data.txs);
-        if (data.cats) setCats(normalizeCats(data.cats));
-        if (data.rules) setRules(data.rules);
-        if (data.settings) setSettings(data.settings);
-        if (data.pending) setPending(data.pending);
-        if (data.blacklist) setBlacklist(data.blacklist);
-        if (data.savings) {
-          const s = data.savings;
-          setSavings({ knownBalance: s.knownBalance ?? s.baseBalance ?? 0, knownDate: s.knownDate ?? s.baseDate ?? new Date().toISOString().split("T")[0], pots: s.pots || [] });
-        }
-        alert("Backup succesvol geïmporteerd!");
-      } catch (err) {
-        alert("Fout bij het lezen van het bestand. Is het een geldige JSON backup?");
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = null;
   };
 
   const autoCat = useCallback((tx) => {
@@ -356,27 +329,25 @@ export default function App() {
     if (!file) return;
     const isJSON = file.name.toLowerCase().endsWith(".json");
     if (isJSON) {
-      if (!window.confirm("Je staat op het punt een backup te herstellen. Dit overschrijft AL je huidige data. Weet je het zeker?")) {
+      if (!window.confirm("Je staat op het punt een backup te herstellen. Dit overschrijft AL je huidige data: transacties, categorieën, patronen, geblokkeerde tegenpartijen, spaarpotjes, budgetten en instellingen.\n\nEr wordt eerst automatisch een veiligheidskopie gemaakt. Weet je het zeker?")) {
         event.target.value = null;
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
+        let data;
         try {
-          const data = JSON.parse(e.target.result);
-          if (data.txs) setTxs(data.txs);
-          if (data.cats) setCats(normalizeCats(data.cats));
-          if (data.rules) setRules(data.rules);
-          if (data.settings) setSettings(data.settings);
-          if (data.pending) setPending(data.pending);
-          if (data.blacklist) setBlacklist(data.blacklist);
-          if (data.savings) {
-            const s = data.savings;
-            setSavings({ knownBalance: s.knownBalance ?? s.baseBalance ?? 0, knownDate: s.knownDate ?? s.baseDate ?? new Date().toISOString().split("T")[0], pots: s.pots || [] });
-          }
-          alert("Backup succesvol geïmporteerd!");
+          data = JSON.parse(e.target.result);
         } catch (err) {
-          alert("Fout bij het lezen van het backup bestand.");
+          setImportErr("Fout bij het lezen van het backup bestand. Is het geldige JSON?");
+          return;
+        }
+        try {
+          await applyBackupData(data);
+          setToast("Backup succesvol hersteld");
+          setTimeout(() => setToast(null), 3000);
+        } catch (err) {
+          setImportErr(`Herstellen mislukt: ${err.message}\n\nJe huidige data is niet gewijzigd.`);
         }
       };
       reader.readAsText(file);

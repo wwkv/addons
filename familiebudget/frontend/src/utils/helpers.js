@@ -43,6 +43,18 @@ export function safeEvalMath(str) {
   try { return Function('"use strict"; return (' + s + ")")(); } catch { return NaN; }
 }
 
+/* Savings state was originally stored as baseBalance/baseDate; it is now
+   knownBalance/knownDate. Old backups and databases still carry the old
+   names, so keep reading both when loading. */
+export function normalizeSavings(s) {
+  const src = s || {};
+  return {
+    knownBalance: src.knownBalance ?? src.baseBalance ?? 0,
+    knownDate: src.knownDate ?? src.baseDate ?? new Date().toISOString().split("T")[0],
+    pots: src.pots || [],
+  };
+}
+
 export function netBalanceColor(amount) {
   if (amount > 0) return "var(--green)";
   if (amount < 0) return "var(--red)";
