@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { Star, Package, Scissors, Plus } from "lucide-react";
 import CatGrid from './CatGrid.jsx';
 
 export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
@@ -43,12 +44,12 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
       zIndex: 1000,
       background: "var(--card)",
       border: "1px solid var(--border)",
-      borderRadius: 10,
-      padding: 8,
+      borderRadius: 14,
+      padding: 10,
       width: menuW,
       maxHeight: menuH,
       overflow: "auto",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+      boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
       visibility: "visible",
     });
   }, [open]);
@@ -79,13 +80,15 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
     setOpen(false);
   };
 
-  let btnLabel = "＋ Categorie";
-  let btnBorder = "2px dashed var(--muted)";
+  let btnLabel = null;
+  let btnIcon = <Plus size={compact ? 10 : 12} />;
+  let btnBorder = "1px dashed var(--muted)";
   let btnBg = "transparent";
-  if (hasSplits) { btnLabel = "✂️ Gesplitst"; btnBorder = "2px solid var(--accent)"; }
+  if (hasSplits) { btnLabel = "Gesplitst"; btnIcon = <Scissors size={compact ? 10 : 12} />; btnBorder = "1px solid var(--accent)"; }
   else if (tx.categoryId && cat) {
     btnLabel = `${cat.name.slice(0, 12)} › ${sub ? sub.name : "?"}`;
-    btnBorder = `2px solid ${cat.color}`;
+    btnIcon = null;
+    btnBorder = `1px solid ${cat.color}`;
     btnBg = cat.color + "20";
   }
 
@@ -94,33 +97,33 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
       <button
         ref={buttonRef}
         onClick={() => setOpen(!open)}
-        style={{ padding: compact ? "3px 7px" : "5px 10px", borderRadius: 6, border: btnBorder, background: btnBg, color: "var(--text)", cursor: "pointer", fontSize: compact ? 10 : 12, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: compact ? "3px 7px" : "5px 10px", borderRadius: 7, border: btnBorder, background: btnBg, color: "var(--text)", cursor: "pointer", fontSize: compact ? 10 : 12, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
       >
-        {btnLabel}
+        {btnIcon}{btnLabel || "Categorie"}
       </button>
 
       {open && createPortal(
         <div ref={menuRef} style={menuStyle}>
           {/* Favorites */}
           {favs.length > 0 && (
-            <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "var(--accent)", padding: "2px 4px", textTransform: "uppercase" }}>⭐ Meest gebruikt</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, color: "var(--accent)", padding: "2px 4px", textTransform: "uppercase" }}><Star size={10} fill="currentColor" strokeWidth={0} />Meest gebruikt</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {favs.map(({ cat: fc, sub: fs }) => (
-                  <button key={fs.id} onClick={(e) => handleSelect(fc.id, fs.id, e)} style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>
-                    <span style={{ color: fc.color, fontWeight: 600 }}>{fc.name.slice(0, 8)}</span> › {fs.name}
+                  <button key={fs.id} onClick={(e) => handleSelect(fc.id, fs.id, e)} style={{ padding: "4px 9px", borderRadius: 999, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10.5, fontWeight: 500 }}>
+                    <span style={{ color: fc.color, fontWeight: 700 }}>{fc.name.slice(0, 8)}</span> › {fs.name}
                   </button>
                 ))}
               </div>
             </div>
           )}
           {/* Parking */}
-          <button onClick={(e) => handleSelect("nog_te_verwerken", "te_categoriseren", e)} style={{ display: "block", width: "100%", textAlign: "left", padding: "4px 8px", background: "#88888810", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 4, fontSize: 10, fontStyle: "italic", marginBottom: 6 }}>
-            📦 Nog te verwerken
+          <button onClick={(e) => handleSelect("nog_te_verwerken", "te_categoriseren", e)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", padding: "5px 8px", background: "var(--bg)", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 7, fontSize: 10.5, fontStyle: "italic", marginBottom: 8 }}>
+            <Package size={12} />Nog te verwerken
           </button>
           {/* 3-column grid */}
           <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={handleSelect} />
-          <div style={{ marginTop: 6, fontSize: 8, opacity: 0.35, color: "var(--text)", textAlign: "center" }}>
+          <div style={{ marginTop: 8, fontSize: 9, opacity: 0.4, color: "var(--text)", textAlign: "center" }}>
             ⌘+klik of ⇧+klik = patroon onthouden
           </div>
         </div>,

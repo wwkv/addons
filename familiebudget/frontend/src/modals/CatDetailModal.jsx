@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from "react";
+import { X } from "lucide-react";
 import { fmt, fD, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import Pie from '../components/Pie.jsx';
@@ -19,10 +20,10 @@ export default function CatDetailModal({ catId, cats, catStats, totalExp, expand
   catTxs.sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 600, width: "95%", maxHeight: "85vh", overflow: "auto", border: "1px solid var(--border)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 600, width: "95%", maxHeight: "85vh", overflow: "auto", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: cat.color }}>{cat.name}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>✕</button>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: cat.color }}>{cat.name}</h3>
+          <button onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--muted)", cursor: "pointer" }}><X size={14} /></button>
         </div>
         <Pie data={subData} size={170} legendTotal={totalExp} />
         <div style={{ marginTop: 14, maxHeight: 250, overflow: "auto" }}>

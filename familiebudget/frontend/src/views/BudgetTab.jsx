@@ -244,6 +244,7 @@ export default function BudgetTab({ cats }) {
 
   return (
     <div>
+      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Budget</h1>
       <div
         style={{
           position: "sticky",
@@ -258,13 +259,13 @@ export default function BudgetTab({ cats }) {
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
-          style={{ padding: "3px 6px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10, fontWeight: 600 }}
+          style={{ padding: "4px 7px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10, fontWeight: 600 }}
         >
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
 
-      <div style={{ background: "var(--card)", borderRadius: 6, border: "1px solid var(--border)", overflow: "hidden" }}>
+      <div style={{ background: "var(--card)", borderRadius: 11, border: "1px solid var(--border)", overflow: "hidden" }}>
         <div style={{ overflow: "auto", maxHeight: "calc(100vh - 180px)" }}>
         <div style={{ display: "grid", gridTemplateColumns: GRID_TEMPLATE, rowGap: 0, columnGap: 8, minWidth: 700, alignItems: "stretch", fontSize: 10, background: "var(--card)" }}>
           <div style={{ ...catCellStyle(0), ...cellStyle(true), justifyContent: "flex-start", textTransform: "uppercase", fontSize: 8, letterSpacing: 0.3, position: "sticky", top: 0, zIndex: 4 }}>Categorie</div>
@@ -290,7 +291,7 @@ export default function BudgetTab({ cats }) {
             </span>
           </div>
           {renderSection("Inkomsten", incomeOpen, setIncomeOpen, incomeCats, incomeBudgets, setIncomeBudgets, "var(--green)")}
-          {renderSection("Uitgaven", expenseOpen, setExpenseOpen, expenseCats, expenseBudgets, setExpenseBudgets, "#C06E52")}
+          {renderSection("Uitgaven", expenseOpen, setExpenseOpen, expenseCats, expenseBudgets, setExpenseBudgets, "var(--danger)")}
         </div>
         </div>
       </div>

@@ -2,63 +2,88 @@
    FamilieBudget Theme
    ═══════════════════════════════════════════════ */
 
-/* ── Base tokens ── */
+/* ── Base tokens ──
+   "Ledger" direction: cool ink/navy dark, violet accent, DM Sans/DM Mono +
+   an Instrument Serif headline touch. Money amounts (green/red) are reserved
+   for signed € values only — never used for category coding elsewhere. */
 :root {
   /* Default = dark */
-  --bg: #1E1B17;
-  --card: #2A2520;
-  --border: #3D372F;
-  --text: #E8E0D4;
-  --muted: #8A8078;
-  --green: #7BC47F;
-  --red: #E8A080;
-  --accent: #C4956A;
+  --bg: #0E1016;
+  --card: #171A22;
+  --border: #272B36;
+  --text: #EDEFF4;
+  --muted: #8B90A0;
+  --green: #39C98C;
+  --red: #F1685E;
+  --accent: #7C6CF0;
 
   /* Alpha variants (8-digit hex) */
-  --bg-30: #1E1B1730;
-  --bg-80: #1E1B1780;
-  --card-40: #2A252040;
-  --card-60: #2A252060;
-  --border-30: #3D372F30;
-  --accent-10: #C4956A10;
-  --accent-20: #C4956A20;
-  --accent-30: #C4956A30;
-  --accent-40: #C4956A40;
-  --muted-40: #8A807840;
+  --bg-30: #0E101630;
+  --bg-80: #0E101680;
+  --card-40: #171A2240;
+  --card-60: #171A2260;
+  --border-30: #272B3630;
+  --accent-10: #7C6CF010;
+  --accent-20: #7C6CF020;
+  --accent-30: #7C6CF030;
+  --accent-40: #7C6CF040;
+  --muted-40: #8B90A040;
+
+  /* Category-coding palette — deliberately separate from green/red so
+     category chips, charts and tags never compete with the money signal */
+  --cat-1: #7C6CF0;
+  --cat-2: #5B9BD8;
+  --cat-3: #F0C56C;
+  --cat-4: #D874B8;
+  --cat-5: #6B7086;
 
   /* Semantic colors */
-  --primary: #4A7C59;
-  --danger: #C06E52;
-  --type-vast: #5B9BD5;
-  --type-variabel: #6BAF6E;
-  --necessity-luxe: #D4845A;
-  --neutral: #6B7B8D;
+  --primary: #7C6CF0;
+  --danger: #F1685E;
+  --type-vast: #5B9BD8;
+  --type-variabel: #F0C56C;
+  --necessity-luxe: #D874B8;
+  --neutral: #6B7086;
 
   /* Fonts */
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'DM Mono', monospace;
+  --font-display: 'Instrument Serif', Georgia, serif;
 }
 
 [data-theme="light"] {
-  --bg: #F5F3F0;
+  --bg: #F4F5F8;
   --card: #FFFFFF;
-  --border: #E0DCD6;
-  --text: #2A2520;
-  --muted: #8A8078;
-  --green: #2D7A32;
-  --red: #C04A2B;
-  --accent: #B07840;
+  --border: #E3E6ED;
+  --text: #14161C;
+  --muted: #6B7180;
+  --green: #1F9D6B;
+  --red: #D6483F;
+  --accent: #6C5CE8;
 
-  --bg-30: #F5F3F030;
-  --bg-80: #F5F3F080;
+  --bg-30: #F4F5F830;
+  --bg-80: #F4F5F880;
   --card-40: #FFFFFF40;
   --card-60: #FFFFFF60;
-  --border-30: #E0DCD630;
-  --accent-10: #B0784010;
-  --accent-20: #B0784020;
-  --accent-30: #B0784030;
-  --accent-40: #B0784040;
-  --muted-40: #8A807840;
+  --border-30: #E3E6ED30;
+  --accent-10: #6C5CE810;
+  --accent-20: #6C5CE820;
+  --accent-30: #6C5CE830;
+  --accent-40: #6C5CE840;
+  --muted-40: #6B718040;
+
+  --cat-1: #6C5CE8;
+  --cat-2: #3B82C4;
+  --cat-3: #D9A22E;
+  --cat-4: #C2508F;
+  --cat-5: #7A8092;
+
+  --primary: #6C5CE8;
+  --danger: #D6483F;
+  --type-vast: #3B82C4;
+  --type-variabel: #D9A22E;
+  --necessity-luxe: #C2508F;
+  --neutral: #7A8092;
 }
 
 /* ── Layout ── */
@@ -71,9 +96,87 @@
 }
 
 .app-main {
-  padding: 12px 14px;
-  max-width: 1100px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 28px 28px;
+  max-width: 1680px;
   margin: 0 auto;
+}
+
+.app-body {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Icon rail ── */
+.app-rail {
+  width: 58px;
+  flex: 0 0 58px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.app-rail::-webkit-scrollbar { display: none; }
+
+.rail-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--accent);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.rail-btn {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+.rail-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+.rail-btn.active {
+  background: var(--accent-20);
+  color: var(--accent);
+}
+.rail-spacer {
+  flex: 1;
+}
+.rail-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-40);
 }
 
 /* ── Header ── */
@@ -82,6 +185,7 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -93,13 +197,13 @@
 /* ── Cards ── */
 .card {
   background: var(--card);
-  border-radius: 7px;
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
 .card-padded {
   background: var(--card);
-  border-radius: 7px;
+  border-radius: 10px;
   padding: 12px;
   border: 1px solid var(--border);
 }
@@ -107,7 +211,7 @@
 /* ── Buttons ── */
 .btn {
   padding: 4px 9px;
-  border-radius: 5px;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 10px;
   font-weight: 600;
@@ -141,7 +245,7 @@
 /* ── Tables ── */
 .table-wrap {
   background: var(--card);
-  border-radius: 7px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -176,11 +280,15 @@
 /* ── Forms ── */
 .input, .select {
   padding: 3px 5px;
-  border-radius: 5px;
+  border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
   font-size: 9px;
+}
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 /* ── Typography ── */
@@ -249,10 +357,10 @@
 
 .modal-content {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   padding: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
 
 /* ── Loading ── */
@@ -273,38 +381,65 @@
   opacity: 0.3;
 }
 
-/* ── Nav scrollbar hidden at all sizes ── */
-.app-nav {
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.app-nav::-webkit-scrollbar {
-  display: none;
-}
-.app-nav button {
-  flex-shrink: 0;
-}
-
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .app-nav {
-    order: 3;
-    width: 100%;
-    flex: 1 1 100% !important;
-  }
   .zoom-controls {
     display: none;
   }
-  .dashboard-grid {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: unset !important;
-    height: auto !important;
-    gap: 12px;
+
+  /* Icon rail becomes a bottom tab bar */
+  .app-rail {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    height: 62px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 6px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    z-index: 60;
   }
-  .dashboard-grid > div {
-    grid-column: span 1 !important;
-    height: auto !important;
-    min-height: 260px;
+  .rail-logo, .rail-spacer {
+    display: none;
+  }
+  .mobile-hide {
+    display: none;
+  }
+  .rail-btn.mobile-settings {
+    order: 10;
+  }
+  .app-main {
+    padding-bottom: 84px;
+  }
+
+  /* Floating quick-categorize action */
+  .mobile-fab {
+    display: flex;
+    position: fixed;
+    right: 18px;
+    bottom: 78px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0E1016;
+    border: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 24px var(--accent-40);
+    cursor: pointer;
+    z-index: 70;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-fab {
+    display: none;
   }
 }
 

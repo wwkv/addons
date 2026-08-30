@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { ArrowRight } from "lucide-react";
 import { safeEvalMath } from '../utils/helpers.js';
 import { fmt } from '../utils/formatters.js';
 
@@ -97,7 +98,6 @@ export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, o
             background: "transparent",
             color: "var(--muted)",
             opacity: 0.7,
-            fontSize: 9,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -105,7 +105,7 @@ export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, o
           }}
           title="Stream naar rechts"
         >
-          ➔
+          <ArrowRight size={10} />
         </button>
       )}
       <div style={{ position: "absolute", bottom: "2px", left: "10%", width: `${Math.min(80, (Math.max(0, Number(value)) / Math.max(maxScale, 1)) * 80)}%`, height: "3px", borderRadius: "9999px", background: barColor || "var(--accent)", opacity: 0.5, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />

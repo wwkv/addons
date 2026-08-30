@@ -25,13 +25,14 @@ export default function ContextMenu({ x, y, items, onClose}) {
           onClick={() => { item.onClick?.(); onClose(); }}
           disabled={item.disabled}
           style={{
-            display: "block", width: "100%", padding: "6px 12px",
+            display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "6px 12px",
             border: "none", background: "transparent",
             color: item.disabled ? "var(--muted)" : "var(--text)",
             cursor: item.disabled ? "default" : "pointer",
             fontSize: 11, textAlign: "left",
           }}
         >
+          {item.icon && <span style={{ display: "flex", flexShrink: 0, opacity: item.disabled ? 0.5 : 1 }}>{item.icon}</span>}
           {item.label}
         </button>
       ))}

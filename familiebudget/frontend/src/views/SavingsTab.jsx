@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
-import { fmt, fD } from '../utils/formatters.js';
-import { isSubExcluded } from '../utils/helpers.js';
+import { useState } from "react";
+import { Settings, Check, ChevronLeft, ChevronRight, Plus, Minus, X } from "lucide-react";
+import { fmt } from '../utils/formatters.js';
+
+const POT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)"];
 
 export default function SavingsTab({ txs, expanded, cats, savings, setSavings, year, settings, unassignedSavings }) {
   const [showSetup, setShowSetup] = useState(!savings.knownBalance);
@@ -15,34 +17,24 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
   const knownDate = savings.knownDate || "";
 
   /* Spaarbuffer target: matches Noodzakelijk vs Luxe pie chart exactly */
-  const { bufferTarget, avgMonthlyNodig } = (() => {
+  const { bufferTarget } = (() => {
     const data = expanded ?? txs;
-    const yearExpenses = data.filter(t =>
-      t.date.startsWith(year.toString()) &&
-      Number(t.amount) < 0
-    );
+    const yearExpenses = data.filter(t => t.date.startsWith(year.toString()) && Number(t.amount) < 0);
     const nodigTxs = yearExpenses.filter(t => {
       const cat = cats.find(c => c.id === t.categoryId);
       const sub = cat ? cat.subs.find(ss => ss.id === t.subCategoryId) : null;
       if (!cat || !sub || sub.excluded || cat.id === "sparen") return false;
-      const necessity = sub.necessity || "nodig";
-      return necessity !== "luxe";
+      return (sub.necessity || "nodig") !== "luxe";
     });
     const uniqueMonths = new Set(nodigTxs.map(t => t.date.substring(0, 7)));
-    const totalNodigSpend = Math.abs(
-      nodigTxs.reduce((sum, t) => sum + Number(t.amount), 0)
-    );
+    const totalNodigSpend = Math.abs(nodigTxs.reduce((sum, t) => sum + Number(t.amount), 0));
     const activeMonthsCount = uniqueMonths.size > 0 ? uniqueMonths.size : 1;
     const avgMonthlyNodigVal = totalNodigSpend / activeMonthsCount;
-    const mult = settings?.bufferMultiplier || 5;
-    const rawBuffer = avgMonthlyNodigVal * mult;
-    const bufferTargetVal = Math.ceil(rawBuffer / 500) * 500;
-    return { bufferTarget: bufferTargetVal, avgMonthlyNodig: avgMonthlyNodigVal };
+    const rawBuffer = avgMonthlyNodigVal * (settings?.bufferMultiplier || 5);
+    return { bufferTarget: Math.ceil(rawBuffer / 500) * 500 };
   })();
 
-  const savingsWindowTxs = knownDate
-    ? txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear && tx.date <= knownDate)
-    : [];
+  const savingsWindowTxs = knownDate ? txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear && tx.date <= knownDate) : [];
   const netChange = savingsWindowTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
   const jan1Balance = (savings.knownBalance || 0) - netChange;
 
@@ -60,55 +52,42 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
     return { ...pot, allocated: actualAllocated, intent };
   });
 
-  const updatePot = (id, patch) => {
-    setSavings(s => ({
-      ...s,
-      pots: s.pots.map(p => p.id === id ? { ...p, ...patch } : p),
-    }));
-  };
-  const removePot = (id) => {
-    setSavings(s => ({ ...s, pots: s.pots.filter(p => p.id !== id) }));
-  };
-  const handleAssign = (potId, amount) => {
-    setSavings(prev => ({
-      ...prev,
-      pots: (prev.pots || []).map(p => {
-        if (p.id !== potId) return p;
-        const currentSaved = Number(p.saved) || 0;
-        const newSaved = Math.max(0, currentSaved + amount);
-        return { ...p, saved: newSaved };
-      })
-    }));
-  };
-  const movePot = (index, direction) => {
-    setSavings(prev => {
-      const newPots = [...(prev.pots || [])];
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= newPots.length) return prev;
-      [newPots[index], newPots[targetIndex]] = [newPots[targetIndex], newPots[index]];
-      return { ...prev, pots: newPots };
-    });
-  };
-  const inputStyle = { padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11 };
+  const updatePot = (id, patch) => setSavings(s => ({ ...s, pots: s.pots.map(p => p.id === id ? { ...p, ...patch } : p) }));
+  const removePot = (id) => setSavings(s => ({ ...s, pots: s.pots.filter(p => p.id !== id) }));
+  const handleAssign = (potId, amount) => setSavings(prev => ({ ...prev, pots: (prev.pots || []).map(p => p.id === potId ? { ...p, saved: Math.max(0, (Number(p.saved) || 0) + amount) } : p) }));
+  const movePot = (index, direction) => setSavings(prev => {
+    const newPots = [...(prev.pots || [])];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newPots.length) return prev;
+    [newPots[index], newPots[targetIndex]] = [newPots[targetIndex], newPots[index]];
+    return { ...prev, pots: newPots };
+  });
+
+  const inputStyle = { padding: "6px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", fontSize: 11 };
+  const stepperStyle = (disabled) => ({ width: 28, height: 28, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: disabled ? "var(--muted)" : "var(--text)", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 });
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, padding: "8px 12px", marginBottom: 16, border: "1px solid var(--border)", borderRadius: 6, background: "var(--card-40)", fontSize: 11, color: "var(--text)" }}>
+      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Sparen</h1>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "9px 14px", marginBottom: 14, border: "1px solid var(--border)", borderRadius: 11, background: "var(--card)", fontSize: 11, color: "var(--text)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ color: "var(--muted)" }}>Startsaldo (1 Jan):</span>
           <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(jan1Balance)}</span>
-          <span style={{ color: "var(--muted)" }}>|</span>
+          <span style={{ color: "var(--border)" }}>|</span>
           <span style={{ color: "var(--muted)" }}>Gespaard dit jaar:</span>
           <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(totalSavedThisYear)}</span>
-          <span style={{ color: "var(--muted)" }}>|</span>
-          <span style={{ color: "var(--muted)" }}>Actueel Saldo:</span>
+          <span style={{ color: "var(--border)" }}>|</span>
+          <span style={{ color: "var(--muted)" }}>Actueel saldo:</span>
           <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 600, color: "var(--green)" }}>{fmt(liveTotal)}</span>
         </div>
-        <button onClick={() => setShowSetup(true)} style={{ padding: "4px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10, flexShrink: 0 }}>⚙️ Saldo Instellen</button>
+        <button onClick={() => setShowSetup(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10, flexShrink: 0 }}><Settings size={11} />Saldo instellen</button>
       </div>
+
       {showSetup && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 18, maxWidth: 320, width: "90%", border: "1px solid var(--border)" }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Saldo instellen</h3>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 320, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)" }}>Saldo instellen</h3>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, marginBottom: 4, color: "var(--muted)" }}>Bekend saldo</label>
               <input type="number" value={savings.knownBalance || 0} onChange={e => setSavings(s => ({ ...s, knownBalance: Number(e.target.value) || 0 }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
@@ -117,147 +96,106 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
               <label style={{ display: "block", fontSize: 11, marginBottom: 4, color: "var(--muted)" }}>Datum van bekend saldo</label>
               <input type="date" value={knownDate} onChange={e => setSavings(s => ({ ...s, knownDate: e.target.value || "" }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
             </div>
-            <button onClick={() => setShowSetup(false)} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Opslaan</button>
+            <button onClick={() => setShowSetup(false)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={12} />Opslaan</button>
           </div>
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255, 255, 255, 0.05)", padding: "16px 24px", borderRadius: "12px", marginBottom: "24px", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
+
+      {/* Hero: te verdelen */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", background: "var(--card)", border: "1px solid var(--accent)", borderRadius: 13, padding: "14px 18px", marginBottom: 16 }}>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text)", marginBottom: 4 }}>Te verdelen: €{(unassignedSavings || 0).toLocaleString("nl-NL")}</div>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>Beschikbare blokken: {blocksAvailable}× €250 | Restant (blijft staan): €{remainder}</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Te verdelen</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--green)" }}>{fmt(unassignedSavings || 0)}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {Array.from({ length: Math.min(blocksAvailable, 10) }).map((_, i) => (
-            <div key={i} style={{ width: 16, height: 16, background: "#4ade80", borderRadius: 4 }} />
-          ))}
-          {blocksAvailable > 10 && <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 4 }}>+{blocksAvailable - 10}</span>}
+          {Array.from({ length: Math.min(blocksAvailable, 10) }).map((_, i) => <div key={i} style={{ width: 10, height: 10, background: "var(--accent)", borderRadius: 3 }} />)}
+          {blocksAvailable > 10 && <span style={{ fontSize: 10.5, color: "var(--muted)", marginLeft: 4 }}>+{blocksAvailable - 10}</span>}
         </div>
-        <button
-          onClick={() => setIsAssignMode(!isAssignMode)}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: "none",
-            background: isAssignMode ? "#4A7C59" : "rgba(0,0,0,0.3)",
-            color: "#fff",
-            cursor: unassignedSavings >= 250 || isAssignMode ? "pointer" : "not-allowed",
-            fontSize: 12,
-            fontWeight: 600,
-            opacity: unassignedSavings >= 250 || isAssignMode ? 1 : 0.5
-          }}
-          disabled={!isAssignMode && unassignedSavings < 250}
-        >
-          {isAssignMode ? "Klaar met verdelen" : "Verdeel Geld"}
-        </button>
+        <div style={{ fontSize: 11, color: "var(--muted)" }}>{blocksAvailable}× €250 · restant €{remainder}</div>
+        <div style={{ marginLeft: "auto" }}>
+          <button
+            onClick={() => setIsAssignMode(!isAssignMode)}
+            disabled={!isAssignMode && unassignedSavings < 250}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: isAssignMode ? "transparent" : "var(--accent)", color: isAssignMode ? "var(--muted)" : "#0E1016", cursor: (!isAssignMode && unassignedSavings < 250) ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: (!isAssignMode && unassignedSavings < 250) ? 0.5 : 1, ...(isAssignMode ? { border: "1px solid var(--border)" } : {}) }}
+          >
+            {isAssignMode ? <><Check size={13} />Klaar met verdelen</> : "Verdeel geld"}
+          </button>
+        </div>
       </div>
-      <div style={{ display: "flex", flexWrap: "nowrap", gap: "20px", overflowX: "auto", paddingBottom: "24px", marginTop: "32px", WebkitOverflowScrolling: "touch" }}>
-        {/* Permanent Spaarbuffer card */}
-        <div style={{ background: "var(--card)", border: "2px solid #4ade80", boxShadow: "0 4px 20px rgba(74, 222, 128, 0.15)", borderRadius: 8, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", minWidth: "272px", flexShrink: 0, overflow: "visible" }}>
-          <h3 style={{ margin: "28px 0 16px 0", fontSize: 14, fontWeight: 600, color: "var(--text)", textAlign: "center" }}>Spaarbuffer</h3>
-          <div style={{ width: "80px", height: "200px", background: "rgba(255, 255, 255, 0.05)", borderRadius: "12px", overflow: "hidden", display: "flex", alignItems: "flex-end", margin: "20px 0" }}>
-            <div style={{ width: "100%", height: `${bufferTarget > 0 ? Math.min((bufferAllocated / bufferTarget) * 100, 100) : 0}%`, background: "#4ade80", transition: "height 0.5s ease" }} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+        {/* Spaarbuffer — full-width row */}
+        <div style={{ gridColumn: "1 / -1", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: "0 0 170px" }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Spaarbuffer</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {settings?.bufferMultiplier || 5}× gem. vaste lasten</div>
           </div>
-          <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px" }}>
-            €{bufferAllocated.toLocaleString("nl-NL")} ({Math.round((bufferAllocated / bufferTarget) * 100 || 0)}%)
+          <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#20242F", overflow: "hidden", minWidth: 100 }}>
+            <div style={{ width: `${bufferTarget > 0 ? Math.min((bufferAllocated / bufferTarget) * 100, 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--accent)", transition: "width 0.4s" }} />
           </div>
-          <div style={{ width: "100%", background: "rgba(0,0,0,0.2)", padding: "12px", borderRadius: "8px" }}>
-            <div style={{ fontWeight: "600", fontSize: "15px", marginBottom: "4px", color: "var(--text)" }}>€{bufferTarget.toLocaleString("nl-NL")}</div>
-            <div style={{ fontSize: "11px", color: "var(--muted)" }}>Gebaseerd op {settings?.bufferMultiplier || 5}× gem. vaste lasten</div>
-          </div>
+          <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "var(--muted)", flexShrink: 0 }}>{Math.round((bufferAllocated / bufferTarget) * 100 || 0)}%</div>
         </div>
+
         {potsWithAllocation.map((pot, index) => {
           const target = pot.target || 0;
           const pct = target > 0 ? Math.min((pot.allocated / target) * 100, 100) : 0;
+          const color = POT_COLORS[index % POT_COLORS.length];
           const isEditing = editingPotId === pot.id;
 
           if (isEditing) {
             return (
-              <div key={pot.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative", minWidth: "180px", flexShrink: 0 }}>
-                <input type="text" value={pot.name} onChange={e => updatePot(pot.id, { name: e.target.value })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box", marginBottom: 12 }} placeholder="Naam" />
-                <input type="number" value={pot.target ?? ""} onChange={e => updatePot(pot.id, { target: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", marginBottom: 8 }} placeholder="Doelbedrag" />
-                <input type="number" value={pot.saved ?? ""} onChange={e => updatePot(pot.id, { saved: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", marginBottom: 12 }} placeholder="Opgespaard" title="Manueel toegewezen bedrag" />
-                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
-                  <button onClick={() => setEditingPotId(null)} style={{ padding: "6px 14px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Klaar</button>
-                  <button onClick={() => { if (!window.confirm("Weet je zeker dat je dit potje wilt verwijderen?")) return; removePot(pot.id); setEditingPotId(null); }} style={{ padding: "6px 14px", borderRadius: 5, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11 }}>Verwijderen</button>
+              <div key={pot.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                <input type="text" value={pot.name} onChange={e => updatePot(pot.id, { name: e.target.value })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Naam" />
+                <input type="number" value={pot.target ?? ""} onChange={e => updatePot(pot.id, { target: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
+                <input type="number" value={pot.saved ?? ""} onChange={e => updatePot(pot.id, { saved: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Opgespaard" title="Manueel toegewezen bedrag" />
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <button onClick={() => setEditingPotId(null)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={11} />Klaar</button>
+                  <button onClick={() => { if (!window.confirm("Weet je zeker dat je dit potje wilt verwijderen?")) return; removePot(pot.id); setEditingPotId(null); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11 }}>Verwijderen</button>
                 </div>
               </div>
             );
           }
 
           return (
-            <div key={pot.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative", minWidth: "180px", flexShrink: 0 }}>
-              <div style={{ position: "absolute", top: "12px", left: "12px", display: "flex", gap: "4px" }}>
-                {index > 0 && (
-                  <button onClick={() => movePot(index, -1)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", borderRadius: "4px", cursor: "pointer", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-                )}
-                {index < (savings.pots || []).length - 1 && (
-                  <button onClick={() => movePot(index, 1)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", borderRadius: "4px", cursor: "pointer", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
-                )}
+            <div key={pot.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 9, position: "relative" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{pot.name || "Potje"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  {index > 0 && <button onClick={() => movePot(index, -1)} style={{ ...stepperStyle(false), width: 22, height: 22, borderRadius: 6 }}><ChevronLeft size={12} /></button>}
+                  {index < (savings.pots || []).length - 1 && <button onClick={() => movePot(index, 1)} style={{ ...stepperStyle(false), width: 22, height: 22, borderRadius: 6 }}><ChevronRight size={12} /></button>}
+                  {!isAssignMode && <button onClick={() => setEditingPotId(pot.id)} title="Bewerken" style={{ ...stepperStyle(false), width: 22, height: 22, borderRadius: 6 }}><Settings size={11} /></button>}
+                </div>
               </div>
-              {!isAssignMode && <button onClick={() => setEditingPotId(pot.id)} style={{ position: "absolute", top: "12px", right: "12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 14, color: "var(--muted)", padding: 4 }} title="Bewerken">⚙️</button>}
-              <h3 style={{ margin: "28px 0 16px 0", fontSize: 14, fontWeight: 600, color: "var(--text)", textAlign: "center" }}>{pot.name || "Potje"}</h3>
-              <div style={{ width: "80px", height: "200px", background: "rgba(255, 255, 255, 0.05)", borderRadius: "12px", overflow: "hidden", display: "flex", alignItems: "flex-end", margin: "20px 0" }}>
-                <div style={{ width: "100%", height: `${pct}%`, background: "#4ade80", transition: "height 0.5s ease" }} />
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px" }}>
-                €{(pot.allocated || 0).toLocaleString("nl-NL")} ({Math.round(((pot.allocated || 0) / (pot.target || 1)) * 100)}%)
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11.5, color: "var(--muted)" }}>{fmt(pot.allocated || 0).replace("€", "")} / {fmt(target).replace("€", "")} ({Math.round(pct)}%)</div>
+              <div style={{ height: 8, borderRadius: 4, background: "#20242F", overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", borderRadius: 4, background: color, transition: "width 0.4s" }} />
               </div>
               {isAssignMode && (
-                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: "16px", gap: "8px" }}>
-                  <button
-                    onClick={() => handleAssign(pot.id, -250)}
-                    disabled={(pot.allocated || 0) < 250}
-                    style={{ flex: 1, padding: "8px 0", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "6px", cursor: (pot.allocated || 0) < 250 ? "not-allowed" : "pointer", opacity: (pot.allocated || 0) < 250 ? 0.3 : 1 }}
-                  >
-                    - €250
-                  </button>
-                  <button
-                    onClick={() => handleAssign(pot.id, 250)}
-                    disabled={unassignedSavings < 250}
-                    style={{ flex: 1, padding: "8px 0", background: "rgba(74, 222, 128, 0.1)", color: "#4ade80", border: "1px solid rgba(74, 222, 128, 0.2)", borderRadius: "6px", cursor: unassignedSavings < 250 ? "not-allowed" : "pointer", opacity: unassignedSavings < 250 ? 0.3 : 1 }}
-                  >
-                    + €250
-                  </button>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <button onClick={() => handleAssign(pot.id, -250)} disabled={(pot.allocated || 0) < 250} style={stepperStyle((pot.allocated || 0) < 250)}><Minus size={13} /></button>
+                  <button onClick={() => handleAssign(pot.id, 250)} disabled={unassignedSavings < 250} style={stepperStyle(unassignedSavings < 250)}><Plus size={13} /></button>
                 </div>
               )}
-              <div style={{ width: "100%", background: "rgba(0,0,0,0.2)", padding: "12px", borderRadius: "8px", marginTop: isAssignMode ? "16px" : 0 }}>
-                <div style={{ fontWeight: "600", fontSize: "15px", marginBottom: "4px", color: "var(--text)" }}>€{target.toLocaleString("nl-NL")}</div>
-              </div>
             </div>
           );
         })}
+
         <div
           onClick={!isAdding ? () => { setIsAdding(true); setDraftPot({ name: "Nieuw Doel", target: 1000, saved: 0 }); } : undefined}
-          style={{
-            border: "2px dashed rgba(255, 255, 255, 0.2)",
-            borderRadius: "8px",
-            background: "transparent",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: isAdding ? "default" : "pointer",
-            minHeight: "250px",
-            minWidth: "180px",
-            flexShrink: 0,
-            color: "rgba(255, 255, 255, 0.5)",
-            transition: "background 0.2s"
-          }}
-          onMouseEnter={!isAdding ? (e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)" : undefined}
-          onMouseLeave={!isAdding ? (e) => e.currentTarget.style.background = "transparent" : undefined}
+          style={{ border: "1px dashed var(--border)", borderRadius: 14, background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: isAdding ? "default" : "pointer", minHeight: 140, color: "var(--muted)" }}
         >
           {!isAdding ? (
             <>
-              <div style={{ fontSize: "48px", fontWeight: "300", marginBottom: "8px" }}>+</div>
-              <div style={{ fontSize: "14px", fontWeight: "500" }}>Nieuw Potje</div>
+              <Plus size={22} strokeWidth={1.5} />
+              <div style={{ fontSize: 12, fontWeight: 600, marginTop: 6 }}>Nieuw potje</div>
             </>
           ) : (
-            <div style={{ width: "100%", padding: 16, display: "flex", flexDirection: "column", gap: 10, alignItems: "stretch" }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: "100%", padding: 16, display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch" }} onClick={e => e.stopPropagation()}>
               <input type="text" value={draftPot.name} onChange={e => setDraftPot(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Naam" />
               <input type="number" value={draftPot.target ?? ""} onChange={e => setDraftPot(p => ({ ...p, target: Number(e.target.value) || 0 }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <button onClick={() => { setSavings(s => ({ ...s, pots: [...(s.pots || []), { id: Date.now().toString(), ...draftPot }] })); setIsAdding(false); }} style={{ flex: 1, padding: "6px 12px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Opslaan</button>
-                <button onClick={() => setIsAdding(false)} style={{ flex: 1, padding: "6px 12px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleren</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setSavings(s => ({ ...s, pots: [...(s.pots || []), { id: Date.now().toString(), ...draftPot }] })); setIsAdding(false); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={11} />Opslaan</button>
+                <button onClick={() => setIsAdding(false)} style={{ display: "flex", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer" }}><X size={12} /></button>
               </div>
             </div>
           )}
@@ -266,4 +204,3 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
     </div>
   );
 }
-

@@ -17,6 +17,11 @@ A "Project" (e.g. wedding, home renovation) as a cross-cutting label with its ow
 
 Rough shape: a `projectId` (or array of tags) on a transaction, independent of `categoryId`/`subCategoryId`; a dedicated Projects tab showing budget vs. spent per project; a way to attach a project label from the CatPicker or right-click menu alongside the normal category.
 
+## 4. Subscriptions watcher
+Automatically detect recurring subscription-style transactions (same counterparty, similar amount, roughly monthly/yearly interval) and surface them in one place instead of them blending into the regular transaction list. Useful for spotting price increases, subscriptions nobody uses anymore, and a single "total recurring spend per month" figure.
+
+Rough shape: reuse the existing pattern-detection logic (`rules.js`/Patronen) to flag recurring counterparties; a dedicated view listing each detected subscription with last-seen amount, frequency, and a trend indicator if the amount changed; a manual "dit is geen abonnement" override for false positives.
+
 ## Done
 
 - ~~Mark merged PayPal transactions~~ — merged transactions now get `paypalMerged: true`, shown as a small "PP" badge next to the counterparty in the Transactions list, and searchable by typing "paypal" in the search box.

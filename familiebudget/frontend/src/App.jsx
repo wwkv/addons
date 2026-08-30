@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { List, Clock, X, ChevronDown, ChevronRight } from "lucide-react";
+import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Brain, Database, Upload, Download, Trash2, AlertTriangle, MessageSquare, Tag, Lock, Scale, Rocket, User, Check, CheckCircle2, Link2, Ban, Lightbulb, Plus, Minus, Sun, Moon, LayoutGrid, Wallet, PiggyBank, Search, RefreshCw, Sparkles } from "lucide-react";
 
 /* Utils */
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
@@ -16,6 +16,8 @@ import CatPicker from './components/CatPicker.jsx';
 
 /* Modals */
 import TinderMode from './modals/TinderMode.jsx';
+import ProcessingFlow from './modals/ProcessingFlow.jsx';
+import OnboardingFlow from './modals/OnboardingFlow.jsx';
 import SplitModal from './modals/SplitModal.jsx';
 import CatDetailModal from './modals/CatDetailModal.jsx';
 
@@ -32,7 +34,7 @@ export default function App() {
   const [txs, setTxs] = useState([]);
   const [cats, setCats] = useState(() => normalizeCats(DEFAULT_CATEGORIES));
   const [rules, setRules] = useState({});
-  const [settings, setSettings] = useState({ autoLevel: "normaal", darkMode: true, zoom: 100, bufferMultiplier: 5 });
+  const [settings, setSettings] = useState({ autoLevel: "normaal", darkMode: true, zoom: 100, bufferMultiplier: 5, householdAdults: 2, householdKids: 0 });
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -164,7 +166,7 @@ export default function App() {
   const handleImportBackup = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    if (!window.confirm("Weet je zeker dat je deze backup wilt importeren? Dit overschrijft AL je huidige data (transacties, potjes, instellingen).")) {
+    if (!window.confirm("Weet je zeker dat je deze backup wilt importeren? Dit overschrijft AL je huidige data (transacties, categorieën, patronen, spaarpotjes, budgetten en instellingen).")) {
       event.target.value = null;
       return;
     }
@@ -285,7 +287,7 @@ export default function App() {
           const u = updatesMap.get(t.id);
           return u ? { ...t, categoryId: u.categoryId, subCategoryId: u.subCategoryId } : t;
         }));
-        setToast(`🔄 ${updates.length} transacties opnieuw gecategoriseerd`);
+        setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
         setTimeout(() => setToast(null), 3000);
       }
       setRecalcState({ running: false, changed: updates.length });
@@ -324,7 +326,7 @@ export default function App() {
       setRules(p => ({ ...p, [k]: { catId, subId } }));
       setPending(p => { const n = { ...p }; delete n[k]; return n; });
       applyRuleToMatching(k, catId, subId); // FIX: Now applies to history immediately!
-      setToast(`🧠 Patroon geforceerd: "${k}"`);
+      setToast(`Patroon geforceerd: "${k}"`);
       setTimeout(() => setToast(null), 2500);
       return;
     }
@@ -752,40 +754,57 @@ export default function App() {
   }, [preview, importSort]);
 
   /* Lookup Button */
-  if (!loaded) return <div className="loading-screen"><div>💰<br /><span style={{ fontSize: 13, opacity: 0.6 }}>Laden...</span></div></div>;
+  if (!loaded) return <div className="loading-screen"><div style={{ textAlign: "center" }}><div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}><PiggyBank size={22} strokeWidth={1.8} /></div><span style={{ fontSize: 13, opacity: 0.6 }}>Laden...</span></div></div>;
+
+  if (!settings.onboardingComplete && txs.length === 0) {
+    return <OnboardingFlow settings={settings} setSettings={setSettings} cats={cats} setCats={setCats} />;
+  }
 
   return (
     <div className="app-shell" style={{ zoom: (settings.zoom || 100) / 100 }}>
+      <div className="app-body">
 
-      {/* ─── HEADER ─── */}
-      <header className="app-header">
-        <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
-          <input type="file" ref={fRef} onChange={handleSmartImport} accept=".csv,.json,.txt" style={{ display: "none" }} />
-          <button onClick={() => fRef.current && fRef.current.click()} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}>Importeer</button>
-          {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: "#B5597B", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Sorteer ({uncatN})</button>}
-        </div>
-        <nav className="app-nav" style={{ display: "flex", gap: 1, background: "var(--card)", borderRadius: 7, padding: 2, border: "1px solid var(--border)", flex: "1 1 0", minWidth: 0, overflowX: "auto" }}>
-          {[{ id: "dashboard", l: "📊 Overzicht" }, { id: "budget", l: "💰 Budget" }, { id: "transactions", l: "📋 Transacties" }, { id: "categories", l: "🏷️ Categorieën" }, { id: "patterns", l: "🧠 Patronen" }, { id: "savings", l: "🐖 Sparen" }].map(tab => (
-            <button key={tab.id} onClick={() => setView(tab.id)} style={{ padding: "4px 9px", borderRadius: 5, border: "none", background: view === tab.id ? "var(--border)" : "transparent", color: view === tab.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, whiteSpace: "nowrap", position: tab.id === "savings" ? "relative" : undefined }}>
-              {tab.l}
-              {tab.id === "savings" && unassignedSavings > 0 && (
-                <div style={{ position: "absolute", top: "4px", right: "4px", width: "10px", height: "10px", backgroundColor: "#4ade80", borderRadius: "50%", boxShadow: "0 0 8px rgba(74, 222, 128, 0.8)" }} />
-              )}
+        {/* ─── ICON RAIL ─── */}
+        <nav className="app-rail">
+          <div className="rail-logo" />
+          {[
+            { id: "dashboard", label: "Overzicht", icon: <LayoutGrid size={19} /> },
+            { id: "budget", label: "Budget", icon: <Wallet size={19} />, desktopOnly: true },
+            { id: "transactions", label: "Transacties", icon: <List size={19} /> },
+            { id: "categories", label: "Categorieën", icon: <Tag size={19} /> },
+            { id: "patterns", label: "Patronen", icon: <Brain size={19} />, desktopOnly: true },
+            { id: "savings", label: "Sparen", icon: <PiggyBank size={19} /> },
+          ].map(tab => (
+            <button key={tab.id} title={tab.label} onClick={() => setView(tab.id)} className={`rail-btn${view === tab.id ? " active" : ""}${tab.desktopOnly ? " mobile-hide" : ""}`}>
+              {tab.icon}
+              {tab.id === "savings" && unassignedSavings > 0 && <span className="rail-dot" />}
             </button>
           ))}
+          <div className="rail-spacer" />
+          <button title="Instellingen" onClick={() => setShowSettings(true)} className="rail-btn mobile-settings"><Settings size={18} /></button>
         </nav>
-        <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
-          <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}><option value="">Alle jaren</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
-          <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>{settings.darkMode ? "☀️" : "🌙"}</button>
-          <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>
-          <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.max((s.zoom || 100) - 25, 75) }))} style={{ padding: "4px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A−</button>
-          <button onClick={() => setShowSettings(true)} style={{ padding: "4px 7px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}>⚙️</button>
-        </div>
-      </header>
+
+        {uncatN > 0 && <button title="Snel categoriseren" onClick={() => setTinderMode(true)} className="mobile-fab"><Sparkles size={22} /></button>}
+
+        <div className="app-content">
+          {/* ─── HEADER ─── */}
+          <header className="app-header">
+            <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
+              <input type="file" ref={fRef} onChange={handleSmartImport} accept=".csv,.json,.txt" style={{ display: "none" }} />
+              <button onClick={() => fRef.current && fRef.current.click()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}><Upload size={11} />Importeer</button>
+              {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 7, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Sorteer ({uncatN})</button>}
+            </div>
+            <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
+              <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}><option value="">Alle jaren</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
+              <button onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))} style={{ display: "flex", padding: "4px 7px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer" }}>{settings.darkMode ? <Sun size={13} /> : <Moon size={13} />}</button>
+              <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.min((s.zoom || 100) + 25, 150) }))} style={{ padding: "4px 5px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A+</button>
+              <button className="zoom-controls" onClick={() => setSettings(s => ({ ...s, zoom: Math.max((s.zoom || 100) - 25, 75) }))} style={{ padding: "4px 5px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>A−</button>
+            </div>
+          </header>
 
       {/* Toast notification */}
       {toast && (
-        <div style={{ position: "fixed", top: 52, left: "50%", transform: "translateX(-50%)", zIndex: 400, background: "#4A7C59", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.3)", animation: "none", pointerEvents: "none" }}>
+        <div style={{ position: "fixed", top: 52, left: "50%", transform: "translateX(-50%)", zIndex: 400, background: "var(--primary)", color: "#fff", padding: "8px 18px", borderRadius: 10, fontSize: 12, fontWeight: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", animation: "none", pointerEvents: "none" }}>
           {toast}
         </div>
       )}
@@ -797,10 +816,10 @@ export default function App() {
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
           items={[
-            { label: `🔍 Toon alle transacties: "${contextMenu.tx.counterparty.trim().slice(0, 22)}"`, onClick: () => { setView("transactions"); setSearch(contextMenu.tx.counterparty.trim()); setMonths([]); setFCats([]); setStartDate(""); setEndDate(""); setYear(""); setContextMenu(null); } },
+            { label: `Toon alle transacties: "${contextMenu.tx.counterparty.trim().slice(0, 22)}"`, icon: <Search size={12} />, onClick: () => { setView("transactions"); setSearch(contextMenu.tx.counterparty.trim()); setMonths([]); setFCats([]); setStartDate(""); setEndDate(""); setYear(""); setContextMenu(null); } },
             { label: "Copy Category", disabled: !contextMenu.tx.categoryId, onClick: () => setCatClipboard({ categoryId: contextMenu.tx.categoryId, subCategoryId: contextMenu.tx.subCategoryId }) },
             { label: "Paste Category", disabled: !catClipboard?.categoryId, onClick: () => { const targetIds = sel.size > 0 ? [...sel] : [contextMenu.tx.id]; bulkAssign(catClipboard.categoryId, catClipboard.subCategoryId, targetIds); } },
-            { label: "🚫 Verwijder categorie" + (sel.size > 1 ? "s" : ""), disabled: sel.size <= 1 && !contextMenu.tx.categoryId, onClick: () => {
+            { label: "Verwijder categorie" + (sel.size > 1 ? "s" : ""), icon: <Ban size={12} />, disabled: sel.size <= 1 && !contextMenu.tx.categoryId, onClick: () => {
               const targetIds = sel.size > 0 ? sel : new Set([contextMenu.tx.id]);
               setTxs(p => p.map(t => targetIds.has(t.id) ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t));
               setContextMenu(null);
@@ -812,11 +831,11 @@ export default function App() {
                 const k = cp.toLowerCase().slice(0, 30);
                 setRules(r => { const n = { ...r }; delete n[k]; return n; });
                 setPending(p => { const n = { ...p }; delete n[k]; return n; });
-                setToast(`🚫 "${cp}" aan blacklist toegevoegd`);
+                setToast(`"${cp}" aan blacklist toegevoegd`);
                 setTimeout(() => setToast(null), 2500);
               }
             } },
-            { label: "🗑️ Verwijder transactie" + (sel.size > 1 ? "s" : ""), onClick: () => {
+            { label: "Verwijder transactie" + (sel.size > 1 ? "s" : ""), icon: <Trash2 size={12} />, onClick: () => {
               if (!window.confirm("Weet je zeker dat je deze transactie(s) wilt verwijderen?")) return;
               const targetIds = sel.size > 0 ? sel : new Set([contextMenu.tx.id]);
               setTxs(p => p.filter(t => !targetIds.has(t.id)));
@@ -824,7 +843,7 @@ export default function App() {
               setContextMenu(null);
             } },
             ...(sel.size > 1 && sel.has(contextMenu.tx.id) ? [
-              { label: "🔗 Samenvoegen (Bedragen optellen)", onClick: () => {
+              { label: "Samenvoegen (Bedragen optellen)", icon: <Link2 size={12} />, onClick: () => {
                 if (!window.confirm("Weet je zeker dat je deze wilt samenvoegen (bedragen optellen)?")) return;
                 const primaryId = contextMenu.tx.id;
                 setTxs(p => {
@@ -840,7 +859,7 @@ export default function App() {
                 setSel(new Set());
                 setContextMenu(null);
               } },
-              { label: "🔗 Samenvoegen (Behoud dit bedrag)", onClick: () => {
+              { label: "Samenvoegen (Behoud dit bedrag)", icon: <Link2 size={12} />, onClick: () => {
                 if (!window.confirm("Weet je zeker dat je deze wilt samenvoegen (enkel dit bedrag behouden)?")) return;
                 const primaryId = contextMenu.tx.id;
                 setTxs(p => p.filter(t => t.id === primaryId || !sel.has(t.id)));
@@ -854,7 +873,17 @@ export default function App() {
       )}
 
       {/* ─── MODALS ─── */}
-      {tinderMode && <TinderMode txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }} onAssign={(id, c, s) => assign(id, c, s, false)} onSkip={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t))} onUndo={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null } : t))} onClose={() => setTinderMode(false)} />}
+      {tinderMode && <ProcessingFlow
+        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist}
+        onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }}
+        assign={assign}
+        bulkAssign={bulkAssign}
+        onSkip={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t))}
+        onUndo={(id) => setTxs(p => p.map(t => t.id === id ? { ...t, categoryId: null, subCategoryId: null } : t))}
+        unassignedSavings={unassignedSavings}
+        onClose={() => setTinderMode(false)}
+        onGoToSavings={() => { setTinderMode(false); setView("savings"); }}
+      />}
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
       {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} months={months} onClose={() => setCatDetail(null)} />}
@@ -862,11 +891,11 @@ export default function App() {
       {/* Recalc loading overlay */}
       {recalcState.running && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 24, maxWidth: 320, width: "90%", border: "1px solid var(--border)", textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>🔄</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Heranalyse...</div>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 26, maxWidth: 320, width: "90%", border: "1px solid var(--border)", textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}><RefreshCw size={20} strokeWidth={1.8} /></div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 400, color: "var(--text)", marginBottom: 4 }}>Heranalyse...</div>
             <div style={{ fontSize: 11, opacity: 0.6, color: "var(--text)", marginBottom: 16 }}>Past patronen toe op ongecategoriseerde transacties</div>
-            <button onClick={() => { recalcCancelRef.current = true; }} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>Annuleren</button>
+            <button onClick={() => { recalcCancelRef.current = true; }} style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>Annuleren</button>
           </div>
         </div>
       )}
@@ -874,26 +903,50 @@ export default function App() {
       {/* Settings */}
       {showSettings && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 600, color: "var(--text)", flexShrink: 0 }}>⚙️ Instellingen</h3>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}><Settings size={18} strokeWidth={1.8} />Instellingen</h3>
 
             {/* Tab bar */}
-            <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 7, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0 }}>
-              {[{ id: "regels", l: "🤖 Regels" }, { id: "patronen", l: "🧠 Patronen" }, { id: "data", l: "💾 Data" }].map(t => (
-                <button key={t.id} onClick={() => { setSettingsTab(t.id); setShowExcludeAddPicker(false); setShowDeleteConfirm(false); }} style={{ flex: 1, padding: "5px 8px", borderRadius: 5, border: "none", background: settingsTab === t.id ? "var(--border)" : "transparent", color: settingsTab === t.id ? "var(--text)" : "var(--muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t.l}</button>
+            <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 9, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0 }}>
+              {[{ id: "profiel", l: "Profiel", icon: <User size={12} /> }, { id: "regels", l: "Regels", icon: <Bot size={12} /> }, { id: "patronen", l: "Patronen", icon: <Brain size={12} /> }, { id: "data", l: "Data", icon: <Database size={12} /> }].map(t => (
+                <button key={t.id} onClick={() => { setSettingsTab(t.id); setShowExcludeAddPicker(false); setShowDeleteConfirm(false); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "6px 8px", borderRadius: 7, border: "none", background: settingsTab === t.id ? "var(--accent-20)" : "transparent", color: settingsTab === t.id ? "var(--accent)" : "var(--muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t.icon}{t.l}</button>
               ))}
             </div>
 
             {/* Tab content */}
             <div style={{ overflow: "auto", flex: 1 }}>
 
+              {settingsTab === "profiel" && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Huishouden</label>
+                    <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 10px" }}>Gebruikt om je budget te vergelijken met gezinnen van vergelijkbare samenstelling.</p>
+                    {[
+                      { key: "householdAdults", l: "Aantal volwassenen", d: "Inclusief jezelf", min: 1 },
+                      { key: "householdKids", l: "Aantal kinderen", d: "Voor budgetvergelijking", min: 0 },
+                    ].map(f => (
+                      <div key={f.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", marginBottom: 8 }}>
+                        <div><div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{f.l}</div><div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{f.d}</div></div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <button onClick={() => setSettings(s => ({ ...s, [f.key]: Math.max(f.min, (s[f.key] ?? f.min) - 1) }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={12} /></button>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, width: 16, textAlign: "center" }}>{settings[f.key] ?? f.min}</span>
+                          <button onClick={() => setSettings(s => ({ ...s, [f.key]: (s[f.key] ?? f.min) + 1 }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={12} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("categories"); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--accent)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Categorieën beheren<ChevronRight size={14} /></button>
+                </div>
+              )}
+
               {settingsTab === "regels" && (
                 <div>
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Auto-categorisatie</label>
-                    {[{ v: "voorzichtig", l: "🔒 Voorzichtig", d: "Enkel 100% zekere" }, { v: "normaal", l: "⚖️ Normaal", d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "🚀 Ambitieus", d: "Alles incl. mededeling" }].map(o => (
-                      <label key={o.v} style={{ display: "flex", gap: 6, padding: "6px 8px", borderRadius: 5, border: settings.autoLevel === o.v ? "2px solid var(--accent)" : "1px solid var(--border)", cursor: "pointer", marginBottom: 3 }}>
+                    {[{ v: "voorzichtig", l: "Voorzichtig", icon: <Lock size={12} />, d: "Enkel 100% zekere" }, { v: "normaal", l: "Normaal", icon: <Scale size={12} />, d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "Ambitieus", icon: <Rocket size={12} />, d: "Alles incl. mededeling" }].map(o => (
+                      <label key={o.v} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 10px", borderRadius: 8, border: settings.autoLevel === o.v ? "1px solid var(--accent)" : "1px solid var(--border)", background: settings.autoLevel === o.v ? "var(--accent-10)" : "transparent", cursor: "pointer", marginBottom: 4 }}>
                         <input type="radio" checked={settings.autoLevel === o.v} onChange={() => setSettings(s => ({ ...s, autoLevel: o.v }))} style={{ accentColor: "var(--accent)" }} />
+                        <span style={{ color: "var(--accent)", display: "flex" }}>{o.icon}</span>
                         <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
                       </label>
                     ))}
@@ -912,7 +965,7 @@ export default function App() {
                         {cats.flatMap(c => c.subs.filter(s => s.excluded).map(s => ({ cat: c, sub: s }))).map(({ cat, sub }) => (
                           <span key={sub.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, background: cat.color + "20", border: `1px solid ${cat.color}40`, fontSize: 10, color: "var(--text)" }}>
                             {cat.name} › {sub.name}
-                            <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", fontSize: 12, lineHeight: 1 }} aria-label="Verwijderen">✕</button>
+                            <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", display: "flex", lineHeight: 1 }} aria-label="Verwijderen"><X size={11} /></button>
                           </span>
                         ))}
                       </div>
@@ -947,12 +1000,12 @@ export default function App() {
                     </div>
                     <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)" }}>Aantal keer dezelfde categorie vóór automatisch patroon</div>
                   </div>
-                  <div style={{ padding: 12, background: "var(--bg)", borderRadius: 8, border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>🧠 {Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
+                  <div style={{ padding: 12, background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}><Brain size={13} strokeWidth={1.8} />{Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
                     <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 10 }}>Geleerde patronen worden gebruikt voor automatische categorisatie.</div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
-                      <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 5, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
+                      <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
+                      <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
                     </div>
                   </div>
                 </div>
@@ -962,21 +1015,21 @@ export default function App() {
                 <div>
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Backup</label>
-                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van al je transacties, budgetten, spaardoelen en instellingen.</p>
-                    <button onClick={handleExportBackup} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border)", background: "rgba(0,0,0,0.3)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>📤 Exporteer Data</button>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van alles: transacties, categorieën, patronen (bevestigd en in afwachting), geblokkeerde tegenpartijen, budgetten, spaarpotjes en instellingen (incl. huishouden).</p>
+                    <button onClick={handleExportBackup} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Download size={13} />Exporteer data</button>
                   </div>
                   <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#C06E52", display: "block", marginBottom: 6 }}>Gevarenzone</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "block", marginBottom: 6 }}>Gevarenzone</label>
                     <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Verwijder alle data permanent. Er wordt eerst automatisch een backup geëxporteerd.</p>
                     {!showDeleteConfirm
-                      ? <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #C06E52", background: "transparent", color: "#C06E52", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>🗑️ Verwijder alle data</button>
+                      ? <button onClick={() => setShowDeleteConfirm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Trash2 size={13} />Verwijder alle data</button>
                       : (
-                        <div style={{ padding: 14, borderRadius: 8, border: "1px solid #C06E52", background: "rgba(192,110,82,0.08)" }}>
-                          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "#C06E52" }}>⚠️ Ben je zeker?</p>
+                        <div style={{ padding: 14, borderRadius: 10, border: "1px solid var(--danger)", background: "color-mix(in srgb, var(--danger) 10%, transparent)" }}>
+                          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}><AlertTriangle size={13} />Ben je zeker?</p>
                           <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, budgetten, categorieën, patronen en spaardoelen worden gewist.</p>
                           <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#C06E52", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
-                            <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                            <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "var(--danger)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
+                            <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
                           </div>
                         </div>
                       )
@@ -987,17 +1040,17 @@ export default function App() {
 
             </div>
 
-            <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ marginTop: 16, padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%", flexShrink: 0 }}>Sluiten</button>
+            <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ marginTop: 16, padding: "9px 14px", borderRadius: 9, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%", flexShrink: 0 }}>Sluiten</button>
           </div>
         </div>
       )}
 
       {importErr && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 20, maxWidth: 400, width: "90%", border: "1px solid var(--border)" }}>
-            <h3 style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 600, color: "var(--accent)" }}>⚠️</h3>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 400, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}><AlertTriangle size={19} strokeWidth={1.8} /></div>
             <p style={{ fontSize: 12, color: "var(--text)", margin: "0 0 12px", whiteSpace: "pre-line" }}>{importErr}</p>
-            <button onClick={() => setImportErr(null)} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
+            <button onClick={() => setImportErr(null)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>OK</button>
           </div>
         </div>
       )}
@@ -1005,15 +1058,15 @@ export default function App() {
       {/* Import Preview */}
       {importing && preview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 18, maxWidth: 860, width: "95%", maxHeight: "88vh", overflow: "auto", border: "1px solid var(--border)" }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{preview[0]?.source === "paypal" ? "PayPal Import" : "Crelan Import"}</h2>
-            <p style={{ margin: "0 0 8px", fontSize: 10, opacity: 0.6, color: "var(--text)" }}>{preview.length} tx · {preview.filter(t => t._d).length} dupl · {preview.filter(t => t.categoryId).length} gecat · {preview.filter(t => !t.categoryId && !t._d).length} te doen{preview.some(t => t._backfillId) ? ` · ${preview.filter(t => t._backfillId).length} te markeren als PayPal` : ""}</p>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 860, width: "95%", maxHeight: "88vh", overflow: "auto", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)" }}>{preview[0]?.source === "paypal" ? "PayPal import" : "Crelan import"}</h2>
+            <p style={{ margin: "0 0 12px", fontSize: 11, opacity: 0.6, color: "var(--text)" }}>{preview.length} tx · {preview.filter(t => t._d).length} dupl · {preview.filter(t => t.categoryId).length} gecat · {preview.filter(t => !t.categoryId && !t._d).length} te doen{preview.some(t => t._backfillId) ? ` · ${preview.filter(t => t._backfillId).length} te markeren als PayPal` : ""}</p>
             <div style={{ maxHeight: 420, overflow: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
                 <thead><tr style={{ position: "sticky", top: 0, zIndex: 3 }}>
                   {[{ f: "date", l: "Datum" }, { f: "amount", l: "Bedrag" }, { f: "counterparty", l: "Tegenpartij" }, { f: "category", l: "Categorie" }, { f: "status", l: "" }].map(col => (
                     <th key={col.f} onClick={() => { if (importSort.field === col.f) setImportSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setImportSort({ field: col.f, dir: "asc" }); }} style={{ padding: "5px 5px", textAlign: "left", fontSize: 9, fontWeight: 600, cursor: "pointer", userSelect: "none", color: "var(--text)", background: "var(--card)", borderBottom: "2px solid var(--border)" }}>
-                      {col.l} {importSort.field === col.f ? (importSort.dir === "asc" ? "↑" : "↓") : ""}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>{col.l} {importSort.field === col.f && (importSort.dir === "asc" ? <ChevronUp size={9} /> : <ChevronDown size={9} />)}</span>
                     </th>
                   ))}
                 </tr></thead>
@@ -1035,27 +1088,27 @@ export default function App() {
                       </td>
                       <td style={{ padding: "3px 5px" }}>{!hideCatPicker && (
                         <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                          {tx._v === "suggestion" && !tx.categoryId && <button onClick={() => setCatPrev(tx.id, tx._sc, tx._ss)} style={{ padding: "1px 5px", borderRadius: 3, border: `1px dashed ${cat ? cat.color : "#888"}`, background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 8 }}>💡 {sub ? sub.name : "?"}?</button>}
+                          {tx._v === "suggestion" && !tx.categoryId && <button onClick={() => setCatPrev(tx.id, tx._sc, tx._ss)} style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 5px", borderRadius: 4, border: `1px dashed ${cat ? cat.color : "var(--muted)"}`, background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 8 }}><Lightbulb size={8} />{sub ? sub.name : "?"}?</button>}
                           <CatPicker tx={tx} cats={cats} catUsage={catUsage} onSelect={(c, s) => setCatPrev(tx.id, c, s)} compact />
                         </div>
                       )}</td>
                       <td style={{ padding: "3px", textAlign: "center", fontSize: 9 }}>
                         {isBackfill ? (
-                          <span style={{ padding: "1px 5px", borderRadius: 4, background: "#0070BA", color: "#fff", fontSize: 8 }}>🏷️ Markeer als PayPal</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, background: "var(--accent-20)", color: "var(--accent)", fontSize: 8, fontWeight: 700 }}><Tag size={9} />Markeer als PayPal</span>
                         ) : tx._isDuplicate ? (
-                          <span style={{ padding: "1px 5px", borderRadius: 4, background: "#666", color: "#fff", fontSize: 8 }}>🚫 Duplicaat</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, background: "var(--border)", color: "var(--muted)", fontSize: 8, fontWeight: 700 }}><Ban size={9} />Duplicaat</span>
                         ) : tx.source === "paypal" ? (
                           tx._matchedId && tx.categoryId ? (
-                            <span style={{ padding: "1px 5px", borderRadius: 4, background: "#2D7A32", color: "#fff", fontSize: 8 }}>✅ Al verwerkt</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, background: "var(--accent-20)", color: "var(--accent)", fontSize: 8, fontWeight: 700 }}><CheckCircle2 size={9} />Al verwerkt</span>
                           ) : tx._matchedId ? (
-                            <span style={{ padding: "1px 5px", borderRadius: 4, background: "#2563eb", color: "#fff", fontSize: 8 }}>🔗 Crelan Match</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, background: "var(--accent-20)", color: "var(--accent)", fontSize: 8, fontWeight: 700 }}><Link2 size={9} />Crelan match</span>
                           ) : (
-                            <span style={{ padding: "1px 5px", borderRadius: 4, background: "#c2410c", color: "#fff", fontSize: 8 }}>⏳ Genegeerd</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, background: "var(--border)", color: "var(--muted)", fontSize: 8, fontWeight: 700 }}><Clock size={9} />Genegeerd</span>
                           )
                         ) : tx.categoryId ? (
-                          <span style={{ color: "var(--green)" }}>✓</span>
+                          <Check size={11} style={{ color: "var(--green)" }} />
                         ) : (
-                          "?"
+                          <span style={{ color: "var(--muted)" }}>?</span>
                         )}
                       </td>
                     </tr>
@@ -1063,9 +1116,9 @@ export default function App() {
                 })}</tbody>
               </table>
             </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => { setImporting(false); setPreview(null); }} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
-              <button onClick={confirmImport} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>✓ Importeer {preview.filter(t => !t._d && !(t.source === "paypal" && !t._matchedId)).length}{preview.some(t => t._backfillId) ? ` (+${preview.filter(t => t._backfillId).length} markeren)` : ""}</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "flex-end" }}>
+              <button onClick={() => { setImporting(false); setPreview(null); }} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+              <button onClick={confirmImport} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 18px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={13} />Importeer {preview.filter(t => !t._d && !(t.source === "paypal" && !t._matchedId)).length}{preview.some(t => t._backfillId) ? ` (+${preview.filter(t => t._backfillId).length} markeren)` : ""}</button>
             </div>
           </div>
         </div>
@@ -1074,13 +1127,13 @@ export default function App() {
       {/* Comment */}
       {editComment && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card)", borderRadius: 12, padding: 18, maxWidth: 380, width: "90%", border: "1px solid var(--border)" }}>
-            <h3 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}>💬 Opmerking</h3>
+          <div style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 380, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", display: "flex", alignItems: "center", gap: 7 }}><MessageSquare size={15} strokeWidth={1.8} />Opmerking</h3>
             <p style={{ margin: "0 0 6px", fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{editComment.counterparty} · {fmt(editComment.amount)}</p>
-            <textarea value={editComment.comment || ""} onChange={e => setEditComment({ ...editComment, comment: e.target.value })} rows={2} placeholder="Notitie..." style={{ width: "100%", padding: "6px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", fontSize: 11, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+            <textarea value={editComment.comment || ""} onChange={e => setEditComment({ ...editComment, comment: e.target.value })} rows={2} placeholder="Notitie..." style={{ width: "100%", padding: "7px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", fontSize: 11, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
             <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setEditComment(null)} style={{ padding: "5px 10px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
-              <button onClick={() => { setTxs(p => p.map(t => t.id === editComment.id ? { ...t, comment: editComment.comment } : t)); setEditComment(null); }} style={{ padding: "5px 12px", borderRadius: 5, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Opslaan</button>
+              <button onClick={() => setEditComment(null)} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+              <button onClick={() => { setTxs(p => p.map(t => t.id === editComment.id ? { ...t, comment: editComment.comment } : t)); setEditComment(null); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={12} />Opslaan</button>
             </div>
           </div>
         </div>
@@ -1135,7 +1188,9 @@ export default function App() {
             setPendingSort={setPendingSort} setRulesSort={setRulesSort}
           />
         )}
-      </main>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

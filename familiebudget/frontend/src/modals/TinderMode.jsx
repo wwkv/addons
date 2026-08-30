@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Clock, List } from "lucide-react";
+import { Clock, List, Check, Star, Package, PartyPopper, ArrowDown } from "lucide-react";
 import { getSuggestion } from '../utils/helpers.js';
 import { fmt, fD } from '../utils/formatters.js';
 import CatPicker from '../components/CatPicker.jsx';
@@ -84,9 +84,9 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
 
   if (!group) return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 48 }}>🎉</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Alles gecategoriseerd!</div>
-      <button onClick={onClose} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#4A7C59", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Sluiten</button>
+      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}><PartyPopper size={26} strokeWidth={1.8} /></div>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "#fff" }}>Alles gecategoriseerd!</div>
+      <button onClick={onClose} style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Sluiten</button>
     </div>
   );
 
@@ -97,8 +97,8 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
   const cardTransition = isEntering ? "none" : "transform 0.35s ease-out, opacity 0.35s ease-out";
 
   const isGroup = group.txs.length > 1;
-  const cardBg = isGroup ? ("var(--card)" === "#FFFFFF" || "var(--card)".toLowerCase() === "#ffffff" ? "#E8E4DF" : "#1E1B17") : "var(--card)";
-  const stackCardBg = isGroup ? ("var(--card)" === "#FFFFFF" || "var(--card)".toLowerCase() === "#ffffff" ? "#B8B0A8" : "#0F0E0C") : cardBg;
+  const cardBg = isGroup ? "var(--bg)" : "var(--card)";
+  const stackCardBg = isGroup ? "var(--border)" : cardBg;
   const cardShadow = isGroup
     ? "0 8px 24px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.4)"
     : "0 12px 40px rgba(0,0,0,0.3)";
@@ -119,7 +119,7 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
                 bottom: 0,
                 borderRadius: 16,
                 background: stackCardBg,
-                border: "1px solid #444",
+                border: "1px solid var(--border)",
                 boxShadow: "0 8px 24px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.5)",
                 transform: `translateX(${(i + 1) * 8}px) translateY(-${(i + 1) * 8}px)`,
                 zIndex: -(i + 1),
@@ -129,12 +129,12 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
           ))}
           <div style={{ position: "relative", zIndex: 0, background: cardBg, borderRadius: 16, border: "1px solid var(--border)", boxShadow: cardShadow, padding: 0, minHeight: "60vh", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, color: "#fff", padding: "12px 24px", borderBottom: "1px solid var(--border)", flexShrink: 0, background: "rgba(0,0,0,0.2)", borderRadius: "16px 16px 0 0" }}>
-            <button onClick={goBack} disabled={history.length===0} style={{ flexShrink: 0, background: "none", border: "1px solid #555", borderRadius: 6, color: history.length>0?"#fff":"#444", cursor: history.length>0?"pointer":"default", padding: "3px 10px", fontSize: 11, opacity: history.length>0?1:0.3 }}>↓ Vorige</button>
+            <button onClick={goBack} disabled={history.length===0} style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0, background: "none", border: "1px solid var(--border)", borderRadius: 8, color: history.length>0?"#fff":"#555", cursor: history.length>0?"pointer":"default", padding: "4px 11px", fontSize: 11, opacity: history.length>0?1:0.4 }}><ArrowDown size={11} />Vorige</button>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, minWidth: 0 }}>
-              <div style={{ flex: 1, maxWidth: 200, height: 6, borderRadius: 3, background: "#333" }}><div style={{ width: `${(catCount/totalTxs)*100}%`, height: 6, borderRadius: 3, background: "#4A7C59", transition: "width 0.3s" }} /></div>
+              <div style={{ flex: 1, maxWidth: 200, height: 6, borderRadius: 3, background: "rgba(255,255,255,0.12)" }}><div style={{ width: `${(catCount/totalTxs)*100}%`, height: 6, borderRadius: 3, background: "var(--accent)", transition: "width 0.3s" }} /></div>
               <span style={{ flexShrink: 0, fontSize: 11, opacity: 0.6 }}>{groups.length} groepen over</span>
             </div>
-            <button onClick={onClose} style={{ flexShrink: 0, background: "none", border: "1px solid #555", borderRadius: 6, color: "#fff", cursor: "pointer", padding: "3px 10px", fontSize: 11 }}>✕ Sluiten</button>
+            <button onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0, background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "#fff", cursor: "pointer", padding: "4px 11px", fontSize: 11 }}>Sluiten</button>
           </div>
         <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
@@ -153,24 +153,24 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
           <>
             {suggestion ? (
               <div style={{ textAlign: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 4 }}>{suggestion.src==="lookup"?`🔍 ${suggestion.desc||"Online suggestie"}`:"💡 Suggestie"}</div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: suggestion.color+"25", border: `2px solid ${suggestion.color}` }}>
+                <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 4 }}>Suggestie</div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: suggestion.color+"25", border: `1px solid ${suggestion.color}` }}>
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: suggestion.color }} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{suggestion.catName} › {suggestion.subName}</span>
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: "center", marginBottom: 16, padding: 12, borderRadius: 8, background: "var(--bg)", border: "1px dashed var(--border)" }}>
+              <div style={{ textAlign: "center", marginBottom: 16, padding: 12, borderRadius: 10, background: "var(--bg)", border: "1px dashed var(--border)" }}>
                 <div style={{ fontSize: 12, opacity: 0.5, color: "var(--text)" }}>Geen suggestie — kies handmatig of sla over</div>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 8 }}>
-              <div style={{ textAlign: "center" }}><button onClick={()=>setShowAlts(true)} style={{ width: 56, height: 56, borderRadius: 28, border: "2px solid #8B6B6B", background: "rgba(139,107,107,0.12)", color: "#8B6B6B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><List size={22} strokeWidth={2} /></button><div style={{ fontSize: 9, opacity: 0.5, color: "#8B6B6B", marginTop: 4 }}>Andere</div></div>
+              <div style={{ textAlign: "center" }}><button onClick={()=>setShowAlts(true)} style={{ width: 56, height: 56, borderRadius: 28, border: "1px solid var(--necessity-luxe)", background: "var(--bg)", color: "var(--necessity-luxe)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><List size={22} strokeWidth={1.8} /></button><div style={{ fontSize: 9, opacity: 0.7, color: "var(--necessity-luxe)", marginTop: 4 }}>Andere</div></div>
               <div style={{ textAlign: "center", alignSelf: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <button onClick={doSkipGroup} style={{ width: 56, height: 56, borderRadius: 28, border: "2px solid #6B7B8D", background: "rgba(107,123,141,0.08)", color: "#6B7B8D", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", outline: "none" }}><Clock size={22} strokeWidth={2} /></button>
-                <div style={{ fontSize: 9, opacity: 0.5, color: "#6B7B8D" }}>Later</div>
+                <button onClick={doSkipGroup} style={{ width: 56, height: 56, borderRadius: 28, border: "1px solid var(--muted)", background: "var(--bg)", color: "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", outline: "none" }}><Clock size={22} strokeWidth={1.8} /></button>
+                <div style={{ fontSize: 9, opacity: 0.7, color: "var(--muted)" }}>Later</div>
                 {onAddToBlacklist && (
-                  <button onClick={doBlockGroup} style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--muted)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, outline: "none" }}>
+                  <button onClick={doBlockGroup} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--muted)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10, fontWeight: 500, outline: "none" }}>
                     En blokkeer
                   </button>
                 )}
@@ -183,36 +183,35 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
                     width: 56,
                     height: 56,
                     borderRadius: 28,
-                    border: suggestion ? "2px solid #4A7C59" : "2px solid #555",
-                    background: suggestion ? "transparent" : "rgba(0,0,0,0.25)",
-                    color: suggestion ? "#4A7C59" : "#666",
+                    border: suggestion ? "1px solid var(--accent)" : "1px solid var(--border)",
+                    background: suggestion ? "var(--accent-20)" : "var(--bg)",
+                    color: suggestion ? "var(--accent)" : "var(--muted)",
                     cursor: suggestion ? "pointer" : "not-allowed",
-                    fontSize: 22,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     opacity: suggestion ? 1 : 0.6,
                   }}
                 >
-                  ✓
+                  <Check size={22} strokeWidth={2} />
                 </button>
-                <div style={{ fontSize: 9, opacity: 0.5, color: suggestion ? "#4A7C59" : "#666", marginTop: 4 }}>Akkoord</div>
+                <div style={{ fontSize: 9, opacity: 0.7, color: suggestion ? "var(--accent)" : "var(--muted)", marginTop: 4 }}>Akkoord</div>
               </div>
             </div>
           </>
         ) : (
           <>
             {favSubs.length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", marginBottom: 3 }}>⭐ Meest gebruikt</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>{favSubs.map(({ cat: fc, sub: fs }) => <button key={fs.id} onClick={() => { doAssignGroup(fc.id, fs.id); setShowAlts(false); }} style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><span style={{ color: fc.color, fontWeight: 600 }}>{fc.name.slice(0, 8)}</span> › {fs.name}</button>)}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", marginBottom: 4 }}><Star size={10} fill="currentColor" strokeWidth={0} />Meest gebruikt</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{favSubs.map(({ cat: fc, sub: fs }) => <button key={fs.id} onClick={() => { doAssignGroup(fc.id, fs.id); setShowAlts(false); }} style={{ padding: "4px 9px", borderRadius: 999, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10.5 }}><span style={{ color: fc.color, fontWeight: 700 }}>{fc.name.slice(0, 8)}</span> › {fs.name}</button>)}</div>
               </div>
             )}
-            <button onClick={() => { doAssignGroup("nog_te_verwerken", "te_categoriseren"); setShowAlts(false); }} style={{ display: "block", width: "100%", textAlign: "left", padding: "4px 8px", background: "#88888810", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 4, fontSize: 10, fontStyle: "italic", marginBottom: 6 }}>📦 Nog te verwerken</button>
+            <button onClick={() => { doAssignGroup("nog_te_verwerken", "te_categoriseren"); setShowAlts(false); }} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", padding: "5px 8px", background: "var(--bg)", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 7, fontSize: 10.5, fontStyle: "italic", marginBottom: 8 }}><Package size={12} />Nog te verwerken</button>
             <div style={{ maxHeight: 280, overflow: "auto" }}>
               <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={(catId, subId) => { doAssignGroup(catId, subId); setShowAlts(false); }} />
             </div>
-            <button onClick={() => setShowAlts(false)} style={{ marginTop: 8, width: "100%", padding: "6px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>← Terug</button>
+            <button onClick={() => setShowAlts(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 8, width: "100%", padding: "7px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}><ArrowDown size={11} style={{ transform: "rotate(90deg)" }} />Terug</button>
           </>
         )}
         </div>
