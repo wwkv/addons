@@ -40,14 +40,19 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
       // Clamp so menu never escapes viewport
       top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
 
-      // ── Horizontal: right-align with button, clamped to viewport ──
-      let right = window.innerWidth - br.right;
-      right = Math.max(pad, Math.min(right, window.innerWidth - menuW - pad));
+      // ── Horizontal: prefer right-aligning with the button's right edge;
+      // if that would push the menu past the left edge of the viewport
+      // (button sits in the left/middle of a narrow container), fall back
+      // to left-aligning with the button instead of collapsing to a fixed
+      // viewport edge unrelated to where the button actually is. ──
+      let left = br.right - menuW;
+      if (left < pad) left = br.left;
+      left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad));
 
       setMenuStyle({
         position: "fixed",
         top,
-        right,
+        left,
         zIndex: 1000,
         background: "var(--card)",
         border: "1px solid var(--border)",
