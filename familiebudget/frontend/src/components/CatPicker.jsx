@@ -13,45 +13,64 @@ export default function CatPicker({ tx, cats, catUsage, onSelect, compact }) {
   const sub = cat ? cat.subs.find(s => s.id === tx.subCategoryId) : null;
   const hasSplits = tx.splits && tx.splits.length > 1;
 
-  // Recalculate menu position every time it opens
+  // Recalculate menu position on open, and keep it pinned to the button
+  // afterwards — window resize, internal table scroll, and CSS `zoom`
+  // changes (from the app's A+/A- controls) all change the button's
+  // on-screen box without firing their own dedicated event we could
+  // otherwise rely on, so a ResizeObserver on the button itself is the
+  // one signal that reliably covers all of them.
   useLayoutEffect(() => {
     if (!open || !buttonRef.current || !menuRef.current) return;
-    const br  = buttonRef.current.getBoundingClientRect();
-    const menuW = 560;
-    const menuH = 420; // matches maxHeight
-    const pad = 8;
 
-    // ── Vertical: open below if room, otherwise above, always clamped ──
-    const spaceBelow = window.innerHeight - br.bottom - pad;
-    const spaceAbove = br.top - pad;
-    let top;
-    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-      top = br.bottom + pad;
-    } else {
-      top = br.top - menuH - pad;
-    }
-    // Clamp so menu never escapes viewport
-    top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
+    const recompute = () => {
+      const br = buttonRef.current.getBoundingClientRect();
+      const menuW = 560;
+      const menuH = 420; // matches maxHeight
+      const pad = 8;
 
-    // ── Horizontal: right-align with button, clamped to viewport ──
-    let right = window.innerWidth - br.right;
-    right = Math.max(pad, Math.min(right, window.innerWidth - menuW - pad));
+      // ── Vertical: open below if room, otherwise above, always clamped ──
+      const spaceBelow = window.innerHeight - br.bottom - pad;
+      const spaceAbove = br.top - pad;
+      let top;
+      if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+        top = br.bottom + pad;
+      } else {
+        top = br.top - menuH - pad;
+      }
+      // Clamp so menu never escapes viewport
+      top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
 
-    setMenuStyle({
-      position: "fixed",
-      top,
-      right,
-      zIndex: 1000,
-      background: "var(--card)",
-      border: "1px solid var(--border)",
-      borderRadius: 14,
-      padding: 10,
-      width: menuW,
-      maxHeight: menuH,
-      overflow: "auto",
-      boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-      visibility: "visible",
-    });
+      // ── Horizontal: right-align with button, clamped to viewport ──
+      let right = window.innerWidth - br.right;
+      right = Math.max(pad, Math.min(right, window.innerWidth - menuW - pad));
+
+      setMenuStyle({
+        position: "fixed",
+        top,
+        right,
+        zIndex: 1000,
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        borderRadius: 14,
+        padding: 10,
+        width: menuW,
+        maxHeight: menuH,
+        overflow: "auto",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+        visibility: "visible",
+      });
+    };
+
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(buttonRef.current);
+    window.addEventListener("resize", recompute);
+    window.addEventListener("scroll", recompute, true);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", recompute);
+      window.removeEventListener("scroll", recompute, true);
+    };
   }, [open]);
 
   // Close on outside click
