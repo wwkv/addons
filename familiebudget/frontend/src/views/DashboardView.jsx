@@ -3,7 +3,6 @@ import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import { isSubExcluded } from '../utils/helpers.js';
 import MonthSelector from '../components/MonthSelector.jsx';
-import ComparePanel from '../components/ComparePanel.jsx';
 
 export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, years }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
@@ -91,8 +90,6 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: spaarquote === null ? "var(--muted)" : spaarquote >= 0 ? "var(--text)" : "var(--red)" }}>{spaarquote === null ? "—" : `${spaarquote}%`}</div>
         </div>
       </div>
-
-      <ComparePanel expanded={expanded} cats={cats} year={year} months={months} years={years} />
 
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 15, padding: "17px 19px", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, flexShrink: 0 }}>Grootste uitgaven</div>

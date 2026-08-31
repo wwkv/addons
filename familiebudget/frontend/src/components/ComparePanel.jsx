@@ -7,9 +7,14 @@ import {
   DATASET_KINDS, resolveDataset, compareDatasets, compareToBenchmark, monthLabel,
 } from '../utils/comparison.js';
 
-/* Spending deltas are signed euro amounts, so green/red apply — oriented so
-   red = spent more (money left the household), green = spent less. */
-const deltaColor = (d) => d > 0 ? "var(--red)" : d < 0 ? "var(--green)" : "var(--muted)";
+/* Deliberately NOT green/red. In this app green/red mean "positive amount" and
+   "negative amount", full stop — and a comparison delta breaks that mapping:
+   spending €143 more is a *positive* number you'd want to read as a warning,
+   which would put red on a positive figure and invert the rule everywhere else
+   in the app. So direction is carried by the arrow and the section heading
+   ("Meer/Minder uitgegeven"), and the number itself stays neutral. */
+const ARROW = { up: ArrowUp, down: ArrowDown, flat: Minus };
+const deltaDir = (d) => d > 0 ? "up" : d < 0 ? "down" : "flat";
 
 const PRESETS = [
   { id: "prev", label: "Vorige periode" },
@@ -19,7 +24,14 @@ const PRESETS = [
 ];
 
 export default function ComparePanel({ expanded, cats, year, months, years }) {
-  const [preset, setPreset] = useState("prev");
+  // "Vorige periode" is the most useful default, but it lands on an empty
+  // comparison when there's no earlier year to compare a whole year against —
+  // so only start there when it will actually produce something.
+  const [preset, setPreset] = useState(() => {
+    if (months.length === 1) return "prev";
+    const prevYear = String(Number(year) - 1);
+    return (years || []).includes(prevYear) ? "prev" : "benchmark";
+  });
   const [budgets, setBudgets] = useState({});
 
   // Budgets live under their own state key; the dashboard remounts on tab
@@ -151,24 +163,27 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          {rows.map(r => (
-            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5 }}>
-              <div style={{ width: 180, flex: "0 0 180px", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.name}>{r.name}</div>
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ height: 7, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
-                  <div style={{ width: `${(r.a / maxShare) * 100}%`, height: "100%", borderRadius: 4, background: "var(--accent)" }} />
+          {rows.map(r => {
+            const Icon = ARROW[deltaDir(r.delta)];
+            return (
+              <div key={r.key} className="cmp-bench-row">
+                <div className="cmp-bench-name" style={{ color: "var(--text)" }} title={r.name}>{r.name}</div>
+                <div className="cmp-bench-bars" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ height: 7, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
+                    <div style={{ width: `${(r.a / maxShare) * 100}%`, height: "100%", borderRadius: 4, background: "var(--accent)" }} />
+                  </div>
+                  <div style={{ height: 7, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
+                    <div style={{ width: `${(r.b / maxShare) * 100}%`, height: "100%", borderRadius: 4, background: "var(--neutral)" }} />
+                  </div>
                 </div>
-                <div style={{ height: 7, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
-                  <div style={{ width: `${(r.b / maxShare) * 100}%`, height: "100%", borderRadius: 4, background: "var(--neutral)" }} />
+                <div className="cmp-bench-mine" style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text)" }}>{r.a.toFixed(1)}%</div>
+                <div className="cmp-bench-nl" style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--muted)" }}>{r.b.toFixed(1)}%</div>
+                <div className="cmp-bench-delta" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2, fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600, color: Math.abs(r.delta) < 1 ? "var(--muted)" : "var(--text)" }}>
+                  <Icon size={10} style={{ opacity: Math.abs(r.delta) < 1 ? 0.4 : 0.75 }} />{Math.abs(r.delta).toFixed(1)}
                 </div>
               </div>
-              <div style={{ width: 62, flex: "0 0 62px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text)" }}>{r.a.toFixed(1)}%</div>
-              <div style={{ width: 52, flex: "0 0 52px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--muted)" }}>{r.b.toFixed(1)}%</div>
-              <div style={{ width: 58, flex: "0 0 58px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600, color: Math.abs(r.delta) < 1 ? "var(--muted)" : "var(--text)" }}>
-                {r.delta > 0 ? "+" : ""}{r.delta.toFixed(1)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, fontSize: 10, color: "var(--muted)", flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: "var(--accent)" }} />Jij</span>
@@ -198,19 +213,19 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
   const suffix = (perMonthForced || cmp.perMonth) ? " / maand" : "";
 
   const moverList = (rows, title, icon) => rows.length > 0 && (
-    <div style={{ flex: 1, minWidth: 220 }}>
+    <div className="cmp-mover-col">
       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 7 }}>
         {icon}{title}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {rows.map(r => (
-          <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
-            <div style={{ width: 116, flex: "0 0 116px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text)" }} title={catName(r.key)}>{catName(r.key)}</div>
-            <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: "var(--bg)", overflow: "hidden" }}>
+          <div key={r.key} className="cmp-mover-row">
+            <div className="cmp-mover-name" style={{ color: "var(--text)" }} title={catName(r.key)}>{catName(r.key)}</div>
+            <div className="cmp-mover-bar" style={{ height: 6, borderRadius: 3, background: "var(--bg)", overflow: "hidden" }}>
               <div style={{ width: `${(Math.max(r.a, r.b) / barMax) * 100}%`, height: "100%", borderRadius: 3, background: catColor(r.key) }} />
             </div>
-            <div style={{ width: 74, flex: "0 0 74px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: deltaColor(r.delta) }}>
-              {r.delta > 0 ? "+" : ""}{fmt(r.delta)}
+            <div className="cmp-mover-delta" style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "var(--text)" }}>
+              {fmt(Math.abs(r.delta))}
             </div>
           </div>
         ))}
@@ -220,7 +235,7 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
 
   return shell(
     <>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+      <div className="cmp-summary">
         <div>
           <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600 }}>{a.label}</div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 17, color: "var(--muted)" }}>{fmt(cmp.totalA)}{suffix}</div>
@@ -230,16 +245,15 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
           <div style={{ fontSize: 10.5, color: "var(--text)", fontWeight: 700 }}>{b.label}</div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 17, color: "var(--text)", fontWeight: 600 }}>{fmt(cmp.totalB)}{suffix}</div>
         </div>
-        <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600, color: deltaColor(cmp.delta) }}>
-            {cmp.delta > 0 ? <ArrowUp size={17} /> : cmp.delta < 0 ? <ArrowDown size={17} /> : <Minus size={15} />}
-            {cmp.delta > 0 ? "+" : ""}{fmt(cmp.delta)}
+        <div className="cmp-summary-delta">
+          <div className="cmp-summary-figure" style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600, color: "var(--text)" }}>
+            {(() => { const Icon = ARROW[deltaDir(cmp.delta)]; return <Icon size={17} style={{ opacity: 0.75 }} />; })()}
+            {fmt(Math.abs(cmp.delta))}
           </div>
-          {cmp.pct !== null && Number.isFinite(cmp.pct) && (
-            <div style={{ fontSize: 10.5, color: "var(--muted)" }}>
-              {cmp.pct > 0 ? "+" : ""}{Math.round(cmp.pct)}% t.o.v. {a.label.toLowerCase()}
-            </div>
-          )}
+          <div style={{ fontSize: 10.5, color: "var(--muted)" }}>
+            {cmp.delta > 0 ? "meer" : cmp.delta < 0 ? "minder" : "gelijk"}
+            {cmp.pct !== null && Number.isFinite(cmp.pct) ? ` (${Math.abs(Math.round(cmp.pct))}%)` : ""} dan {a.label.toLowerCase()}
+          </div>
         </div>
       </div>
 

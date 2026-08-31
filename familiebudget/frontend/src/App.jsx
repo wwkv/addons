@@ -24,6 +24,7 @@ import CatDetailModal from './modals/CatDetailModal.jsx';
 import BudgetTab from './views/BudgetTab.jsx';
 import SavingsTab from './views/SavingsTab.jsx';
 import DashboardView from './views/DashboardView.jsx';
+import CompareView from './views/CompareView.jsx';
 import TransactionsView from './views/TransactionsView.jsx';
 import CategoriesView from './views/CategoriesView.jsx';
 import PatternsView from './views/PatternsView.jsx';
@@ -740,6 +741,7 @@ export default function App() {
           <div className="rail-logo" />
           {[
             { id: "dashboard", label: "Overzicht", icon: <LayoutGrid size={19} /> },
+            { id: "compare", label: "Vergelijk", icon: <Scale size={19} /> },
             { id: "budget", label: "Budget", icon: <Wallet size={19} />, desktopOnly: true },
             { id: "transactions", label: "Transacties", icon: <List size={19} /> },
             { id: "categories", label: "Categorieën", icon: <Tag size={19} /> },
@@ -1123,6 +1125,14 @@ export default function App() {
             necessityStats={necessityStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail} years={years}
+          />
+        )}
+
+        {/* ═══ VERGELIJK ═══ */}
+        {view === "compare" && (
+          <CompareView
+            expanded={expanded} cats={cats} year={year} months={months}
+            setMonths={setMonths} mStats={mStats} years={years}
           />
         )}
 

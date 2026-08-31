@@ -383,6 +383,97 @@
   opacity: 0.3;
 }
 
+/* ── Comparison rows ──
+   Grid rather than flex so the columns can be re-laid-out wholesale on narrow
+   screens instead of overflowing their card. Every text cell needs min-width:0
+   or the grid track refuses to shrink below its content and pushes out. */
+.cmp-bench-row {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr) 58px 48px 54px;
+  gap: 10px;
+  align-items: center;
+  font-size: 11.5px;
+}
+.cmp-bench-row > * { min-width: 0; }
+.cmp-bench-name,
+.cmp-mover-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmp-mover-row {
+  display: grid;
+  grid-template-columns: minmax(0, 116px) minmax(0, 1fr) 74px;
+  gap: 8px;
+  align-items: center;
+  font-size: 11.5px;
+}
+.cmp-mover-row > * { min-width: 0; }
+
+.cmp-movers {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.cmp-mover-col {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.cmp-summary {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.cmp-summary-delta { margin-left: auto; text-align: right; }
+.cmp-summary-figure { justify-content: flex-end; }
+
+@media (max-width: 640px) {
+  /* Name over the bars, figures on their own line — nothing fixed-width left
+     to overflow a ~390px card. */
+  .cmp-bench-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name delta"
+      "bars bars"
+      "figs figs";
+    gap: 4px 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cmp-bench-name { grid-area: name; font-weight: 600; }
+  .cmp-bench-bars { grid-area: bars; }
+  .cmp-bench-delta { grid-area: delta; }
+  .cmp-bench-mine,
+  .cmp-bench-nl {
+    grid-area: figs;
+    text-align: left !important;
+    width: auto !important;
+  }
+  .cmp-bench-nl { justify-self: end; }
+
+  .cmp-mover-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name delta"
+      "bar  bar";
+    gap: 3px 8px;
+  }
+  .cmp-mover-name { grid-area: name; }
+  .cmp-mover-bar { grid-area: bar; }
+  .cmp-mover-delta { grid-area: delta; }
+
+  .cmp-movers { gap: 16px; }
+  .cmp-mover-col { flex: 1 1 100%; }
+
+  .cmp-summary { gap: 10px; }
+  .cmp-summary-delta { margin-left: 0; text-align: left; width: 100%; }
+  .cmp-summary-figure { justify-content: flex-start; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .zoom-controls {
