@@ -48,7 +48,6 @@ export default function App() {
   const lastClickedIndexRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const [splitTx, setSplitTx] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState("regels");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
@@ -175,7 +174,7 @@ export default function App() {
     try { await fetch('api/state/budgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: {} }) }); } catch (_) {}
     setShowDeleteConfirm(false);
     setSettingsTab("regels");
-    setShowSettings(false);
+    setView("dashboard");
   };
 
   const autoCat = useCallback((tx) => {
@@ -754,7 +753,7 @@ export default function App() {
             </button>
           ))}
           <div className="rail-spacer" />
-          <button title="Instellingen" onClick={() => setShowSettings(true)} className="rail-btn mobile-settings"><Settings size={18} /></button>
+          <button title="Instellingen" onClick={() => setView("settings")} className={`rail-btn mobile-settings${view === "settings" ? " active" : ""}`}><Settings size={18} /></button>
         </nav>
 
         {uncatN > 0 && <button title="Snel categoriseren" onClick={() => setTinderMode(true)} className="mobile-fab"><Sparkles size={22} /></button>}
@@ -873,152 +872,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Settings */}
-      {showSettings && (
-        <div className="settings-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="settings-panel" style={{ background: "var(--card)", borderRadius: 16, padding: 20, maxWidth: 520, width: "90%", border: "1px solid var(--border)", maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Settings size={18} strokeWidth={1.8} />Instellingen</span>
-              <button onClick={() => { setShowExcludeAddPicker(false); setSettingsTab("regels"); setShowSettings(false); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer" }}><X size={18} /></button>
-            </h3>
-
-            {/* Tab bar */}
-            <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 9, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0 }}>
-              {[{ id: "profiel", l: "Profiel", icon: <User size={12} /> }, { id: "regels", l: "Regels", icon: <Bot size={12} /> }, { id: "patronen", l: "Patronen", icon: <Brain size={12} /> }, { id: "data", l: "Data", icon: <Database size={12} /> }].map(t => (
-                <button key={t.id} onClick={() => { setSettingsTab(t.id); setShowExcludeAddPicker(false); setShowDeleteConfirm(false); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "6px 8px", borderRadius: 7, border: "none", background: settingsTab === t.id ? "var(--accent-20)" : "transparent", color: settingsTab === t.id ? "var(--accent)" : "var(--muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t.icon}{t.l}</button>
-              ))}
-            </div>
-
-            {/* Tab content */}
-            <div style={{ overflow: "auto", flex: 1 }}>
-
-              {settingsTab === "profiel" && (
-                <div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Huishouden</label>
-                    <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 10px" }}>Gebruikt om je budget te vergelijken met gezinnen van vergelijkbare samenstelling.</p>
-                    {[
-                      { key: "householdAdults", l: "Aantal volwassenen", d: "Inclusief jezelf", min: 1 },
-                      { key: "householdKids", l: "Aantal kinderen", d: "Voor budgetvergelijking", min: 0 },
-                    ].map(f => (
-                      <div key={f.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", marginBottom: 8 }}>
-                        <div><div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{f.l}</div><div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{f.d}</div></div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <button onClick={() => setSettings(s => ({ ...s, [f.key]: Math.max(f.min, (s[f.key] ?? f.min) - 1) }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={12} /></button>
-                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, width: 16, textAlign: "center" }}>{settings[f.key] ?? f.min}</span>
-                          <button onClick={() => setSettings(s => ({ ...s, [f.key]: (s[f.key] ?? f.min) + 1 }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={12} /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("categories"); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--accent)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Categorieën beheren<ChevronRight size={14} /></button>
-                </div>
-              )}
-
-              {settingsTab === "regels" && (
-                <div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Auto-categorisatie</label>
-                    {[{ v: "voorzichtig", l: "Voorzichtig", icon: <Lock size={12} />, d: "Enkel 100% zekere" }, { v: "normaal", l: "Normaal", icon: <Scale size={12} />, d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "Ambitieus", icon: <Rocket size={12} />, d: "Alles incl. mededeling" }].map(o => (
-                      <label key={o.v} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 10px", borderRadius: 8, border: settings.autoLevel === o.v ? "1px solid var(--accent)" : "1px solid var(--border)", background: settings.autoLevel === o.v ? "var(--accent-10)" : "transparent", cursor: "pointer", marginBottom: 4 }}>
-                        <input type="radio" checked={settings.autoLevel === o.v} onChange={() => setSettings(s => ({ ...s, autoLevel: o.v }))} style={{ accentColor: "var(--accent)" }} />
-                        <span style={{ color: "var(--accent)", display: "flex" }}>{o.icon}</span>
-                        <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
-                      </label>
-                    ))}
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Spaarbuffer Maanden</label>
-                    <input type="number" min={3} max={10} value={settings.bufferMultiplier ?? 5} onChange={e => setSettings(s => ({ ...s, bufferMultiplier: Number(e.target.value) || 5 }))} style={{ padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11, width: 80 }} />
-                    <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)", marginTop: 4 }}>Aantal maanden nodig-uitgaven voor spaarbuffer doel</div>
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Uitgesloten subcategorieën</label>
-                    <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 8 }}>Deze subcategorieën tellen niet mee in het totaal.</div>
-                    <div style={{ position: "relative", background: "var(--bg)", borderRadius: 6, padding: 8, paddingRight: 36, border: "1px solid var(--border)", minHeight: 44 }}>
-                      <button type="button" onClick={() => setShowExcludeAddPicker(!showExcludeAddPicker)} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 5, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 14, fontWeight: 300, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }} title="Subcategorie toevoegen">+</button>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                        {cats.flatMap(c => c.subs.filter(s => s.excluded).map(s => ({ cat: c, sub: s }))).map(({ cat, sub }) => (
-                          <span key={sub.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, background: cat.color + "20", border: `1px solid ${cat.color}40`, fontSize: 10, color: "var(--text)" }}>
-                            {cat.name} › {sub.name}
-                            <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", display: "flex", lineHeight: 1 }} aria-label="Verwijderen"><X size={11} /></button>
-                          </span>
-                        ))}
-                      </div>
-                      {showExcludeAddPicker && (
-                        <div style={{ marginTop: 10, padding: 10, background: "var(--card)", borderRadius: 8, border: "1px solid var(--border)", maxHeight: 280, overflow: "auto" }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase" }}>Kies subcategorie om uit te sluiten</div>
-                          <CatGrid cats={cats} catUsage={catUsage} tx={{ categoryId: null, subCategoryId: null }} handleSelect={(catId, subId) => { setCats(p => p.map(c => c.id === catId ? { ...c, subs: c.subs.map(s => s.id === subId ? { ...s, excluded: true } : s) } : c)); setShowExcludeAddPicker(false); }} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {settingsTab === "patronen" && (
-                <div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Patroon drempels</label>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Normaal</div>
-                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                          {[2, 3, 4, 5].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, patternThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.patternThreshold || 3) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.patternThreshold || 3) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Personen</div>
-                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                          {[3, 4, 6, 8].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, personThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.personThreshold || 6) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.personThreshold || 6) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)" }}>Aantal keer dezelfde categorie vóór automatisch patroon</div>
-                  </div>
-                  <div style={{ padding: 12, background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}><Brain size={13} strokeWidth={1.8} />{Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
-                    <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 10 }}>Geleerde patronen worden gebruikt voor automatische categorisatie.</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { setSettingsTab("regels"); setShowSettings(false); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
-                      <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {settingsTab === "data" && (
-                <div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Backup</label>
-                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van alles: transacties, categorieën, patronen (bevestigd en in afwachting), geblokkeerde tegenpartijen, budgetten, spaarpotjes en instellingen (incl. huishouden).</p>
-                    <button onClick={handleExportBackup} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Download size={13} />Exporteer data</button>
-                  </div>
-                  <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "block", marginBottom: 6 }}>Gevarenzone</label>
-                    <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Verwijder alle data permanent. Er wordt eerst automatisch een backup geëxporteerd.</p>
-                    {!showDeleteConfirm
-                      ? <button onClick={() => setShowDeleteConfirm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Trash2 size={13} />Verwijder alle data</button>
-                      : (
-                        <div style={{ padding: 14, borderRadius: 10, border: "1px solid var(--danger)", background: "color-mix(in srgb, var(--danger) 10%, transparent)" }}>
-                          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}><AlertTriangle size={13} />Ben je zeker?</p>
-                          <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, budgetten, categorieën, patronen en spaardoelen worden gewist.</p>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "var(--danger)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
-                            <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
-                          </div>
-                        </div>
-                      )
-                    }
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {importErr && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1170,6 +1023,152 @@ export default function App() {
             setToast={setToast} setPatternSearch={setPatternSearch}
             setPendingSort={setPendingSort} setRulesSort={setRulesSort}
           />
+        )}
+
+        {/* ═══ INSTELLINGEN ═══
+            A real view like any other tab — not an overlay. It therefore needs
+            no close button: you leave it by picking another tab. */}
+        {view === "settings" && (
+          <div className="settings-view">
+            <div>
+              <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Instellingen</h1>
+
+              {/* Tab bar */}
+              <div style={{ display: "flex", gap: 2, background: "var(--bg)", borderRadius: 9, padding: 3, border: "1px solid var(--border)", marginBottom: 16, flexShrink: 0, maxWidth: 520 }}>
+                {[{ id: "profiel", l: "Profiel", icon: <User size={12} /> }, { id: "regels", l: "Regels", icon: <Bot size={12} /> }, { id: "patronen", l: "Patronen", icon: <Brain size={12} /> }, { id: "data", l: "Data", icon: <Database size={12} /> }].map(t => (
+                  <button key={t.id} onClick={() => { setSettingsTab(t.id); setShowExcludeAddPicker(false); setShowDeleteConfirm(false); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "6px 8px", borderRadius: 7, border: "none", background: settingsTab === t.id ? "var(--accent-20)" : "transparent", color: settingsTab === t.id ? "var(--accent)" : "var(--muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{t.icon}{t.l}</button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div style={{ maxWidth: 520 }}>
+
+                {settingsTab === "profiel" && (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Huishouden</label>
+                      <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 10px" }}>Gebruikt om je budget te vergelijken met gezinnen van vergelijkbare samenstelling.</p>
+                      {[
+                        { key: "householdAdults", l: "Aantal volwassenen", d: "Inclusief jezelf", min: 1 },
+                        { key: "householdKids", l: "Aantal kinderen", d: "Voor budgetvergelijking", min: 0 },
+                      ].map(f => (
+                        <div key={f.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", marginBottom: 8 }}>
+                          <div><div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{f.l}</div><div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{f.d}</div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <button onClick={() => setSettings(s => ({ ...s, [f.key]: Math.max(f.min, (s[f.key] ?? f.min) - 1) }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={12} /></button>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, width: 16, textAlign: "center" }}>{settings[f.key] ?? f.min}</span>
+                            <button onClick={() => setSettings(s => ({ ...s, [f.key]: (s[f.key] ?? f.min) + 1 }))} style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={12} /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => { setSettingsTab("regels"); setView("categories"); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--accent)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Categorieën beheren<ChevronRight size={14} /></button>
+                  </div>
+                )}
+
+                {settingsTab === "regels" && (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Auto-categorisatie</label>
+                      {[{ v: "voorzichtig", l: "Voorzichtig", icon: <Lock size={12} />, d: "Enkel 100% zekere" }, { v: "normaal", l: "Normaal", icon: <Scale size={12} />, d: "Zeker + waarschijnlijk" }, { v: "ambitieus", l: "Ambitieus", icon: <Rocket size={12} />, d: "Alles incl. mededeling" }].map(o => (
+                        <label key={o.v} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 10px", borderRadius: 8, border: settings.autoLevel === o.v ? "1px solid var(--accent)" : "1px solid var(--border)", background: settings.autoLevel === o.v ? "var(--accent-10)" : "transparent", cursor: "pointer", marginBottom: 4 }}>
+                          <input type="radio" checked={settings.autoLevel === o.v} onChange={() => setSettings(s => ({ ...s, autoLevel: o.v }))} style={{ accentColor: "var(--accent)" }} />
+                          <span style={{ color: "var(--accent)", display: "flex" }}>{o.icon}</span>
+                          <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
+                        </label>
+                      ))}
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Spaarbuffer Maanden</label>
+                      <input type="number" min={3} max={10} value={settings.bufferMultiplier ?? 5} onChange={e => setSettings(s => ({ ...s, bufferMultiplier: Number(e.target.value) || 5 }))} style={{ padding: "6px 8px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11, width: 80 }} />
+                      <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)", marginTop: 4 }}>Aantal maanden nodig-uitgaven voor spaarbuffer doel</div>
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Uitgesloten subcategorieën</label>
+                      <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 8 }}>Deze subcategorieën tellen niet mee in het totaal.</div>
+                      <div style={{ position: "relative", background: "var(--bg)", borderRadius: 6, padding: 8, paddingRight: 36, border: "1px solid var(--border)", minHeight: 44 }}>
+                        <button type="button" onClick={() => setShowExcludeAddPicker(!showExcludeAddPicker)} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 5, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 14, fontWeight: 300, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }} title="Subcategorie toevoegen">+</button>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                          {cats.flatMap(c => c.subs.filter(s => s.excluded).map(s => ({ cat: c, sub: s }))).map(({ cat, sub }) => (
+                            <span key={sub.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, background: cat.color + "20", border: `1px solid ${cat.color}40`, fontSize: 10, color: "var(--text)" }}>
+                              {cat.name} › {sub.name}
+                              <button type="button" onClick={() => setCats(p => p.map(cat2 => cat2.id === cat.id ? { ...cat2, subs: cat2.subs.map(s2 => s2.id === sub.id ? { ...s2, excluded: false } : s2) } : cat2))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--muted)", display: "flex", lineHeight: 1 }} aria-label="Verwijderen"><X size={11} /></button>
+                            </span>
+                          ))}
+                        </div>
+                        {showExcludeAddPicker && (
+                          <div style={{ marginTop: 10, padding: 10, background: "var(--card)", borderRadius: 8, border: "1px solid var(--border)", maxHeight: 280, overflow: "auto" }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase" }}>Kies subcategorie om uit te sluiten</div>
+                            <CatGrid cats={cats} catUsage={catUsage} tx={{ categoryId: null, subCategoryId: null }} handleSelect={(catId, subId) => { setCats(p => p.map(c => c.id === catId ? { ...c, subs: c.subs.map(s => s.id === subId ? { ...s, excluded: true } : s) } : c)); setShowExcludeAddPicker(false); }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === "patronen" && (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Patroon drempels</label>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Normaal</div>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            {[2, 3, 4, 5].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, patternThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.patternThreshold || 3) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.patternThreshold || 3) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+                          </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Personen</div>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            {[3, 4, 6, 8].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, personThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.personThreshold || 6) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.personThreshold || 6) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 9, opacity: 0.4, color: "var(--text)" }}>Aantal keer dezelfde categorie vóór automatisch patroon</div>
+                    </div>
+                    <div style={{ padding: 12, background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}><Brain size={13} strokeWidth={1.8} />{Object.keys(rules).length} patronen · {Object.keys(pending).length} in afwachting</div>
+                      <div style={{ fontSize: 10, opacity: 0.5, color: "var(--text)", marginBottom: 10 }}>Geleerde patronen worden gebruikt voor automatische categorisatie.</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => { setSettingsTab("regels"); setView("patterns"); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--accent)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Beheer patronen →</button>
+                        <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Wis alle patronen</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === "data" && (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Backup</label>
+                      <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Maak een veilige kopie van alles: transacties, categorieën, patronen (bevestigd en in afwachting), geblokkeerde tegenpartijen, budgetten, spaarpotjes en instellingen (incl. huishouden).</p>
+                      <button onClick={handleExportBackup} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Download size={13} />Exporteer data</button>
+                    </div>
+                    <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "block", marginBottom: 6 }}>Gevarenzone</label>
+                      <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>Verwijder alle data permanent. Er wordt eerst automatisch een backup geëxporteerd.</p>
+                      {!showDeleteConfirm
+                        ? <button onClick={() => setShowDeleteConfirm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Trash2 size={13} />Verwijder alle data</button>
+                        : (
+                          <div style={{ padding: 14, borderRadius: 10, border: "1px solid var(--danger)", background: "color-mix(in srgb, var(--danger) 10%, transparent)" }}>
+                            <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}><AlertTriangle size={13} />Ben je zeker?</p>
+                            <p style={{ margin: "0 0 12px", fontSize: 11, color: "var(--text)", opacity: 0.8 }}>Alle transacties, budgetten, categorieën, patronen en spaardoelen worden gewist.</p>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={handleDeleteAllData} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "var(--danger)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Ja, verwijder alles</button>
+                              <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                            </div>
+                          </div>
+                        )
+                      }
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+            </div>
+          </div>
         )}
           </main>
         </div>

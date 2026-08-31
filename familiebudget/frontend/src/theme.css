@@ -626,20 +626,6 @@
     z-index: 70;
   }
 
-  /* Settings becomes a full-screen page instead of a floating dialog, to
-     match the weight of every other bottom-bar destination. */
-  .settings-overlay {
-    padding: 0 !important;
-    align-items: stretch !important;
-  }
-  .settings-panel {
-    max-width: 100% !important;
-    width: 100% !important;
-    max-height: 100% !important;
-    height: 100% !important;
-    border-radius: 0 !important;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-  }
 }
 
 @media (min-width: 641px) {
