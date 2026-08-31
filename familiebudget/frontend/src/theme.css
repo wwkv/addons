@@ -439,6 +439,45 @@
 .cmp-summary-delta { margin-left: auto; text-align: right; }
 .cmp-summary-figure { justify-content: flex-end; }
 
+/* ── Dashboard KPI cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* ── "Grootste uitgaven" rows ──
+   Grid rather than flex with fixed px columns, so the name track can shrink
+   instead of pushing the bar and amount off the right edge on a phone. */
+.rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 176px) minmax(0, 1fr) 84px 11px;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 12px;
+}
+.rank-row > * { min-width: 0; }
+.rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-amount { text-align: right; font-size: 11.5px; }
+
+/* ── Period strip ──
+   One horizontally-scrolling row rather than a wrapping block: 12 months
+   wrapped to three rows on a phone and ate the top of the screen. Scrolling
+   also means the control does not grow if more periods are ever added. */
+.month-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.month-strip::-webkit-scrollbar { display: none; }
+.month-strip > * { flex-shrink: 0; }
+
 /* Trend chart axis labels — the SVG is stretched horizontally, so these live
    in HTML on top of it rather than as SVG text. */
 .trend-axis-label { font-size: 9px; }
@@ -572,6 +611,24 @@
   .cmp-hero-badge { width: 46px; height: 46px; flex-basis: 46px; }
   .cmp-hero-figure { font-size: 27px; }
   .cmp-baseline { gap: 10px; }
+
+  /* Income and spending side by side, savings rate full width beneath —
+     three equal columns ran the third card off the screen. */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .kpi-grid > :nth-child(3) { grid-column: 1 / -1; }
+
+  .rank-row {
+    grid-template-columns: minmax(0, 1fr) 78px 11px;
+    grid-template-areas: "name amount chev" "bar bar bar";
+    gap: 3px 8px;
+  }
+  .rank-name { grid-area: name; }
+  .rank-row > :nth-child(2) { grid-area: bar; }
+  .rank-amount { grid-area: amount; }
+  .rank-row > :nth-child(4) { grid-area: chev; }
 }
 
 /* ── Responsive ── */

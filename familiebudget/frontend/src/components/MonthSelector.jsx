@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { MONTH_NAMES } from '../utils/comparison.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 
@@ -8,6 +9,16 @@ import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
  * Months with no transactions are dimmed but still selectable.
  */
 export default function MonthSelector({ months, setMonths, mStats, year }) {
+  const stripRef = useRef(null);
+  const activeRef = useRef(null);
+
+  // The strip scrolls on narrow screens, so a selected month can start out
+  // off-view — e.g. picking December then switching tabs.
+  useEffect(() => {
+    if (!activeRef.current || !stripRef.current) return;
+    activeRef.current.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [months, year]);
+
   const toggle = (key, e) => {
     const additive = e && (e.shiftKey || e.metaKey || e.ctrlKey);
     if (additive) {
@@ -20,17 +31,21 @@ export default function MonthSelector({ months, setMonths, mStats, year }) {
   const allActive = months.length === 0;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginBottom: 14 }}>
+    <div className="month-strip" ref={stripRef}>
+      {/* Says "Heel jaar", not the year itself — the year is chosen in the
+          header, and showing it twice made two controls look like one. */}
       <button
         onClick={() => setMonths([])}
+        ref={allActive ? activeRef : null}
         style={{
           padding: "5px 11px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
+          whiteSpace: "nowrap",
           border: allActive ? "1px solid var(--accent)" : "1px solid var(--border)",
           background: allActive ? "var(--accent-20)" : "var(--card)",
           color: allActive ? "var(--accent)" : "var(--muted)",
         }}
       >
-        {year}
+        Heel jaar
       </button>
       <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 4px" }} />
       {CALENDAR_MONTH_KEYS.map((key, i) => {
@@ -39,6 +54,7 @@ export default function MonthSelector({ months, setMonths, mStats, year }) {
         return (
           <button
             key={key}
+            ref={active ? activeRef : null}
             onClick={(e) => toggle(key, e)}
             title={hasData ? undefined : "Geen transacties in deze maand"}
             style={{

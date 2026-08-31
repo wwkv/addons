@@ -770,7 +770,9 @@ export default function App() {
           <button title="Instellingen" onClick={() => setView("settings")} className={`rail-btn mobile-settings${view === "settings" ? " active" : ""}`}><Settings size={18} /></button>
         </nav>
 
-        {uncatN > 0 && <button title="Snel categoriseren" onClick={() => setTinderMode(true)} className="mobile-fab"><Sparkles size={22} /></button>}
+        {/* Only on Transacties: it acts on the list you're looking at, and
+            floating over Sparen or Budget it just obscured content. */}
+        {view === "transactions" && uncatN > 0 && <button title="Snel categoriseren" onClick={() => setTinderMode(true)} className="mobile-fab"><Sparkles size={22} /></button>}
 
         <div className="app-content">
           {/* ─── HEADER ─── */}
