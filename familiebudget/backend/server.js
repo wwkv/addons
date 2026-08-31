@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { join, dirname } from 'path';
+import { join, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { getState, setState, getAllState, importAll, closeDb } from './db.js';
@@ -128,9 +128,28 @@ app.get('/api/health', (req, res) => {
 // ─── Serve frontend build ───
 const publicDir = join(__dirname, 'public');
 if (existsSync(publicDir)) {
-  app.use(express.static(publicDir));
+  /* Cache-Control matters here. Without it Express sends no cache header at
+     all, and browsers fall back to heuristic caching — they hold on to
+     index.html for a while on their own. Since index.html is what names the
+     content-hashed bundles, a stale copy keeps loading the OLD JS and CSS
+     after an add-on update, which looks exactly like the update not having
+     applied.
+
+     Assets are content-addressed (index-<hash>.js), so a changed file always
+     has a new URL and can be cached indefinitely. index.html never can. */
+  app.use(express.static(publicDir, {
+    etag: true,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (path.includes(`${sep}assets${sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api')) {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(join(publicDir, 'index.html'));
     }
   });

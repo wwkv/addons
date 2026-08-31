@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.1] - 2026-08-31
+### Fixed
+- Add-on updates appeared not to apply. Express served the frontend with no
+  `Cache-Control` header at all, so browsers fell back to heuristic caching
+  and held on to `index.html` — the file that names the content-hashed JS and
+  CSS bundles. A stale copy kept loading the previous version's assets even
+  though the container had been rebuilt, which looked exactly like the update
+  failing. `index.html` is now sent `no-cache` (revalidate, still a cheap 304
+  when unchanged) and the hashed assets under `/assets/` are marked immutable,
+  since a changed file always gets a new URL
+
 ## [1.1.0] - 2026-08-31
 
 Full visual overhaul plus a new comparison tab. Two of the fixes below are
