@@ -15,6 +15,13 @@ import {
    ("Meer/Minder uitgegeven"), and the number itself stays neutral. */
 const ARROW = { up: ArrowUp, down: ArrowDown, flat: Minus };
 const deltaDir = (d) => d > 0 ? "up" : d < 0 ? "down" : "flat";
+const ARROW_SMALL = ({ dir }) => { const I = ARROW[dir]; return <I size={11} strokeWidth={2.5} />; };
+
+/* Width of one side of the before/after bars, as a share of the larger side. */
+const barPct = (v, other) => {
+  const max = Math.max(Math.abs(v), Math.abs(other), 1);
+  return Math.max(2, (Math.abs(v) / max) * 100);
+};
 
 const PRESETS = [
   { id: "prev", label: "Vorige periode" },
@@ -235,25 +242,43 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
 
   return shell(
     <>
-      <div className="cmp-summary">
-        <div>
-          <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600 }}>{a.label}</div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 17, color: "var(--muted)" }}>{fmt(cmp.totalA)}{suffix}</div>
-        </div>
-        <div style={{ fontSize: 15, color: "var(--muted)", paddingBottom: 3 }}>→</div>
-        <div>
-          <div style={{ fontSize: 10.5, color: "var(--text)", fontWeight: 700 }}>{b.label}</div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 17, color: "var(--text)", fontWeight: 600 }}>{fmt(cmp.totalB)}{suffix}</div>
-        </div>
-        <div className="cmp-summary-delta">
-          <div className="cmp-summary-figure" style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600, color: "var(--text)" }}>
-            {(() => { const Icon = ARROW[deltaDir(cmp.delta)]; return <Icon size={17} style={{ opacity: 0.75 }} />; })()}
-            {fmt(Math.abs(cmp.delta))}
+      {/* Hero, after AppBlock's trend screen: a direction badge, the delta as
+          the single biggest thing on screen, a caption saying what it means,
+          and the % change as a pill underneath. */}
+      <div className="cmp-hero">
+        {(() => {
+          const Icon = ARROW[deltaDir(cmp.delta)];
+          return (
+            <div className="cmp-hero-badge">
+              <Icon size={26} strokeWidth={2.4} />
+            </div>
+          );
+        })()}
+        <div className="cmp-hero-body">
+          <div className="cmp-hero-figure">{fmt(Math.abs(cmp.delta))}{suffix}</div>
+          <div className="cmp-hero-caption">
+            {cmp.delta > 0 ? "MEER UITGEGEVEN" : cmp.delta < 0 ? "MINDER UITGEGEVEN" : "GELIJK GEBLEVEN"}
           </div>
-          <div style={{ fontSize: 10.5, color: "var(--muted)" }}>
-            {cmp.delta > 0 ? "meer" : cmp.delta < 0 ? "minder" : "gelijk"}
-            {cmp.pct !== null && Number.isFinite(cmp.pct) ? ` (${Math.abs(Math.round(cmp.pct))}%)` : ""} dan {a.label.toLowerCase()}
-          </div>
+          {cmp.pct !== null && Number.isFinite(cmp.pct) && (
+            <div className="cmp-hero-pill">
+              <ARROW_SMALL dir={deltaDir(cmp.delta)} />
+              {Math.abs(Math.round(cmp.pct))}% verandering
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Before → after, the way AppBlock states it as a sentence */}
+      <div className="cmp-baseline">
+        <div className="cmp-baseline-side">
+          <div className="cmp-baseline-label">{a.label}</div>
+          <div className="cmp-baseline-val" style={{ color: "var(--muted)" }}>{fmt(cmp.totalA)}{suffix}</div>
+          <div className="cmp-baseline-bar"><div style={{ width: `${barPct(cmp.totalA, cmp.totalB)}%`, background: "var(--neutral)" }} /></div>
+        </div>
+        <div className="cmp-baseline-side">
+          <div className="cmp-baseline-label" style={{ color: "var(--text)", fontWeight: 700 }}>{b.label}</div>
+          <div className="cmp-baseline-val" style={{ color: "var(--text)", fontWeight: 600 }}>{fmt(cmp.totalB)}{suffix}</div>
+          <div className="cmp-baseline-bar"><div style={{ width: `${barPct(cmp.totalB, cmp.totalA)}%`, background: "var(--accent)" }} /></div>
         </div>
       </div>
 

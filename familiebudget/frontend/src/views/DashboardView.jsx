@@ -3,6 +3,7 @@ import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import { isSubExcluded } from '../utils/helpers.js';
 import MonthSelector from '../components/MonthSelector.jsx';
+import NetTrendChart from '../components/NetTrendChart.jsx';
 
 export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, years }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
@@ -38,13 +39,6 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
     }
   }
 
-  /* ── Sparkline: net per month across the year ── */
-  const sparkVals = CALENDAR_MONTH_KEYS.map(m => { const s = mStats[m]; return s ? s.inc - s.exp : 0; });
-  const maxV = Math.max(...sparkVals, 0), minV = Math.min(...sparkVals, 0);
-  const range = (maxV - minV) || 1;
-  const sparkPts = sparkVals.map((v, i) => `${(i / (sparkVals.length - 1)) * 600},${65 - ((v - minV) / range) * 60}`);
-  const areaPath = `M${sparkPts[0]} L${sparkPts.join(" L")} L600,70 L0,70 Z`;
-
   /* ── Ranked expense list ── */
   const ranked = cats
     .filter(c => c.type !== "inkomsten" && catStats[c.id] && catStats[c.id].total > 0)
@@ -68,12 +62,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
             {trend.up ? <ChevronUp size={12} /> : <ChevronDown size={12} />}{trend.pct}% t.o.v. vorige maand
           </div>
         )}
-        <div style={{ marginTop: 10 }}>
-          <svg viewBox="0 0 600 70" width="100%" height="70" preserveAspectRatio="none">
-            <path d={areaPath} fill="var(--accent)" opacity="0.15" />
-            <polyline points={sparkPts.join(" ")} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        <NetTrendChart mStats={mStats} months={months} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 14 }}>
