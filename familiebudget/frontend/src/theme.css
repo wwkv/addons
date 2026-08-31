@@ -7,27 +7,30 @@
    an Instrument Serif headline touch. Money amounts (green/red) are reserved
    for signed € values only — never used for category coding elsewhere. */
 :root {
-  /* Default = dark */
-  --bg: #0E1016;
-  --card: #171A22;
-  --border: #272B36;
-  --text: #EDEFF4;
-  --muted: #8B90A0;
-  --green: #39C98C;
-  --red: #F1685E;
-  --accent: #7C6CF0;
+  /* Default = dark: a very dark purplish blue (deep indigo), not neutral black */
+  --bg: #0A0819;
+  --card: #14112A;
+  --border: #251F45;
+  --text: #EDEAF7;
+  --muted: #8E88AE;
+  --green: #3FD69A;
+  --red: #FF6B61;
+  --accent: #8B7DF7;
+  /* Readable ink on an --accent fill; flips per theme so accent buttons
+     don't hardcode a background colour that only worked in dark mode. */
+  --on-accent: #0A0819;
 
   /* Alpha variants (8-digit hex) */
-  --bg-30: #0E101630;
-  --bg-80: #0E101680;
-  --card-40: #171A2240;
-  --card-60: #171A2260;
-  --border-30: #272B3630;
-  --accent-10: #7C6CF010;
-  --accent-20: #7C6CF020;
-  --accent-30: #7C6CF030;
-  --accent-40: #7C6CF040;
-  --muted-40: #8B90A040;
+  --bg-30: #0A081930;
+  --bg-80: #0A081980;
+  --card-40: #14112A40;
+  --card-60: #14112A60;
+  --border-30: #251F4530;
+  --accent-10: #8B7DF710;
+  --accent-20: #8B7DF720;
+  --accent-30: #8B7DF730;
+  --accent-40: #8B7DF740;
+  --muted-40: #8E88AE40;
 
   /* Category-coding palette — deliberately separate from green/red so
      category chips, charts and tags never compete with the money signal */
@@ -52,25 +55,30 @@
 }
 
 [data-theme="light"] {
-  --bg: #F4F5F8;
-  --card: #FFFFFF;
-  --border: #E3E6ED;
-  --text: #14161C;
-  --muted: #6B7180;
-  --green: #1F9D6B;
-  --red: #D6483F;
-  --accent: #6C5CE8;
+  /* Light = warm: a soft orangey-yellow cream, deliberately not white.
+     The violet accent carries over from dark mode — violet against warm
+     yellow is a complementary pair, so the brand colour stays constant
+     while the ground changes temperature. */
+  --bg: #FDF3E3;
+  --card: #FFFCF6;
+  --border: #EDDFC7;
+  --text: #241B0F;
+  --muted: #7D6B52;
+  --green: #1B8F5F;
+  --red: #C9453B;
+  --accent: #6D4AE0;
+  --on-accent: #FFFCF6;
 
-  --bg-30: #F4F5F830;
-  --bg-80: #F4F5F880;
-  --card-40: #FFFFFF40;
-  --card-60: #FFFFFF60;
-  --border-30: #E3E6ED30;
-  --accent-10: #6C5CE810;
-  --accent-20: #6C5CE820;
-  --accent-30: #6C5CE830;
-  --accent-40: #6C5CE840;
-  --muted-40: #6B718040;
+  --bg-30: #FDF3E330;
+  --bg-80: #FDF3E380;
+  --card-40: #FFFCF640;
+  --card-60: #FFFCF660;
+  --border-30: #EDDFC730;
+  --accent-10: #6D4AE010;
+  --accent-20: #6D4AE020;
+  --accent-30: #6D4AE030;
+  --accent-40: #6D4AE040;
+  --muted-40: #7D6B5240;
 
   --cat-1: #6C5CE8;
   --cat-2: #3B82C4;
@@ -617,7 +625,7 @@
     height: 52px;
     border-radius: 50%;
     background: var(--accent);
-    color: #0E1016;
+    color: var(--on-accent);
     border: none;
     align-items: center;
     justify-content: center;

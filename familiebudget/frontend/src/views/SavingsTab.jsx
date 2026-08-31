@@ -117,7 +117,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
           <button
             onClick={() => setIsAssignMode(!isAssignMode)}
             disabled={!isAssignMode && unassignedSavings < 250}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: isAssignMode ? "transparent" : "var(--accent)", color: isAssignMode ? "var(--muted)" : "#0E1016", cursor: (!isAssignMode && unassignedSavings < 250) ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: (!isAssignMode && unassignedSavings < 250) ? 0.5 : 1, ...(isAssignMode ? { border: "1px solid var(--border)" } : {}) }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: isAssignMode ? "transparent" : "var(--accent)", color: isAssignMode ? "var(--muted)" : "var(--on-accent)", cursor: (!isAssignMode && unassignedSavings < 250) ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: (!isAssignMode && unassignedSavings < 250) ? 0.5 : 1, ...(isAssignMode ? { border: "1px solid var(--border)" } : {}) }}
           >
             {isAssignMode ? <><Check size={13} />Klaar met verdelen</> : "Verdeel geld"}
           </button>
@@ -131,7 +131,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
             <div style={{ fontSize: 13, fontWeight: 600 }}>Spaarbuffer</div>
             <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {settings?.bufferMultiplier || 5}× gem. vaste lasten</div>
           </div>
-          <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#20242F", overflow: "hidden", minWidth: 100 }}>
+          <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden", minWidth: 100 }}>
             <div style={{ width: `${bufferTarget > 0 ? Math.min((bufferAllocated / bufferTarget) * 100, 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--accent)", transition: "width 0.4s" }} />
           </div>
           <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: "var(--muted)", flexShrink: 0 }}>{Math.round((bufferAllocated / bufferTarget) * 100 || 0)}%</div>
@@ -168,7 +168,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
                 </div>
               </div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11.5, color: "var(--muted)" }}>{fmt(pot.allocated || 0).replace("€", "")} / {fmt(target).replace("€", "")} ({Math.round(pct)}%)</div>
-              <div style={{ height: 8, borderRadius: 4, background: "#20242F", overflow: "hidden" }}>
+              <div style={{ height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
                 <div style={{ width: `${pct}%`, height: "100%", borderRadius: 4, background: color, transition: "width 0.4s" }} />
               </div>
               {isAssignMode && (

@@ -99,7 +99,7 @@ export default function OnboardingFlow({ settings, setSettings, cats, setCats })
               const color = CAT_COLOR_VARS[i % CAT_COLOR_VARS.length];
               return (
                 <div key={cat.id} onClick={() => toggleCat(cat.id)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 8px", borderRadius: 14, border: `1px solid ${isOn ? "var(--accent)" : "var(--border)"}`, background: isOn ? "var(--accent-10)" : "var(--card)", opacity: isOn ? 1 : 0.55 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: isOn ? color + "1F" : "#20242F", color: isOn ? color : "var(--muted)" }}><Icon size={18} strokeWidth={1.8} /></div>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: isOn ? color + "1F" : "var(--bg)", color: isOn ? color : "var(--muted)" }}><Icon size={18} strokeWidth={1.8} /></div>
                   <div style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>{cat.name}</div>
                 </div>
               );
@@ -142,9 +142,9 @@ export default function OnboardingFlow({ settings, setSettings, cats, setCats })
           <button onClick={() => setStep(s => s - 1)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "var(--muted)", fontSize: 12.5, cursor: "pointer" }}><ChevronLeft size={13} />Terug</button>
         )}
         {step < 2 ? (
-          <button onClick={() => setStep(s => s + 1)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 20px", borderRadius: 11, background: "var(--accent)", color: "#0E1016", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Volgende<ChevronRight size={14} /></button>
+          <button onClick={() => setStep(s => s + 1)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 20px", borderRadius: 11, background: "var(--accent)", color: "var(--on-accent)", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Volgende<ChevronRight size={14} /></button>
         ) : (
-          <button onClick={finish} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 12, background: "var(--accent)", color: "#0E1016", fontSize: 14, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>Start met FamilieBudget<Check size={16} /></button>
+          <button onClick={finish} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 12, background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>Start met FamilieBudget<Check size={16} /></button>
         )}
       </div>
       {step === 2 && (
