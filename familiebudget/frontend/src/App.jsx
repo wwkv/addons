@@ -6,7 +6,7 @@ import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Br
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
 import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI } from './utils/rules.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
-import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx } from './utils/helpers.js';
+import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
 
 /* Components */
@@ -93,10 +93,17 @@ export default function App() {
         const d = await r.json();
         if (d && d.value) {
           const p = d.value;
+          // Databases created before savings were excluded by default get the
+          // exclusion applied once. The flag means a later removal in Settings
+          // sticks instead of being re-applied on every load.
+          const seedSavingsExclusion = p.settings?.savingsExclusionApplied !== true;
           if (p.txs) setTxs(p.txs);
-          if (p.cats) setCats(normalizeCats(p.cats));
+          if (p.cats) {
+            const loadedCats = normalizeCats(p.cats);
+            setCats(seedSavingsExclusion ? applyDefaultSavingsExclusion(loadedCats) : loadedCats);
+          }
           if (p.rules) setRules(p.rules);
-          if (p.settings) setSettings(p.settings);
+          setSettings(s => ({ ...s, ...(p.settings || {}), savingsExclusionApplied: true }));
           if (p.pending) setPending(p.pending);
           if (p.blacklist) setBlacklist(p.blacklist);
           if (p.savings) setSavings(normalizeSavings(p.savings));
@@ -634,7 +641,7 @@ export default function App() {
     let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId));
     if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
     const s = {};
-    for (const c of cats) { if (c.type === "inkomsten" || c.type === "transfers") continue; const ct = et.filter(t => t.categoryId === c.id); const tot = ct.reduce((a, t) => a + Math.abs(t.amount), 0); const subs = {}; for (const sub of c.subs) subs[sub.id] = ct.filter(t => t.subCategoryId === sub.id).reduce((a, t) => a + Math.abs(t.amount), 0); s[c.id] = { total: tot, subs, count: ct.length }; }
+    for (const c of cats) { if (c.type === "inkomsten") continue; const ct = et.filter(t => t.categoryId === c.id); const tot = ct.reduce((a, t) => a + Math.abs(t.amount), 0); const subs = {}; for (const sub of c.subs) subs[sub.id] = ct.filter(t => t.subCategoryId === sub.id).reduce((a, t) => a + Math.abs(t.amount), 0); s[c.id] = { total: tot, subs, count: ct.length }; }
     s._uncat = { total: et.filter(t => !t.categoryId).reduce((a, t) => a + Math.abs(t.amount), 0), count: et.filter(t => !t.categoryId).length };
     return s;
   }, [expanded, cats, year, months]);

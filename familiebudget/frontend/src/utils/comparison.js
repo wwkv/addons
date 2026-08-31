@@ -78,7 +78,7 @@ export function resolveDataset(desc, ctx) {
     const byKey = {};
     let total = 0;
     for (const cat of cats) {
-      if (cat.type === "inkomsten" || cat.type === "transfers") continue;
+      if (cat.type === "inkomsten") continue;
       let sum = 0;
       for (const sub of (cat.subs || [])) {
         const arr = expense[sub.id];

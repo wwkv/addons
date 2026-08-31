@@ -13,22 +13,26 @@ export function isSubExcluded(cats, categoryId, subCategoryId) {
   return sub ? sub.excluded === true : false;
 }
 
-/* Money moved to a savings or investment account has not been spent — it is
-   still yours, just somewhere else. Categories typed "transfers" (Sparen &
-   Beleggen by default) are therefore not expenses, and counting them as such
-   overstated spending and understated the savings rate. They stay visible on
-   the Sparen tab; this only governs what counts as an expense. */
-export function isTransferCat(cats, categoryId) {
-  const cat = (cats || []).find(c => c.id === categoryId);
-  return !!cat && cat.type === "transfers";
+/* The single definition of "this transaction is spending", used by the
+   dashboard, category stats and every comparison so they cannot drift apart.
+   Exclusions are pure user data — see applyDefaultSavingsExclusion for how
+   savings end up excluded by default while staying removable. */
+export function isSpendingTx(cats, t) {
+  return t.amount < 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId);
 }
 
-/* The single definition of "this transaction is spending", used by the
-   dashboard, category stats and every comparison so they cannot drift apart. */
-export function isSpendingTx(cats, t) {
-  return t.amount < 0
-    && !isTransferCat(cats, t.categoryId)
-    && !isSubExcluded(cats, t.categoryId, t.subCategoryId);
+/* Money moved to savings or investments has not been spent — it is still
+   yours, just somewhere else — so transfer subcategories start out on the
+   exclusion list. This is a DEFAULT, not a rule: it writes the same
+   `excluded` flag the user toggles in Settings, so they can drop any of
+   these chips to count savings as spending again, or add their own.
+   Applied once per database via settings.savingsExclusionApplied, so a
+   deliberate removal is never silently undone on the next load. */
+export function applyDefaultSavingsExclusion(cats) {
+  return (cats || []).map(c => c.type !== "transfers" ? c : {
+    ...c,
+    subs: (c.subs || []).map(s => ({ ...s, excluded: true })),
+  });
 }
 
 export function normalizeCats(cats) {

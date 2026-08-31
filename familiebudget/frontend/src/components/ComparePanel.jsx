@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ArrowUp, ArrowDown, Minus, Scale, Info, AlertTriangle } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
-import { isSubExcluded, isTransferCat } from '../utils/helpers.js';
+import { isSubExcluded } from '../utils/helpers.js';
 import {
   DATASET_KINDS, resolveDataset, compareDatasets, compareToBenchmark, MONTH_NAMES,
 } from '../utils/comparison.js';
@@ -68,9 +68,7 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
 
   const ctx = useMemo(() => ({
     expanded, cats, budgets,
-    // Excludes user-excluded subs AND transfers (savings), matching the
-    // dashboard's definition of spending.
-    isExcluded: (t) => isTransferCat(cats, t.categoryId) || isSubExcluded(cats, t.categoryId, t.subCategoryId),
+    isExcluded: (t) => isSubExcluded(cats, t.categoryId, t.subCategoryId),
   }), [expanded, cats, budgets]);
 
   const catName = (key) => {

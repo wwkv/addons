@@ -82,11 +82,14 @@ export const DEFAULT_CATEGORIES = [
     { id: "gift_inkomen", name: "Gift", label: "variabel" },
     { id: "andere_inkomen", name: "Andere", label: "variabel" },
   ]},
+  /* Transfers to savings/investments are excluded from spending by default —
+     the money is still yours. These are ordinary exclusions, editable in
+     Settings › Regels, so any of them can be dropped to count as spending. */
   { id: "sparen", name: "Sparen & Beleggen", type: "transfers", color: "#4A6B8A", subs: [
-    { id: "pensioensparen", name: "Pensioensparen", label: "vast" },
-    { id: "beleggingen", name: "Beleggingen", label: "variabel" },
-    { id: "spaarrekening", name: "Spaarrekening", label: "variabel" },
-    { id: "sparen_kinderen", name: "Spaarrekening Kinderen", label: "variabel" },
+    { id: "pensioensparen", name: "Pensioensparen", label: "vast", excluded: true },
+    { id: "beleggingen", name: "Beleggingen", label: "variabel", excluded: true },
+    { id: "spaarrekening", name: "Spaarrekening", label: "variabel", excluded: true },
+    { id: "sparen_kinderen", name: "Spaarrekening Kinderen", label: "variabel", excluded: true },
   ]},
   { id: "projecten", name: "Projecten", type: "uitgaven", color: "#8B7355", subs: [
     { id: "trouw", name: "Trouw", label: "luxe" },
