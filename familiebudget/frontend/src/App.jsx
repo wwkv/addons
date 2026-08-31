@@ -47,6 +47,7 @@ export default function App() {
   const [sel, setSel] = useState(new Set());
   const lastClickedIndexRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [splitTx, setSplitTx] = useState(null);
   const [settingsTab, setSettingsTab] = useState("regels");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -90,9 +91,14 @@ export default function App() {
     (async () => {
       try {
         const r = await fetch('api/state/main');
+        // fetch only rejects on network failure, so without this an HTTP 500
+        // parses as valid JSON with no `value`, looks identical to an empty
+        // database, and arms the autosave below to overwrite the real one
+        // with empty defaults.
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
-        if (d && d.value) {
-          const p = d.value;
+        const p = d && d.value;
+        if (p) {
           // Databases created before savings were excluded by default get the
           // exclusion applied once. The flag means a later removal in Settings
           // sticks instead of being re-applied on every load.
@@ -103,13 +109,23 @@ export default function App() {
             setCats(seedSavingsExclusion ? applyDefaultSavingsExclusion(loadedCats) : loadedCats);
           }
           if (p.rules) setRules(p.rules);
-          setSettings(s => ({ ...s, ...(p.settings || {}), savingsExclusionApplied: true }));
           if (p.pending) setPending(p.pending);
           if (p.blacklist) setBlacklist(p.blacklist);
           if (p.savings) setSavings(normalizeSavings(p.savings));
         }
-      } catch (e) { /* first load */ }
-      setLoaded(true);
+        // Stamped whether or not there was existing data. On a fresh database
+        // DEFAULT_CATEGORIES already carries the exclusions, so this only
+        // records that seeding is done — without it the flag was never
+        // written on a new install and the next load re-seeded over the
+        // user's first edit.
+        setSettings(s => ({ ...s, ...(p?.settings || {}), savingsExclusionApplied: true }));
+        setLoaded(true);
+      } catch (e) {
+        // Deliberately leave `loaded` false: that is what gates the debounced
+        // writer, so a database we failed to read can never be overwritten
+        // with this session's empty defaults.
+        setLoadError(e.message || String(e));
+      }
     })();
   }, []);
 
@@ -161,10 +177,19 @@ export default function App() {
     });
     if (!r.ok) throw new Error(`Import failed: HTTP ${r.status}`);
 
+    // Same seeding rule as the initial load: a backup taken before savings
+    // were excluded by default gets the exclusion applied, and the flag is
+    // always stamped. Restoring with `setSettings(data.settings)` used to drop
+    // the flag, which let the next load re-seed over exclusions the backup
+    // deliberately contained.
+    const seedSavingsExclusion = data.settings?.savingsExclusionApplied !== true;
     if (data.txs) setTxs(data.txs);
-    if (data.cats) setCats(normalizeCats(data.cats));
+    if (data.cats) {
+      const restored = normalizeCats(data.cats);
+      setCats(seedSavingsExclusion ? applyDefaultSavingsExclusion(restored) : restored);
+    }
     if (data.rules) setRules(data.rules);
-    if (data.settings) setSettings(data.settings);
+    setSettings(s => ({ ...s, ...(data.settings || {}), savingsExclusionApplied: true }));
     if (data.pending) setPending(data.pending);
     if (data.blacklist) setBlacklist(data.blacklist);
     if (data.savings) setSavings(normalizeSavings(data.savings));
@@ -646,40 +671,6 @@ export default function App() {
     return s;
   }, [expanded, cats, year, months]);
 
-  /* Fixed vs Variable: aggregate ONLY by subcategory.type — Vast, Variabel, Onbekend */
-  const typeStats = useMemo(() => {
-    let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0);
-    if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
-    const s = { vast: 0, variabel: 0, onbekend: 0 };
-    for (const t of et) {
-      const cat = cats.find(c => c.id === t.categoryId);
-      const sub = cat ? cat.subs.find(ss => ss.id === t.subCategoryId) : null;
-      if (!sub) { s.onbekend += Math.abs(t.amount); continue; }
-      if (sub.excluded) continue;
-      const type = sub.type || "variabel";
-      if (type === "vast") s.vast += Math.abs(t.amount);
-      else s.variabel += Math.abs(t.amount);
-    }
-    return s;
-  }, [expanded, cats, year, months]);
-
-  /* Necessity vs Luxury: aggregate ONLY by subcategory.necessity — Nodig, Luxe, Onbekend */
-  const necessityStats = useMemo(() => {
-    let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0);
-    if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
-    const s = { nodig: 0, luxe: 0, onbekend: 0 };
-    for (const t of et) {
-      const cat = cats.find(c => c.id === t.categoryId);
-      const sub = cat ? cat.subs.find(ss => ss.id === t.subCategoryId) : null;
-      if (!sub) { s.onbekend += Math.abs(t.amount); continue; }
-      if (sub.excluded) continue;
-      const necessity = sub.necessity || "nodig";
-      if (necessity === "luxe") s.luxe += Math.abs(t.amount);
-      else s.nodig += Math.abs(t.amount);
-    }
-    return s;
-  }, [expanded, cats, year, months]);
-
   const totalExp = cats.filter(c => c.type !== "inkomsten" && catStats[c.id]).reduce((s, c) => s + catStats[c.id].total, 0);
   const uncatN = useMemo(() => txs.filter(t => t.date.startsWith(year) && !t.categoryId).length, [txs, year]);
 
@@ -732,6 +723,22 @@ export default function App() {
   }, [preview, importSort]);
 
   /* Lookup Button */
+  /* A failed read must never look like an empty app, or the user would start
+     entering data on top of a database that is still there. */
+  if (loadError) return (
+    <div className="loading-screen">
+      <div style={{ textAlign: "center", maxWidth: 420, padding: 20 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><AlertTriangle size={22} strokeWidth={1.8} /></div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--text)", marginBottom: 6 }}>Kon je gegevens niet laden</div>
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 16px", lineHeight: 1.5 }}>
+          Je data is niet gewijzigd — er wordt niets opgeslagen zolang dit niet lukt. Controleer of de server draait en probeer opnieuw.
+        </p>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--muted)", marginBottom: 16 }}>{loadError}</div>
+        <button onClick={() => window.location.reload()} style={{ padding: "9px 18px", borderRadius: 9, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Opnieuw proberen</button>
+      </div>
+    </div>
+  );
+
   if (!loaded) return <div className="loading-screen"><div style={{ textAlign: "center" }}><div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}><PiggyBank size={22} strokeWidth={1.8} /></div><span style={{ fontSize: 13, opacity: 0.6 }}>Laden...</span></div></div>;
 
   if (!settings.onboardingComplete && txs.length === 0) {
@@ -980,8 +987,7 @@ export default function App() {
         {view === "dashboard" && (
           <DashboardView
             txs={txs} expanded={expanded} year={year} months={months} cats={cats}
-            catStats={catStats} typeStats={typeStats}
-            necessityStats={necessityStats} totalExp={totalExp} mStats={mStats}
+            catStats={catStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail} years={years}
           />

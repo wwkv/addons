@@ -15,7 +15,10 @@ export default function CatDetailModal({ catId, cats, catStats, totalExp, expand
   if (!stat) return null;
   const shades = ["CC", "AA", "88", "66", "44"];
   const subData = cat.subs.filter(s => stat.subs[s.id] > 0).map((s, idx) => ({ name: s.name, value: stat.subs[s.id], color: cat.color + shades[idx % shades.length] })).sort((a, b) => b.value - a.value);
-  let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && t.amount < 0);
+  // Excluded subs are absent from `stat`, so listing their transactions here
+  // made the table sum higher than the total and the pie above it.
+  const excludedSubs = new Set((cat.subs || []).filter(s => s.excluded).map(s => s.id));
+  let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && t.amount < 0 && !excludedSubs.has(t.subCategoryId));
   if (months.length) catTxs = catTxs.filter(t => months.includes(t.date.slice(5, 7)));
   catTxs.sort((a, b) => b.date.localeCompare(a.date));
   return (

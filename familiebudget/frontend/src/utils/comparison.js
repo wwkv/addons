@@ -81,6 +81,10 @@ export function resolveDataset(desc, ctx) {
       if (cat.type === "inkomsten") continue;
       let sum = 0;
       for (const sub of (cat.subs || [])) {
+        // Skip excluded subs: the actuals side drops their transactions, so
+        // counting their budget here produced a phantom underspend for the
+        // full budgeted amount.
+        if (sub.excluded) continue;
         const arr = expense[sub.id];
         if (!arr) continue;
         for (const i of monthIdxs) sum += Number(arr[i]) || 0;
