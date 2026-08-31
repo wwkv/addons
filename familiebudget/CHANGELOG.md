@@ -1,5 +1,80 @@
 # Changelog
 
+## [1.1.0] - 2026-08-31
+
+Full visual overhaul plus a new comparison tab. Two of the fixes below are
+data-safety issues that were silently live in 1.0.22 — see **Fixed**.
+
+### Added
+- **Vergelijk tab**: compare any two periods — month vs month, a month vs the
+  rest of the year, actual vs budget, or your spending against the average
+  Belgian household. Periods of unequal length are normalised to a per-month
+  average automatically. A "Kies zelf" mode picks month and year for both
+  sides independently, with a swap button
+- National benchmark uses Statbel's Household Budget Survey (2024). It
+  compares **share of spending**, not euro amounts: Statbel publishes the
+  distribution as percentages and does not publish absolute figures by
+  household composition, so a euro-level "family of four" comparison would
+  have been invented. Shares are also income-neutral. The view warns when
+  under 80% of spending is categorised, since the percentages are not
+  representative below that
+- Comparison ranks the biggest movers in both directions rather than only
+  showing a total, so you can see *what* changed
+- **First-run onboarding**: household profile, starter categories and an
+  optional first budget pass. Everything it sets stays editable afterwards
+  in Settings › Profiel
+- **Guided processing funnel** replacing the standalone Tinder mode:
+  progress overview → fast batch sorting by counterparty → one-by-one review
+  of the ambiguous rest → handoff into Sparen
+- Dashboard month strip: click a month to scope, shift/⌘-click for several.
+  Previously the month filter existed but could only be driven from the
+  Transactions tab
+- Net trend chart with a labelled zero line and a dashed average reference
+- Savings transfers (Sparen & Beleggen) are excluded from spending by
+  default, as seeded entries on the Settings exclusion list — remove any of
+  them to count that transfer type as spending again
+- Responsive layout: the icon rail becomes a bottom tab bar on phones, with
+  iOS safe-area handling, and the category picker opens as a bottom sheet
+  instead of a desktop-sized popover
+
+### Fixed
+- **Automatic backups had never once run.** `backup.js` called `existsSync()`
+  without importing it, so every `createBackup()` threw and was swallowed by
+  its own try/catch, logging only "[Backup] Failed". The daily snapshot and
+  the safety snapshot taken before a restore had both silently no-opped since
+  the feature shipped, leaving `/config/backups/` empty
+- **Restoring a backup silently discarded all budgets.** Two restore paths had
+  diverged; the one reachable from the Importeer button only set local state
+  and never called the endpoint that restores budgets (they live under their
+  own state key) or takes the pre-import snapshot
+- Loading state had no HTTP error check, so a failed read looked identical to
+  an empty database and armed the autosave to overwrite the real one with
+  empty defaults. A failed read now blocks and reports instead of saving
+- Exporting a backup could download an HTTP error body as a "backup" file
+- Settings is a real tab now, not a full-screen dialog
+- Category picker rendered detached from its button when the trigger sat left
+  of centre, and did not follow the button when the view scrolled or zoomed
+- Budget tab: overlapping text from three stacked sticky rows at guessed
+  offsets; rebuilt as a table with fixed-height frozen rows
+- Number fields (known savings balance, pot targets) could not be cleared —
+  clearing produced 0, which immediately re-rendered as an undeletable "0"
+- Net trend chart drew months with no data as €0, inventing a flat line
+  across the rest of the year, and had a visibly uneven stroke width
+- Spaarquote card navigated to Transactions instead of Sparen, a leftover
+  from when it showed the uncategorised count
+- Dashboard KPI cards and expense rows overflowed the screen on mobile
+- Quick-categorise button appeared on every tab instead of only Transactions
+
+### Changed
+- New visual system: deep indigo dark mode, warm cream light mode, violet
+  accent across both, Instrument Serif headings, real icons throughout (no
+  emoji)
+- Green and red are now reserved strictly for signed euro amounts. Comparison
+  deltas use a direction arrow and neutral text, since a delta breaks the
+  positive/negative mapping
+- Backup export/import format is unchanged from 1.0.22 and round-trips in
+  both directions, so rolling back is safe
+
 ## [1.0.22] - 2026-08-20
 ### Fixed
 - HA add-on build: added missing `build.yaml` — Supervisor was no longer falling back to a default base image when none was specified, so `docker build` failed with "base name ($BUILD_FROM) should not be blank" and the 1.0.21 update could not install
