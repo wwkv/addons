@@ -1,7 +1,7 @@
 import { Inbox, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
-import { isSubExcluded } from '../utils/helpers.js';
+import { isSubExcluded, isSpendingTx } from '../utils/helpers.js';
 import MonthSelector from '../components/MonthSelector.jsx';
 import NetTrendChart from '../components/NetTrendChart.jsx';
 
@@ -19,9 +19,10 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
 
   /* ── KPI scope: year + optional month filter, same scope as catStats/totalExp ── */
   const notExcluded = t => !isSubExcluded(cats, t.categoryId, t.subCategoryId);
-  const scoped = expanded.filter(t => t.date.startsWith(year) && (!months.length || months.includes(t.date.slice(5, 7))) && notExcluded(t));
-  const inc = scoped.filter(t => t.amount > 0).reduce((a, t) => a + t.amount, 0);
-  const exp = scoped.filter(t => t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0);
+  const scoped = expanded.filter(t => t.date.startsWith(year) && (!months.length || months.includes(t.date.slice(5, 7))));
+  const inc = scoped.filter(t => t.amount > 0 && notExcluded(t)).reduce((a, t) => a + t.amount, 0);
+  // Transfers to savings are not spending — see isSpendingTx.
+  const exp = scoped.filter(t => isSpendingTx(cats, t)).reduce((a, t) => a + Math.abs(t.amount), 0);
   const net = inc - exp;
   const spaarquote = inc > 0 ? Math.round((net / inc) * 100) : null;
 
@@ -68,15 +69,25 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 14 }}>
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 13, padding: "13px 15px" }}>
           <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Inkomsten</div>
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: "var(--green)" }}>{fmt(inc)}</div>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: "var(--text)" }}>{fmt(inc)}</div>
         </div>
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 13, padding: "13px 15px" }}>
           <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Uitgaven</div>
           <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: "var(--text)" }}>{fmt(exp)}</div>
         </div>
-        <div onClick={uncatN > 0 ? () => { setFCats(["_none"]); setView("transactions"); } : undefined} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 13, padding: "13px 15px", cursor: uncatN > 0 ? "pointer" : "default" }}>
-          <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Spaarquote</div>
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: spaarquote === null ? "var(--muted)" : spaarquote >= 0 ? "var(--text)" : "var(--red)" }}>{spaarquote === null ? "—" : `${spaarquote}%`}</div>
+        <div
+          onClick={() => setView("savings")}
+          title="Deel van je inkomsten dat je niet uitgeeft"
+          style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 13, padding: "13px 15px", cursor: "pointer" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+            <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Spaarquote</div>
+            <ChevronRight size={12} style={{ opacity: 0.35, flexShrink: 0 }} />
+          </div>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: spaarquote === null ? "var(--muted)" : "var(--text)" }}>{spaarquote === null ? "—" : `${spaarquote}%`}</div>
+          <div style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 3, lineHeight: 1.3 }}>
+            {spaarquote === null ? "Nog geen inkomsten in deze periode" : `van je inkomsten hou je over${months.length ? "" : " dit jaar"}`}
+          </div>
         </div>
       </div>
 

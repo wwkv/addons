@@ -13,6 +13,24 @@ export function isSubExcluded(cats, categoryId, subCategoryId) {
   return sub ? sub.excluded === true : false;
 }
 
+/* Money moved to a savings or investment account has not been spent — it is
+   still yours, just somewhere else. Categories typed "transfers" (Sparen &
+   Beleggen by default) are therefore not expenses, and counting them as such
+   overstated spending and understated the savings rate. They stay visible on
+   the Sparen tab; this only governs what counts as an expense. */
+export function isTransferCat(cats, categoryId) {
+  const cat = (cats || []).find(c => c.id === categoryId);
+  return !!cat && cat.type === "transfers";
+}
+
+/* The single definition of "this transaction is spending", used by the
+   dashboard, category stats and every comparison so they cannot drift apart. */
+export function isSpendingTx(cats, t) {
+  return t.amount < 0
+    && !isTransferCat(cats, t.categoryId)
+    && !isSubExcluded(cats, t.categoryId, t.subCategoryId);
+}
+
 export function normalizeCats(cats) {
   return (cats || []).map(c => ({ ...c, subs: (c.subs || []).map(normalizeSub) }));
 }

@@ -431,6 +431,13 @@
 .cmp-summary-delta { margin-left: auto; text-align: right; }
 .cmp-summary-figure { justify-content: flex-end; }
 
+/* Trend chart axis labels — the SVG is stretched horizontally, so these live
+   in HTML on top of it rather than as SVG text. */
+.trend-axis-label { font-size: 9px; }
+@media (max-width: 640px) {
+  .trend-axis-label { font-size: 7.5px; }
+}
+
 /* ── Comparison hero (AppBlock-style trend headline) ──
    The badge is always --accent, never green/red: direction is the arrow's
    job, and colouring a positive delta red would invert the app's rule that

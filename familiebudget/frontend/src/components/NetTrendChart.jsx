@@ -100,13 +100,13 @@ export default function NetTrendChart({ mStats, months }) {
           vectorEffect="non-scaling-stroke"
         />
 
-        {/* month markers; the actively-filtered month gets a solid dot */}
-        {coords.map(c => (
+        {/* Only the actively-filtered month gets a marker — a dot on every
+            point made the line read as cluttered. */}
+        {selected && coords.filter(c => c.key === selected).map(c => (
           <circle
             key={c.key}
-            cx={c.x} cy={c.y} r={selected === c.key ? 4 : 2.5}
-            fill={selected === c.key ? "var(--accent)" : "var(--card)"}
-            stroke="var(--accent)" strokeWidth="1.75"
+            cx={c.x} cy={c.y} r={4}
+            fill="var(--accent)" stroke="var(--card)" strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
         ))}
@@ -117,15 +117,15 @@ export default function NetTrendChart({ mStats, months }) {
       {/* Zero on the left, average on the right, so the two reference labels
           can never collide when the lines sit close together. */}
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, pointerEvents: "none" }}>
-        <div style={{
+        <div className="trend-axis-label" style={{
           position: "absolute", left: 0, top: `${(zeroY / H) * 100}%`,
-          transform: "translateY(-50%)", fontSize: 9, fontWeight: 600, color: "var(--muted)",
+          transform: "translateY(-50%)", fontWeight: 600, color: "var(--muted)",
           background: "var(--card)", padding: "0 4px 0 0", fontFamily: "var(--font-mono)",
         }}>€0</div>
-        <div style={{
+        <div className="trend-axis-label" style={{
           position: "absolute", right: 0, top: `${(avgY / H) * 100}%`,
-          transform: "translateY(-50%)", fontSize: 9, color: "var(--muted)",
-          background: "var(--card)", padding: "0 0 0 5px",
+          transform: "translateY(-50%)", color: "var(--muted)",
+          background: "var(--card)", padding: "0 0 0 5px", whiteSpace: "nowrap",
         }}>gem. {fmt(avg)}</div>
       </div>
 

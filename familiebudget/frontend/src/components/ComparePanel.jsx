@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import { ArrowUp, ArrowDown, Minus, Scale, Info, AlertTriangle } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
-import { isSubExcluded } from '../utils/helpers.js';
+import { isSubExcluded, isTransferCat } from '../utils/helpers.js';
 import {
-  DATASET_KINDS, resolveDataset, compareDatasets, compareToBenchmark, monthLabel,
+  DATASET_KINDS, resolveDataset, compareDatasets, compareToBenchmark, MONTH_NAMES,
 } from '../utils/comparison.js';
 
 /* Deliberately NOT green/red. In this app green/red mean "positive amount" and
@@ -28,6 +28,7 @@ const PRESETS = [
   { id: "rest", label: "Rest van het jaar" },
   { id: "budget", label: "Budget" },
   { id: "benchmark", label: "Gemiddeld gezin" },
+  { id: "custom", label: "Kies zelf" },
 ];
 
 export default function ComparePanel({ expanded, cats, year, months, years }) {
@@ -40,6 +41,18 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
     return (years || []).includes(prevYear) ? "prev" : "benchmark";
   });
   const [budgets, setBudgets] = useState({});
+
+  /* Free-form A vs B picking. "" as a month means the whole year, so the same
+     two selects cover month-vs-month, month-vs-year and year-vs-year. */
+  const [custom, setCustom] = useState(() => {
+    const b = months.length === 1 ? months[0] : "";
+    const bIdx = b ? CALENDAR_MONTH_KEYS.indexOf(b) : -1;
+    return {
+      aY: year, aM: bIdx > 0 ? CALENDAR_MONTH_KEYS[bIdx - 1] : "",
+      bY: year, bM: b,
+    };
+  });
+  const setC = (patch) => setCustom(c => ({ ...c, ...patch }));
 
   // Budgets live under their own state key; the dashboard remounts on tab
   // switch so fetching here always reflects the latest Budget-tab edits.
@@ -55,7 +68,9 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
 
   const ctx = useMemo(() => ({
     expanded, cats, budgets,
-    isExcluded: (t) => isSubExcluded(cats, t.categoryId, t.subCategoryId),
+    // Excludes user-excluded subs AND transfers (savings), matching the
+    // dashboard's definition of spending.
+    isExcluded: (t) => isTransferCat(cats, t.categoryId) || isSubExcluded(cats, t.categoryId, t.subCategoryId),
   }), [expanded, cats, budgets]);
 
   const catName = (key) => {
@@ -74,6 +89,13 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
 
     if (preset === "benchmark") {
       return { kind: "benchmark", data: compareToBenchmark({ year, months }, ctx) };
+    }
+
+    if (preset === "custom") {
+      const a = resolveDataset({ kind: DATASET_KINDS.PERIOD, year: custom.aY, months: custom.aM ? [custom.aM] : [] }, ctx);
+      const b = resolveDataset({ kind: DATASET_KINDS.PERIOD, year: custom.bY, months: custom.bM ? [custom.bM] : [] }, ctx);
+      const uneven = a.monthCount !== b.monthCount;
+      return { kind: "eur", a, b, cmp: compareDatasets(a, b, { perMonth: uneven }), perMonthForced: uneven };
     }
 
     const aDesc = { kind: DATASET_KINDS.PERIOD, year, months };
@@ -114,7 +136,39 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
     const a = resolveDataset({ kind: DATASET_KINDS.PERIOD, year: prevYear, months }, ctx);
     const b = resolveDataset(aDesc, ctx);
     return { kind: "eur", a, b, cmp: compareDatasets(a, b, { perMonth: true }), perMonthForced: true };
-  }, [preset, year, months, ctx, years]);
+  }, [preset, year, months, ctx, years, custom]);
+
+  /* A/B month pickers, shown only in "Kies zelf" mode. */
+  const picker = preset === "custom" && (() => {
+    const sel = (val, onChange, opts) => (
+      <select value={val} onChange={e => onChange(e.target.value)} style={{
+        padding: "4px 6px", borderRadius: 7, border: "1px solid var(--border)",
+        background: "var(--card)", color: "var(--text)", fontSize: 11, fontWeight: 600,
+      }}>{opts}</select>
+    );
+    const monthOpts = [<option key="all" value="">Heel jaar</option>,
+      ...CALENDAR_MONTH_KEYS.map((k, i) => <option key={k} value={k}>{MONTH_NAMES[i]}</option>)];
+    const yearOpts = (years && years.length ? years : [year]).map(y => <option key={y} value={y}>{y}</option>);
+    const side = (label, y, m, onY, onM) => (
+      <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+        <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, width: 14, flexShrink: 0 }}>{label}</span>
+        {sel(m, onM, monthOpts)}
+        {sel(y, onY, yearOpts)}
+      </div>
+    );
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        {side("A", custom.aY, custom.aM, v => setC({ aY: v }), v => setC({ aM: v }))}
+        <span style={{ color: "var(--muted)", fontSize: 13 }}>→</span>
+        {side("B", custom.bY, custom.bM, v => setC({ bY: v }), v => setC({ bM: v }))}
+        <button
+          onClick={() => setCustom(c => ({ aY: c.bY, aM: c.bM, bY: c.aY, bM: c.aM }))}
+          title="Wissel A en B om"
+          style={{ padding: "4px 9px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10.5, fontWeight: 600 }}
+        >Omwisselen</button>
+      </div>
+    );
+  })();
 
   const shell = (children) => (
     <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 15, padding: "17px 19px", marginBottom: 14 }}>
@@ -133,6 +187,7 @@ export default function ComparePanel({ expanded, cats, year, months, years }) {
           ))}
         </div>
       </div>
+      {picker}
       {children}
     </div>
   );
