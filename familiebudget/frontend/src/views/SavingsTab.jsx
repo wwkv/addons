@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Settings, Check, ChevronLeft, ChevronRight, Plus, Minus, X } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
+import NumberInput from '../components/NumberInput.jsx';
 
 const POT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)"];
 
@@ -90,7 +91,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
             <h3 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)" }}>Saldo instellen</h3>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, marginBottom: 4, color: "var(--muted)" }}>Bekend saldo</label>
-              <input type="number" value={savings.knownBalance || 0} onChange={e => setSavings(s => ({ ...s, knownBalance: Number(e.target.value) || 0 }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+              <NumberInput value={savings.knownBalance} onChange={v => setSavings(s => ({ ...s, knownBalance: v }))} placeholder="0" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 11, marginBottom: 4, color: "var(--muted)" }}>Datum van bekend saldo</label>
@@ -146,8 +147,8 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
             return (
               <div key={pot.id} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
                 <input type="text" value={pot.name} onChange={e => updatePot(pot.id, { name: e.target.value })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Naam" />
-                <input type="number" value={pot.target ?? ""} onChange={e => updatePot(pot.id, { target: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
-                <input type="number" value={pot.saved ?? ""} onChange={e => updatePot(pot.id, { saved: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Opgespaard" title="Manueel toegewezen bedrag" />
+                <NumberInput value={pot.target} onChange={v => updatePot(pot.id, { target: v })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
+                <NumberInput value={pot.saved} onChange={v => updatePot(pot.id, { saved: v })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Opgespaard" title="Manueel toegewezen bedrag" />
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                   <button onClick={() => setEditingPotId(null)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={11} />Klaar</button>
                   <button onClick={() => { if (!window.confirm("Weet je zeker dat je dit potje wilt verwijderen?")) return; removePot(pot.id); setEditingPotId(null); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11 }}>Verwijderen</button>
@@ -192,7 +193,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
           ) : (
             <div style={{ width: "100%", padding: 16, display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch" }} onClick={e => e.stopPropagation()}>
               <input type="text" value={draftPot.name} onChange={e => setDraftPot(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Naam" />
-              <input type="number" value={draftPot.target ?? ""} onChange={e => setDraftPot(p => ({ ...p, target: Number(e.target.value) || 0 }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
+              <NumberInput value={draftPot.target} onChange={v => setDraftPot(p => ({ ...p, target: v }))} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Doelbedrag" />
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => { setSavings(s => ({ ...s, pots: [...(s.pots || []), { id: Date.now().toString(), ...draftPot }] })); setIsAdding(false); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={11} />Opslaan</button>
                 <button onClick={() => setIsAdding(false)} style={{ display: "flex", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer" }}><X size={12} /></button>
