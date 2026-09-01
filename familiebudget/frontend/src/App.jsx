@@ -21,6 +21,7 @@ import ProcessingFlow from './modals/ProcessingFlow.jsx';
 import OnboardingFlow from './modals/OnboardingFlow.jsx';
 import SplitModal from './modals/SplitModal.jsx';
 import CatDetailModal from './modals/CatDetailModal.jsx';
+import ReanalyzePreview from './modals/ReanalyzePreview.jsx';
 
 /* Views */
 import BudgetTab from './views/BudgetTab.jsx';
@@ -56,7 +57,10 @@ export default function App() {
   // Dry-run result for the manual "Heranalyseer alles" button — null means
   // no dry run has been done yet, a number is the pending count awaiting
   // confirmation before anything is actually written.
+  // 0 after a check that found nothing; null otherwise (candidates open the
+  // review modal directly instead, via reanalyzePreview).
   const [reanalyzeCount, setReanalyzeCount] = useState(null);
+  const [reanalyzePreview, setReanalyzePreview] = useState(null);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
   const [editComment, setEditComment] = useState(null);
@@ -224,20 +228,20 @@ export default function App() {
     // 1. Learned rules: STRICTER check (only match counterparty to prevent false positives in descriptions)
     for (const [p, r] of Object.entries(rules)) {
       if (cpText.includes(p.toLowerCase())) {
-        return { categoryId: r.catId, subCategoryId: r.subId, confidence: "learned" };
+        return { categoryId: r.catId, subCategoryId: r.subId, confidence: "learned", reason: `Eerder zo gecategoriseerd — "${p}"` };
       }
     }
 
     // 2. Amount rules
     for (const r of AMT_RULES) {
-      if (r.p.test(cpText) && Math.abs(tx.amount) === r.a) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
+      if (r.p.test(cpText) && Math.abs(tx.amount) === r.a) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason: `Vast bedrag (€${r.a})` };
     }
 
     // 2b. Type-field rules: bank transaction metadata ("Betaling
     // kredietlasten"), not merchant text — checked against tx.type, which
     // nothing else here reads. Narrow and always "certain" by construction.
     for (const r of TYPE_RULES) {
-      if (tx.type && r.p.test(tx.type)) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
+      if (tx.type && r.p.test(tx.type)) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason: `Type: ${tx.type}` };
     }
 
     // 3. Settings logic for hardcoded rules
@@ -256,8 +260,9 @@ export default function App() {
     for (const r of BRANDS) {
       if (r.p.test(lexText)) {
         const ri = order.indexOf(r.v);
-        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
-        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+        const reason = `Herkend: ${r.note || "merk"}`;
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion", reason };
       }
     }
 
@@ -265,8 +270,10 @@ export default function App() {
     for (const r of AUTO_RULES) {
       if (r.p.test(allText)) {
         const ri = order.indexOf(r.v);
-        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
-        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+        const match = allText.match(r.p);
+        const reason = match ? `Bevat "${match[0]}"` : "Automatische regel";
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion", reason };
       }
     }
 
@@ -277,8 +284,9 @@ export default function App() {
     for (const r of TRADES) {
       if (r.p.test(lexText)) {
         const ri = order.indexOf(r.v);
-        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
-        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+        const reason = `Naam bevat "${r.note || (lexText.match(r.p) || [])[0] || ""}"`;
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion", reason };
       }
     }
 
@@ -286,8 +294,10 @@ export default function App() {
     for (const r of DESC_RULES) {
       if (r.p.test(descText)) {
         const ri = order.indexOf(r.v);
-        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
-        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+        const match = descText.match(r.p);
+        const reason = match ? `Mededeling bevat "${match[0]}"` : "Mededeling";
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v, reason };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion", reason };
       }
     }
 
@@ -298,11 +308,14 @@ export default function App() {
     return null;
   }, [rules, settings.autoLevel, blacklist]);
 
-  /* Chunked autoCat sweep over uncategorised transactions, shared by the
-     automatic trigger below and the manual "Heranalyseer" button in Settings.
-     dryRun=true only counts what WOULD change — nothing is written, and
-     nothing here ever touches a transaction that already has a category. */
-  const sweepUncategorised = useCallback(async (dryRun = false) => {
+  /* Chunked autoCat sweep over uncategorised transactions. Only computes and
+     returns candidates — never writes. Shared by the automatic trigger below
+     (which applies everything immediately, since it fires off a pattern the
+     user just taught the app themselves) and the manual "Heranalyseer" button
+     in Settings (which shows these for approval before writing anything —
+     see ReanalyzePreview). Never touches a transaction that already has a
+     category. */
+  const computeCandidates = useCallback(async () => {
     recalcCancelRef.current = false;
     setRecalcState({ running: true, changed: 0 });
     const uncat = txs.filter(t => !t.categoryId && !t.splits);
@@ -314,23 +327,27 @@ export default function App() {
       for (const t of chunk) {
         const m = autoCat(t);
         if (m && m.categoryId && m.confidence !== "suggestion") {
-          updates.push({ id: t.id, categoryId: m.categoryId, subCategoryId: m.subCategoryId });
+          updates.push({ id: t.id, tx: t, categoryId: m.categoryId, subCategoryId: m.subCategoryId, confidence: m.confidence, reason: m.reason });
         }
       }
       await new Promise(r => setTimeout(r, 0));
     }
-    if (!dryRun && updates.length > 0) {
-      const updatesMap = new Map(updates.map(u => [u.id, u]));
-      setTxs(p => p.map(t => {
-        const u = updatesMap.get(t.id);
-        return u ? { ...t, categoryId: u.categoryId, subCategoryId: u.subCategoryId } : t;
-      }));
-      setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
-      setTimeout(() => setToast(null), 3000);
-    }
     setRecalcState({ running: false, changed: updates.length });
-    return updates.length;
+    return updates;
   }, [txs, autoCat]);
+
+  /* Writes exactly the given candidates — the subset the user approved in
+     ReanalyzePreview, or all of them for the automatic trigger. */
+  const applyCandidates = useCallback((updates) => {
+    if (!updates || updates.length === 0) return;
+    const updatesMap = new Map(updates.map(u => [u.id, u]));
+    setTxs(p => p.map(t => {
+      const u = updatesMap.get(t.id);
+      return u ? { ...t, categoryId: u.categoryId, subCategoryId: u.subCategoryId } : t;
+    }));
+    setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   /* Auto-trigger recalculation when a pattern is assigned (rules count increases) */
   useEffect(() => {
@@ -342,10 +359,10 @@ export default function App() {
     }
     if (rulesCount <= prevRulesCountRef.current) return;
     prevRulesCountRef.current = rulesCount;
-    sweepUncategorised(false);
+    computeCandidates().then(applyCandidates);
 
     return () => { recalcCancelRef.current = true; };
-  }, [rules, loaded, sweepUncategorised]);
+  }, [rules, loaded, computeCandidates, applyCandidates]);
 
   /* Learn pattern — requires N consistent categorizations before creating rule.
      Force-learn (⌘/⇧+click) bypasses and creates immediately. */
@@ -921,6 +938,7 @@ export default function App() {
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
       {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} months={months} onClose={() => setCatDetail(null)} />}
+      {reanalyzePreview && <ReanalyzePreview items={reanalyzePreview} cats={cats} onApply={(selected) => { applyCandidates(selected); setReanalyzePreview(null); }} onClose={() => setReanalyzePreview(null)} />}
 
       {/* Recalc loading overlay */}
       {recalcState.running && (
@@ -1142,26 +1160,23 @@ export default function App() {
                     <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
                       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Heranalyseer alles</label>
                       <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
-                        Past patronen en de herkenningslijst opnieuw toe op nog niet-gecategoriseerde transacties. Bestaande categorieën worden nooit gewijzigd.
+                        Zoekt patronen en herkenningen voor nog niet-gecategoriseerde transacties. Je krijgt een lijst om te controleren voor er iets wordt opgeslagen — bestaande categorieën worden nooit gewijzigd.
                       </p>
-                      {reanalyzeCount === null ? (
+                      {reanalyzeCount === 0 ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: "var(--muted)" }}>Geen nieuwe suggesties gevonden.</span>
+                          <button onClick={() => setReanalyzeCount(null)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10 }}>OK</button>
+                        </div>
+                      ) : (
                         <button
-                          onClick={async () => setReanalyzeCount(await sweepUncategorised(true))}
-                          title="Telt alleen — past nog niets toe"
+                          onClick={async () => {
+                            const items = await computeCandidates();
+                            if (items.length === 0) setReanalyzeCount(0);
+                            else setReanalyzePreview(items);
+                          }}
                           disabled={recalcState.running}
                           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: recalcState.running ? "default" : "pointer", fontSize: 11, fontWeight: 600, opacity: recalcState.running ? 0.6 : 1 }}
                         ><RefreshCw size={12} />{recalcState.running ? "Bezig..." : "Controleer"}</button>
-                      ) : reanalyzeCount === 0 ? (
-                        <div style={{ fontSize: 11, color: "var(--muted)" }}>Geen nieuwe suggesties gevonden.</div>
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 11, color: "var(--text)" }}>{reanalyzeCount} transacties zouden een categorie krijgen.</span>
-                          <button
-                            onClick={async () => { await sweepUncategorised(false); setReanalyzeCount(null); }}
-                            style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}
-                          >Toepassen</button>
-                          <button onClick={() => setReanalyzeCount(null)} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
-                        </div>
                       )}
                     </div>
                     <div style={{ marginBottom: 16 }}>
