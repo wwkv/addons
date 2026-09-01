@@ -11,9 +11,7 @@ export const AUTO_RULES = [
   { p: /(?<![a-zA-Z])r\.?v\.?a\.?(?![a-zA-Z])/i, c: "inkomen", s: "andere_inkomen", v: "certain" },
   { p: /jobbonus|vlabel/i, c: "inkomen", s: "andere_inkomen", v: "certain" },
   { p: /voxdale/i, c: "inkomen", s: "loon", v: "certain" },
-  { p: /kredietlasten/i, c: "wonen", s: "lening", v: "certain" },
   { p: /vervaldag\s*krediet|krediet.*vervaldag|[eé]ch[eé]ance.*cr[eé]dit|cr[eé]dit.*[eé]ch[eé]ance/i, c: "wonen", s: "lening", v: "certain" },
-  { p: /beheren\s*rek.*coop/i, c: "financieel", s: "bankkosten", v: "certain" },
   { p: /nmbs/i, c: "vervoer", s: "ov", v: "certain" },
   { p: /de\s*lijn/i, c: "vervoer", s: "ov", v: "certain" },
   { p: /proximus|telenet|orange|mobile\s*viking|scarlet/i, c: "wonen", s: "internet_telefonie", v: "high" },
@@ -63,6 +61,19 @@ export const AMT_RULES = [
   { p: /amazon/i, a: 2.99, c: "wonen", s: "abonnementen", v: "high" },
   { p: /amazon/i, a: 3.99, c: "wonen", s: "abonnementen", v: "high" },
   { p: /amazon/i, a: 5.99, c: "wonen", s: "abonnementen", v: "high" },
+];
+
+/* The CSV `type` column (e.g. "Betaling kredietlasten") is parsed into every
+   transaction but was never read by the matcher — these two patterns already
+   existed above (:14, :16) yet could never fire, since autoCat's haystack is
+   built from counterparty + description only. Narrow, 100%-pure types only;
+   broad ones ("Betaling Visa Debit contactless") are card/wallet channels,
+   not merchant data, and stay out of this list. */
+export const TYPE_RULES = [
+  { p: /kredietlasten/i, c: "wonen", s: "lening", v: "certain" },
+  { p: /doorlopende\s*betalingsopdracht/i, c: "wonen", s: "abonnementen", v: "certain" },
+  { p: /beheren\s*rek.*coop/i, c: "financieel", s: "bankkosten", v: "certain" },
+  { p: /dividend.*crelanco/i, c: "inkomen", s: "andere_inkomen", v: "certain" },
 ];
 
 export const MULTI = [

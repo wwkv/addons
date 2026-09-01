@@ -4,7 +4,9 @@ import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Br
 
 /* Utils */
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
-import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI } from './utils/rules.js';
+import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/rules.js';
+import { BRANDS, TRADES } from './utils/merchants.js';
+import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
@@ -51,6 +53,10 @@ export default function App() {
   const [splitTx, setSplitTx] = useState(null);
   const [settingsTab, setSettingsTab] = useState("regels");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Dry-run result for the manual "Heranalyseer alles" button — null means
+  // no dry run has been done yet, a number is the pending count awaiting
+  // confirmation before anything is actually written.
+  const [reanalyzeCount, setReanalyzeCount] = useState(null);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
   const [editComment, setEditComment] = useState(null);
@@ -227,14 +233,49 @@ export default function App() {
       if (r.p.test(cpText) && Math.abs(tx.amount) === r.a) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
     }
 
+    // 2b. Type-field rules: bank transaction metadata ("Betaling
+    // kredietlasten"), not merchant text — checked against tx.type, which
+    // nothing else here reads. Narrow and always "certain" by construction.
+    for (const r of TYPE_RULES) {
+      if (tx.type && r.p.test(tx.type)) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
+    }
+
     // 3. Settings logic for hardcoded rules
     const minC = settings.autoLevel === "voorzichtig" ? "certain" : settings.autoLevel === "normaal" ? "high" : "medium";
     const order = ["certain", "high", "medium"];
     const mi = order.indexOf(minC);
 
+    // 3b. Offline merchant lexicon (utils/merchants.js). Matched against the
+    // cleaned merchant name plus the description's merchant-prefix — see
+    // utils/counterparty.js — not the whole description, whose tail is city
+    // + masked card + wallet and would let a city name false-trigger a trade
+    // word like "gent" inside a longer name.
+    const lexName = parseCounterparty(tx.counterparty).name;
+    const lexPrefix = parseEvidence(tx).merchantPrefix || "";
+    const lexText = `${lexName} ${lexPrefix}`.toLowerCase();
+    for (const r of BRANDS) {
+      if (r.p.test(lexText)) {
+        const ri = order.indexOf(r.v);
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+      }
+    }
+
     // 4. Counterparty rules (AUTO_RULES) - Looks at both cp and desc
     for (const r of AUTO_RULES) {
       if (r.p.test(allText)) {
+        const ri = order.indexOf(r.v);
+        if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
+        else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
+      }
+    }
+
+    // 4b. Trade-word lexicon — generic terms (bakker, koffie, klimzaal…) that
+    // catch one-off independents no brand list will ever contain. This is
+    // the layer that matters most: most of the backlog is merchants that
+    // appear exactly once.
+    for (const r of TRADES) {
+      if (r.p.test(lexText)) {
         const ri = order.indexOf(r.v);
         if (ri <= mi) return { categoryId: r.c, subCategoryId: r.s, confidence: r.v };
         else return { categoryId: r.c, subCategoryId: r.s, confidence: "suggestion" };
@@ -257,6 +298,40 @@ export default function App() {
     return null;
   }, [rules, settings.autoLevel, blacklist]);
 
+  /* Chunked autoCat sweep over uncategorised transactions, shared by the
+     automatic trigger below and the manual "Heranalyseer" button in Settings.
+     dryRun=true only counts what WOULD change — nothing is written, and
+     nothing here ever touches a transaction that already has a category. */
+  const sweepUncategorised = useCallback(async (dryRun = false) => {
+    recalcCancelRef.current = false;
+    setRecalcState({ running: true, changed: 0 });
+    const uncat = txs.filter(t => !t.categoryId && !t.splits);
+    const updates = [];
+    const CHUNK = 200;
+    for (let i = 0; i < uncat.length; i += CHUNK) {
+      if (recalcCancelRef.current) break;
+      const chunk = uncat.slice(i, i + CHUNK);
+      for (const t of chunk) {
+        const m = autoCat(t);
+        if (m && m.categoryId && m.confidence !== "suggestion") {
+          updates.push({ id: t.id, categoryId: m.categoryId, subCategoryId: m.subCategoryId });
+        }
+      }
+      await new Promise(r => setTimeout(r, 0));
+    }
+    if (!dryRun && updates.length > 0) {
+      const updatesMap = new Map(updates.map(u => [u.id, u]));
+      setTxs(p => p.map(t => {
+        const u = updatesMap.get(t.id);
+        return u ? { ...t, categoryId: u.categoryId, subCategoryId: u.subCategoryId } : t;
+      }));
+      setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
+      setTimeout(() => setToast(null), 3000);
+    }
+    setRecalcState({ running: false, changed: updates.length });
+    return updates.length;
+  }, [txs, autoCat]);
+
   /* Auto-trigger recalculation when a pattern is assigned (rules count increases) */
   useEffect(() => {
     if (!loaded) return;
@@ -267,39 +342,10 @@ export default function App() {
     }
     if (rulesCount <= prevRulesCountRef.current) return;
     prevRulesCountRef.current = rulesCount;
-
-    recalcCancelRef.current = false;
-    setRecalcState({ running: true, changed: 0 });
-    const uncat = txs.filter(t => !t.categoryId && !t.splits);
-    const updates = [];
-    const CHUNK = 200;
-
-    (async () => {
-      for (let i = 0; i < uncat.length; i += CHUNK) {
-        if (recalcCancelRef.current) break;
-        const chunk = uncat.slice(i, i + CHUNK);
-        for (const t of chunk) {
-          const m = autoCat(t);
-          if (m && m.categoryId && m.confidence !== "suggestion") {
-            updates.push({ id: t.id, categoryId: m.categoryId, subCategoryId: m.subCategoryId });
-          }
-        }
-        await new Promise(r => setTimeout(r, 0));
-      }
-      if (updates.length > 0) {
-        const updatesMap = new Map(updates.map(u => [u.id, u]));
-        setTxs(p => p.map(t => {
-          const u = updatesMap.get(t.id);
-          return u ? { ...t, categoryId: u.categoryId, subCategoryId: u.subCategoryId } : t;
-        }));
-        setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
-        setTimeout(() => setToast(null), 3000);
-      }
-      setRecalcState({ running: false, changed: updates.length });
-    })();
+    sweepUncategorised(false);
 
     return () => { recalcCancelRef.current = true; };
-  }, [rules, loaded, autoCat]);
+  }, [rules, loaded, sweepUncategorised]);
 
   /* Learn pattern — requires N consistent categorizations before creating rule.
      Force-learn (⌘/⇧+click) bypasses and creates immediately. */
@@ -1092,6 +1138,31 @@ export default function App() {
                           <div><div style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{o.l}</div><div style={{ fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{o.d}</div></div>
                         </label>
                       ))}
+                    </div>
+                    <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Heranalyseer alles</label>
+                      <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
+                        Past patronen en de herkenningslijst opnieuw toe op nog niet-gecategoriseerde transacties. Bestaande categorieën worden nooit gewijzigd.
+                      </p>
+                      {reanalyzeCount === null ? (
+                        <button
+                          onClick={async () => setReanalyzeCount(await sweepUncategorised(true))}
+                          title="Telt alleen — past nog niets toe"
+                          disabled={recalcState.running}
+                          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", cursor: recalcState.running ? "default" : "pointer", fontSize: 11, fontWeight: 600, opacity: recalcState.running ? 0.6 : 1 }}
+                        ><RefreshCw size={12} />{recalcState.running ? "Bezig..." : "Controleer"}</button>
+                      ) : reanalyzeCount === 0 ? (
+                        <div style={{ fontSize: 11, color: "var(--muted)" }}>Geen nieuwe suggesties gevonden.</div>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: "var(--text)" }}>{reanalyzeCount} transacties zouden een categorie krijgen.</span>
+                          <button
+                            onClick={async () => { await sweepUncategorised(false); setReanalyzeCount(null); }}
+                            style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}
+                          >Toepassen</button>
+                          <button onClick={() => setReanalyzeCount(null)} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>Annuleer</button>
+                        </div>
+                      )}
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Spaarbuffer Maanden</label>
