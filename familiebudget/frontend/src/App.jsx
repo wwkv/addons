@@ -61,6 +61,11 @@ export default function App() {
   // review modal directly instead, via reanalyzePreview).
   const [reanalyzeCount, setReanalyzeCount] = useState(null);
   const [reanalyzePreview, setReanalyzePreview] = useState(null);
+  // true when the review list was opened from the Transactions-tab "Sorteer"
+  // button, which should fall through to the manual swipe mode for whatever
+  // is left once the list is applied/dismissed; false from the Settings
+  // entry, which is a standalone check with no such fallback.
+  const [reanalyzeThenSort, setReanalyzeThenSort] = useState(false);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
   const [editComment, setEditComment] = useState(null);
@@ -348,6 +353,17 @@ export default function App() {
     setToast(`${updates.length} transacties opnieuw gecategoriseerd`);
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  /* Entry point for the Transactions-tab "Sorteer" action: check for
+     automatic matches first, show the review list if there are any, and
+     only drop into the manual swipe mode (TinderMode) for what's left —
+     skipping straight to it when there's nothing to auto-suggest. */
+  const startCategorize = useCallback(async () => {
+    setReanalyzeThenSort(true);
+    const items = await computeCandidates();
+    if (items.length > 0) setReanalyzePreview(items);
+    else setTinderMode(true);
+  }, [computeCandidates]);
 
   /* Auto-trigger recalculation when a pattern is assigned (rules count increases) */
   useEffect(() => {
@@ -835,7 +851,7 @@ export default function App() {
 
         {/* Only on Transacties: it acts on the list you're looking at, and
             floating over Sparen or Budget it just obscured content. */}
-        {view === "transactions" && uncatN > 0 && <button title="Snel categoriseren" onClick={() => setTinderMode(true)} className="mobile-fab"><Sparkles size={22} /></button>}
+        {view === "transactions" && uncatN > 0 && <button title="Snel categoriseren" onClick={startCategorize} disabled={recalcState.running} className="mobile-fab"><Sparkles size={22} /></button>}
 
         <div className="app-content">
           {/* ─── HEADER ─── */}
@@ -843,7 +859,7 @@ export default function App() {
             <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
               <input type="file" ref={fRef} onChange={handleSmartImport} accept=".csv,.json,.txt" style={{ display: "none" }} />
               <button onClick={() => fRef.current && fRef.current.click()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600 }}><Upload size={11} />Importeer</button>
-              {uncatN > 0 && <button onClick={() => setTinderMode(true)} style={{ padding: "4px 9px", borderRadius: 7, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Sorteer ({uncatN})</button>}
+              {uncatN > 0 && <button onClick={startCategorize} disabled={recalcState.running} style={{ padding: "4px 9px", borderRadius: 7, border: "none", background: "var(--accent)", color: "#fff", cursor: recalcState.running ? "default" : "pointer", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", opacity: recalcState.running ? 0.6 : 1 }}>Sorteer ({uncatN})</button>}
             </div>
             <div style={{ flex: "0 0 auto", display: "flex", gap: 3, alignItems: "center" }}>
               <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "3px 5px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10 }}><option value="">Alle jaren</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -938,7 +954,7 @@ export default function App() {
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
       {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} months={months} onClose={() => setCatDetail(null)} />}
-      {reanalyzePreview && <ReanalyzePreview items={reanalyzePreview} cats={cats} onApply={(selected) => { applyCandidates(selected); setReanalyzePreview(null); }} onClose={() => setReanalyzePreview(null)} />}
+      {reanalyzePreview && <ReanalyzePreview items={reanalyzePreview} cats={cats} onApply={(selected) => { applyCandidates(selected); setReanalyzePreview(null); if (reanalyzeThenSort) setTinderMode(true); }} onClose={() => { setReanalyzePreview(null); if (reanalyzeThenSort) setTinderMode(true); }} />}
 
       {/* Recalc loading overlay */}
       {recalcState.running && (
@@ -1170,6 +1186,7 @@ export default function App() {
                       ) : (
                         <button
                           onClick={async () => {
+                            setReanalyzeThenSort(false);
                             const items = await computeCandidates();
                             if (items.length === 0) setReanalyzeCount(0);
                             else setReanalyzePreview(items);
