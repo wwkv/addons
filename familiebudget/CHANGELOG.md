@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.2.0] - 2026-09-01
+
+Categoriseren is nu een stuk minder giswerk. Alles gebeurt offline — geen
+internet, geen API, geen kosten.
+
+### Added
+- **Herkenningslijst**: een ingebouwde lijst van winkelketens (Kruidvat, HEMA,
+  Action, Decathlon…) en algemene vakwoorden (bakker, koffie, klimzaal,
+  tandarts…) die tegenpartijen automatisch aan een categorie koppelt. Ketens
+  worden meteen toegepast, vakwoorden alleen voorgesteld — die zijn te vaag om
+  blind te vertrouwen.
+- **Controlelijst voor je iets opslaat**: "Sorteer" toont eerst een lijst met
+  elke voorgestelde transactie, de categorie én *waarom* die is gekozen
+  ("Herkend: woonwinkel", "Bevat colruyt"). Vink uit wat niet klopt; alleen
+  het aangevinkte wordt opgeslagen. Er wordt niets geschreven tot je op
+  Toepassen klikt.
+- **Aanwijzingen tijdens het sorteren**: plaats, dag en tijdstip stonden al in
+  de bankgegevens maar werden nooit getoond. Nu wel — "Koffieland · woensdag
+  08:52 · Antwerpen" zegt een stuk meer dan "Koffieland" alleen. Bij groepen
+  over meerdere dagen wordt een tijdsbereik getoond in plaats van één
+  misleidende dag.
+- **Heranalyseer alles** in Instellingen › Regels: doorloopt de bestaande
+  achterstand opnieuw met de huidige regels en herkenningslijst. Nodig omdat
+  de automatische herberekening alleen liep bij een nieuw geleerd patroon,
+  waardoor een bijgewerkte herkenningslijst anders onzichtbaar bleef.
+
+### Changed
+- "Sorteer" op het transactietabblad doet nu eerst de automatische controle en
+  toont de lijst; daarna ga je door naar het handmatige doorloopscherm voor de
+  rest. Stond eerst weggestopt in Instellingen.
+
+### Fixed
+- Twee regels (`kredietlasten`, `beheren rek coop`) konden nooit werken: ze
+  zochten in tegenpartij + mededeling, terwijl die tekst uitsluitend in het
+  `type`-veld van de bank staat. Dat veld wordt nu wél gelezen.
+
 ## [1.1.1] - 2026-08-31
 ### Fixed
 - Add-on updates appeared not to apply. Express served the frontend with no
