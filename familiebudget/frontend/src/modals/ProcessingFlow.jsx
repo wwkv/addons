@@ -2,7 +2,35 @@ import { useState, useMemo, useEffect } from "react";
 import { X, ArrowLeft, ChevronRight, Sparkles, List, Search, CheckCircle2 } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
 import CatPicker from '../components/CatPicker.jsx';
+import { parseCounterparty, parseEvidence } from '../utils/counterparty.js';
+
 import TinderMode from './TinderMode.jsx';
+
+/* Cleaned merchant name for a group heading, preferring the description's
+   merchant prefix when the counterparty column is padded or truncated. */
+function groupTitle(g) {
+  const t = g.txs[0];
+  if (!t) return g.key;
+  const cp = parseCounterparty(t.counterparty);
+  const e = parseEvidence(t);
+  return e.merchantPrefix && e.merchantPrefix.length > cp.name.length ? e.merchantPrefix : (cp.name || g.key);
+}
+
+/* "Antwerpen · 3 dagen · 09:55-14:36" — enough context to bulk-assign a group
+   without opening it. Returns "" when the bank gave us nothing. */
+function groupCues(g) {
+  const evs = g.txs.map(parseEvidence);
+  const places = [...new Set(evs.map(e => e.place).filter(Boolean))];
+  const times = [...new Set(evs.map(e => e.time).filter(Boolean))].sort();
+  const days = [...new Set(g.txs.map(t => t.date))];
+  const bits = [];
+  if (places.length === 1) bits.push(places[0]);
+  else if (places.length > 1) bits.push(`${places[0]} +${places.length - 1}`);
+  if (days.length > 1) bits.push(`${days.length} dagen`);
+  if (times.length === 1) bits.push(times[0]);
+  else if (times.length > 1) bits.push(`${times[0]}-${times[times.length - 1]}`);
+  return bits.join(' \u00b7 ');
+}
 
 /*
  * The categorization "funnel": Voortgang (progress overview) → Batch (fast
@@ -163,9 +191,15 @@ function Batch({ bigGroups, cats, catUsage, groupBy, setGroupBy, bulkAssign, onB
         {bigGroups.length === 0 && <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 12, padding: 20 }}>Geen groepen meer — verder naar dieper bekijken.</div>}
         {bigGroups.map(g => (
           <div key={g.key} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>{g.key}</div>
-              <span style={{ fontSize: 9.5, fontWeight: 700, color: "var(--muted)", background: "var(--border)", padding: "1px 8px", borderRadius: 999 }}>{g.txs.length}×</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupTitle(g)}</div>
+                {/* Where and when, so a bulk decision isn't made blind. */}
+                {groupCues(g) && (
+                  <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupCues(g)}</div>
+                )}
+              </div>
+              <span style={{ flexShrink: 0, fontSize: 9.5, fontWeight: 700, color: "var(--muted)", background: "var(--border)", padding: "1px 8px", borderRadius: 999 }}>{g.txs.length}×</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7 }}>
               <div style={{ flex: 1 }}>

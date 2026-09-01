@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Clock, List, Check, Star, Package, PartyPopper, ArrowDown } from "lucide-react";
+import { Clock, List, Check, Star, Package, PartyPopper, ArrowDown, MapPin, CalendarDays, CreditCard, Smartphone } from "lucide-react";
 import { getSuggestion } from '../utils/helpers.js';
 import { fmt, fD } from '../utils/formatters.js';
+import { parseCounterparty, parseEvidence, evidenceLine } from '../utils/counterparty.js';
 import CatPicker from '../components/CatPicker.jsx';
 import CatGrid from '../components/CatGrid.jsx';
 
@@ -32,6 +33,43 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
   useEffect(() => { setShowAlts(false); if (animDir !== "exitDown" && animDir !== "fromBottom" && animDir !== "fromTop") setAnimDir(null); }, [group && group.counterparty]);
 
   const suggestion = useMemo(() => tx ? getSuggestion(tx, cats, autoCat) : null, [tx, cats, autoCat]);
+
+  /* Recognition evidence for the group under review. The description carries
+     the town, time of day, wallet and card — the cues that let you place a
+     purchase from memory — and none of it used to reach this screen. */
+  const ev = useMemo(() => {
+    if (!tx) return { title: "", chips: [], note: null, platform: null };
+    const cp = parseCounterparty(tx.counterparty);
+    const e = parseEvidence(tx);
+    // The description's merchant prefix is often cleaner and less truncated
+    // than the counterparty column, so prefer it when it's genuinely longer.
+    const title = e.merchantPrefix && e.merchantPrefix.length > cp.name.length
+      ? e.merchantPrefix
+      : (cp.name || tx.counterparty);
+
+    const places = [...new Set(group.txs.map(t => parseEvidence(t).place).filter(Boolean))];
+    const times  = [...new Set(group.txs.map(t => parseEvidence(t).time).filter(Boolean))];
+
+    const chips = [];
+    if (places.length === 1) chips.push({ icon: <MapPin size={10} />, text: places[0] });
+    else if (places.length > 1) chips.push({ icon: <MapPin size={10} />, text: `${places.slice(0, 2).join(", ")}${places.length > 2 ? ` +${places.length - 2}` : ""}` });
+    // Day/time only describe ONE transaction, so a group-level chip would be a
+    // lie the moment the group spans days — the per-row lines carry it instead.
+    if (group.txs.length === 1) {
+      const when = [e.day, e.time].filter(Boolean).join(" ");
+      if (when) chips.push({ icon: <CalendarDays size={10} />, text: when });
+    } else if (times.length > 1) {
+      const sorted = [...times].sort();
+      chips.push({ icon: <Clock size={10} />, text: `meestal ${sorted[0]}–${sorted[sorted.length - 1]}` });
+    } else if (times.length === 1) {
+      chips.push({ icon: <Clock size={10} />, text: times[0] });
+    }
+    if (tx.type) chips.push({ icon: <CreditCard size={10} />, text: tx.type });
+    if (e.wallet) chips.push({ icon: <Smartphone size={10} />, text: e.wallet });
+    else if (e.card) chips.push({ icon: <CreditCard size={10} />, text: `••${e.card}` });
+
+    return { title, chips, note: e.note, platform: cp.platform };
+  }, [tx, group]);
   const totalTxs = txs.length || 1;
   const catCount = txs.filter(t => t.categoryId || t.splits).length;
   const totalAmount = group ? group.txs.reduce((s, t) => s + t.amount, 0) : 0;
@@ -138,14 +176,50 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
           </div>
         <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{group.counterparty}</div>
+          {/* Clean name first. The raw bank string stays visible underneath —
+              "CCV*LINTS ANTWERPEN" is itself a cue, so it must not be hidden
+              behind the tidied version. */}
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{ev.title}</div>
+          {ev.title !== group.counterparty && (
+            <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 6, wordBreak: "break-word" }}>
+              {group.counterparty}{ev.platform ? ` · via ${ev.platform}` : ""}
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono',monospace", color: totalAmount >= 0 ? "var(--green)" : "var(--red)" }}>{fmt(totalAmount)}</span>
             <span style={{ fontSize: 12, color: "var(--muted)" }}>{group.txs.length} transactie{group.txs.length !== 1 ? "s" : ""}</span>
           </div>
-          <div style={{ fontSize: 10, color: "var(--muted)", maxHeight: 80, overflow: "auto", display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {group.txs.slice(0, 15).map((t, i) => <span key={t.id}>{i > 0 && " · "}{fD(t.date)} {fmt(t.amount)}</span>)}
-            {group.txs.length > 15 && <span style={{ opacity: 0.6 }}> · … +{group.txs.length - 15} meer</span>}
+
+          {/* Recognition cues — where and when. Present for about half the
+              backlog and never shown here before. */}
+          {ev.chips.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+              {ev.chips.map((c, i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, background: "var(--accent-10)", border: "1px solid var(--accent-30)", color: "var(--text)", fontSize: 10.5 }}>
+                  {c.icon}{c.text}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* The user's own words, when the bank line isn't a card record. */}
+          {ev.note && (
+            <div style={{ fontSize: 11, color: "var(--text)", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 9px", marginBottom: 8, wordBreak: "break-word" }}>
+              <span style={{ color: "var(--muted)" }}>Mededeling: </span>{ev.note}
+            </div>
+          )}
+
+          <div style={{ fontSize: 10, color: "var(--muted)", maxHeight: 80, overflow: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+            {group.txs.slice(0, 15).map((t) => {
+              const line = evidenceLine(t);
+              return (
+                <span key={t.id}>
+                  {fD(t.date)} {fmt(t.amount)}
+                  {line ? <span style={{ opacity: 0.7 }}> · {line}</span> : null}
+                </span>
+              );
+            })}
+            {group.txs.length > 15 && <span style={{ opacity: 0.6 }}>… +{group.txs.length - 15} meer</span>}
           </div>
         </div>
 
