@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.4.0] - 2026-09-02
+
+### Added
+- **Dag en agenda in de hover** van de transactielijst: zweef over een
+  tegenpartij en je ziet welke dag het écht was plus wat er die dag op de
+  agenda stond — "zaterdag 06/06 · 13:00 K2 klimschoenen · 15:00 mama en papa
+  · 19:00 30 jarig feest Marie". De dag wordt altijd getoond, ook zonder
+  agenda: weten dat het zaterdag was is op zichzelf al een aanwijzing.
+- **Mededelingen worden slimmer gelezen.** Regels kijken nu ook naar de
+  richting van het geld, want hetzelfde woord betekent het omgekeerde:
+  "cadeau" op een betaling is er één die jij kocht, op een storting één die je
+  kreeg. Daarmee worden 40 huwelijkscadeaus ("proficiat", "huwelijk", "kado
+  voor jullie", "leve de liefde") correct als Inkomsten › Gift herkend in
+  plaats van als aankoop.
+
+### Fixed
+- "Vakantiegeld" werd als vakantie-uitgave gelezen in plaats van als loon; die
+  regel geldt nu alleen nog voor uitgaven.
+
 ## [1.3.0] - 2026-09-02
 
 ### Added

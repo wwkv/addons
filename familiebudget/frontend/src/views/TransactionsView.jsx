@@ -5,12 +5,13 @@ import { resolveCatSub } from '../utils/helpers.js';
 import HoverTip from '../components/HoverTip.jsx';
 import CatPicker from '../components/CatPicker.jsx';
 import MultiSelect from '../components/MultiSelect.jsx';
+import { dayContext, dayContextLine } from '../utils/calendar.js';
 
 export default function TransactionsView({
   displayed, months, fCats, cats, sel, sort, search, startDate, endDate, settings, catUsage,
   setMonths, setFCats, setStartDate, setEndDate, setSearch, setSort, setSel,
   setSplitTx, setEditComment, setContextMenu,
-  assign, bulkAssign, handleRowClick, searchInputRef,
+  assign, bulkAssign, handleRowClick, searchInputRef, calEvents = [],
 }) {
   const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(m => ({ value: m, label: mN(m) })), []);
   const catOptions = useMemo(() => [{ value: "_none", label: "Ongecategoriseerd" }, ...cats.map(c => ({ value: c.id, label: c.name, color: c.color }))], [cats]);
@@ -78,7 +79,16 @@ export default function TransactionsView({
                   <td style={{ padding: "3px 5px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 9, fontWeight: 600, color: tx.amount > 0 ? "var(--green)" : "var(--red)" }}>{fmt(tx.amount)}</td>
                   <td style={{ padding: "3px 5px", fontSize: 10, maxWidth: 220 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <HoverTip text={tx.description || "Geen mededeling"}>
+                      <HoverTip text={(() => {
+                        /* Day + agenda first, then the bank's own line. The day
+                           shown is the PURCHASE day from the description, not
+                           tx.date, which trails it by 1-6 days on card payments. */
+                        const ctx = dayContext(tx, calEvents);
+                        const bits = [];
+                        if (ctx) bits.push(dayContextLine(ctx));
+                        bits.push(tx.description || "Geen mededeling");
+                        return bits.join("\n");
+                      })()}>
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{tx.counterparty}</span>
                       </HoverTip>
                       {tx.paypalMerged && <span title="Samengevoegd via PayPal-import" style={{ fontSize: 7, padding: "0 4px", borderRadius: 2, background: "#0070BA30", color: "#0070BA", fontWeight: 700, flexShrink: 0 }}>PP</span>}

@@ -72,6 +72,37 @@ export function eventLine(ev) {
   return bits.join(' · ');
 }
 
+/** Everything on the agenda the day a transaction was actually paid, in time
+ *  order: "maandag · 15:00 kids · 19:00 klimmen". The day is always returned,
+ *  even with no calendar at all, because knowing it was a Saturday is itself a
+ *  cue — and it is the purchase day, not the day the bank got round to it. */
+export function dayContext(tx, events) {
+  const e = parseEvidence(tx);
+  if (!e.date) return null;
+  const out = { date: e.date, day: e.day, lagDays: e.lagDays, booked: e.booked, events: [] };
+  for (const ev of events || []) {
+    const start = (ev.start || '').slice(0, 10);
+    if (ev.allDay) {
+      if (start <= e.date && e.date < (ev.end || ev.start)) out.events.push({ ...ev, label: 'hele dag' });
+    } else if (start === e.date) {
+      const d = new Date(ev.start);
+      const hh = Number.isNaN(d.getTime()) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      out.events.push({ ...ev, label: hh, sort: hh });
+    }
+  }
+  out.events.sort((a, b) => (a.sort || '').localeCompare(b.sort || ''));
+  return out;
+}
+
+/** One line for a tooltip: "vrijdag 05/06 · 15:00 kids · 19:00 klimmen". */
+export function dayContextLine(ctx) {
+  if (!ctx) return '';
+  const [y, m, d] = ctx.date.split('-');
+  const head = [ctx.day, `${d}/${m}`].filter(Boolean).join(' ');
+  const evs = ctx.events.map(e => `${e.label} ${e.summary}`.trim());
+  return [head, ...evs].join(' · ');
+}
+
 /** Date range covering the transactions we might want cues for, as ISO
  *  instants for the HA API. Widened a day each side so a purchase late on the
  *  boundary still sees its event. */

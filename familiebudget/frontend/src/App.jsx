@@ -303,6 +303,10 @@ export default function App() {
 
     // 5. Description rules (DESC_RULES) - e.g. "frietjes", "kapper", "cadeau"
     for (const r of DESC_RULES) {
+      // `sign` lets one word mean opposite things by direction of money:
+      // "cadeau" on a payment is a gift you BOUGHT, on a deposit one you
+      // RECEIVED. Rules without a sign apply either way, as before.
+      if (r.sign && Math.sign(tx.amount) !== r.sign) continue;
       if (r.p.test(descText)) {
         const ri = order.indexOf(r.v);
         const match = descText.match(r.p);
@@ -396,13 +400,15 @@ export default function App() {
       .catch(() => setCalendars([]));
   }, [loaded]);
 
-  /* Events for the span of still-uncategorised transactions — the only ones a
-     cue helps with. Refetched when the user changes the selection. */
+  /* Calendar events covering the transactions on screen. Refetched when the
+     user changes which calendars count. */
   useEffect(() => {
     const picked = settings.calendars || [];
-    const uncat = txs.filter(t => !t.categoryId && !t.splits);
-    if (!loaded || picked.length === 0 || uncat.length === 0) { setCalEvents([]); return; }
-    const range = rangeFor(uncat);
+    if (!loaded || picked.length === 0 || txs.length === 0) { setCalEvents([]); return; }
+    // Whole transaction span, not just the uncategorised ones: the hover cue in
+    // the transaction list applies to every row. HA only holds ~90 days of
+    // one-off events anyway, so asking wider costs nothing.
+    const range = rangeFor(txs);
     if (!range) { setCalEvents([]); return; }
     let cancelled = false;
     const qs = new URLSearchParams({ start: range.start, end: range.end, entities: picked.join(',') });
@@ -1131,7 +1137,7 @@ export default function App() {
             setEndDate={setEndDate} setSearch={setSearch} setSort={setSort} setSel={setSel}
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
-            searchInputRef={searchInputRef}
+            searchInputRef={searchInputRef} calEvents={calEvents}
           />
         )}
 

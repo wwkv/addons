@@ -30,8 +30,23 @@ export const AUTO_RULES = [
   { p: /coolblue|mediamarkt|media\s*markt|fnac/i, c: "aankopen", s: "electronica", v: "high" },
 ];
 
-/* ═══ DESCRIPTION/MEDEDELING RULES ═══ */
+/* ═══ DESCRIPTION/MEDEDELING RULES ═══
+   `sign: 1` matches only money coming IN, `sign: -1` only money going OUT.
+   Without it a rule applies to both, which is what every rule below the
+   sign-aware block does.
+
+   The sign-aware ones exist because congratulation words are the single
+   biggest uncovered pattern in the real data — 31 "proficiat", 12 "huwelijk",
+   plus "kado voor jullie", "leve de liefde", "trouw rox en ward" — and they
+   are always money RECEIVED. Reading them as expenses would have filed a pile
+   of wedding gifts under Aankopen. */
 export const DESC_RULES = [
+  { p: /proficiat|gefeliciteerd|felicitaties|hartelijk/i, c: "inkomen", s: "gift_inkomen", v: "high", sign: 1 },
+  { p: /huwelijk|getrouwd|trouwfeest|jullie\s*trouw/i, c: "inkomen", s: "gift_inkomen", v: "high", sign: 1 },
+  { p: /\bkado\b|cadeau|geschenk/i, c: "inkomen", s: "gift_inkomen", v: "high", sign: 1 },
+  { p: /leve\s*de\s*liefde|veel\s*geluk|het\s*beste/i, c: "inkomen", s: "gift_inkomen", v: "medium", sign: 1 },
+  { p: /\bkado\b|cadeautje/i, c: "aankopen", s: "cadeaus", v: "high", sign: -1 },
+
   { p: /friet|frieten|frietjes/i, c: "eten_uit", s: "afhaal", v: "high" },
   { p: /pizza/i, c: "eten_uit", s: "afhaal", v: "medium" },
   { p: /sushi/i, c: "eten_uit", s: "horeca", v: "medium" },
@@ -49,7 +64,9 @@ export const DESC_RULES = [
   { p: /kapper|coiffeur|haircut/i, c: "persoonlijk", s: "kapper", v: "high" },
   { p: /kleding|kledij|schoenen|shoes/i, c: "persoonlijk", s: "kledij_ward", v: "medium" },
   { p: /\bhuur\b|huurwoning/i, c: "wonen", s: "lening", v: "medium" },
-  { p: /vakantie|hotel|airbnb|booking/i, c: "ontspanning", s: "vakantie", v: "medium" },
+  // sign -1: "vakantiegeld" is holiday PAY, income — without this it filed
+  // salary under Ontspanning › Vakantie.
+  { p: /vakantie|hotel|airbnb|booking/i, c: "ontspanning", s: "vakantie", v: "medium", sign: -1 },
   { p: /sport|fitness|zwembad|gym/i, c: "ontspanning", s: "sport", v: "medium" },
   { p: /bio|bioscoop|cinema|film/i, c: "ontspanning", s: "uitstapjes", v: "medium" },
   { p: /bakker|brood|gebak|patisserie/i, c: "boodschappen", s: "bakker", v: "medium" },
