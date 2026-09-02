@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.1] - 2026-09-02
+### Fixed
+- De hover-popup was één blok cursieve tekst waarin dag, agenda en de ruwe
+  banklijn door elkaar liepen. Nu met duidelijke secties: bovenaan de dag (en
+  wanneer de bank hem boekte als dat verschilt), daaronder AGENDA met de uren
+  netjes onder elkaar, dan je eigen MEDEDELING, en onderaan plaats en kaart.
+  De ruwe banklijn met kaartnummer en landcode wordt niet meer getoond.
+- De popup werd afgeknipt door de tabelcel en was daardoor nauwelijks
+  leesbaar; hij hangt nu los van de tabel en wijkt uit als hij niet past.
+
 ## [1.4.0] - 2026-09-02
 
 ### Added
