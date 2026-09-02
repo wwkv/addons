@@ -4,3 +4,11 @@ familiebudget/backend/data/
 familiebudget/frontend/dist/
 familiebudget/backend/public/
 familiebudget/screenshots/
+
+# KBO/BCE open data dumps. Never commit these: ~2GB (GitHub rejects files
+# over 100MB anyway), the FPS Economy licence covers use, not public
+# redistribution, and contact.csv/address.csv hold real personal data —
+# sole traders are natural persons, so their address, phone and email are
+# in there. This repo is public. Only the *derived* patterns belong in git.
+KboOpenData_*/
+familiebudget/KboOpenData_*/
