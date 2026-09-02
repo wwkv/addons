@@ -7,6 +7,7 @@ import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
 import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/rules.js';
 import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
+import { rangeFor } from './utils/calendar.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
@@ -66,6 +67,11 @@ export default function App() {
   // is left once the list is applied/dismissed; false from the Settings
   // entry, which is a standalone check with no such fallback.
   const [reanalyzeThenSort, setReanalyzeThenSort] = useState(false);
+  // Calendar cues. `calendars` is what HA offers (empty outside HA — the
+  // Electron build and local dev have no supervisor, and the UI then hides
+  // the whole section); settings.calendars is which ones the user picked.
+  const [calendars, setCalendars] = useState([]);
+  const [calEvents, setCalEvents] = useState([]);
   const [showExcludeAddPicker, setShowExcludeAddPicker] = useState(false);
   const [importErr, setImportErr] = useState(null);
   const [editComment, setEditComment] = useState(null);
@@ -379,6 +385,33 @@ export default function App() {
 
     return () => { recalcCancelRef.current = true; };
   }, [rules, loaded, computeCandidates, applyCandidates]);
+
+  /* Which calendars Home Assistant can offer. Answers { available: false }
+     outside HA, which leaves `calendars` empty and hides the feature. */
+  useEffect(() => {
+    if (!loaded) return;
+    fetch('api/calendar/list')
+      .then(r => r.json())
+      .then(d => setCalendars(d.available && Array.isArray(d.calendars) ? d.calendars : []))
+      .catch(() => setCalendars([]));
+  }, [loaded]);
+
+  /* Events for the span of still-uncategorised transactions — the only ones a
+     cue helps with. Refetched when the user changes the selection. */
+  useEffect(() => {
+    const picked = settings.calendars || [];
+    const uncat = txs.filter(t => !t.categoryId && !t.splits);
+    if (!loaded || picked.length === 0 || uncat.length === 0) { setCalEvents([]); return; }
+    const range = rangeFor(uncat);
+    if (!range) { setCalEvents([]); return; }
+    let cancelled = false;
+    const qs = new URLSearchParams({ start: range.start, end: range.end, entities: picked.join(',') });
+    fetch(`api/calendar/events?${qs}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setCalEvents(d.available && Array.isArray(d.events) ? d.events : []); })
+      .catch(() => { if (!cancelled) setCalEvents([]); });
+    return () => { cancelled = true; };
+  }, [loaded, txs, settings.calendars]);
 
   /* Learn pattern — requires N consistent categorizations before creating rule.
      Force-learn (⌘/⇧+click) bypasses and creates immediately. */
@@ -941,7 +974,7 @@ export default function App() {
 
       {/* ─── MODALS ─── */}
       {tinderMode && <ProcessingFlow
-        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist}
+        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents}
         onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }}
         assign={assign}
         bulkAssign={bulkAssign}
@@ -1173,6 +1206,39 @@ export default function App() {
                         </label>
                       ))}
                     </div>
+                    {/* Only in Home Assistant — the desktop build has no
+                        supervisor, so /calendar/list returns nothing and this
+                        whole block stays hidden rather than showing a dead UI. */}
+                    {calendars.length > 0 && (
+                      <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Agenda als hint</label>
+                        <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "0 0 8px", lineHeight: 1.4 }}>
+                          Toont bij het sorteren wat er in je agenda stond toen je betaalde. Alleen als hint — er wordt nooit automatisch een categorie op gezet. Kies je persoonlijke agenda's; werkagenda's geven meestal ruis.
+                        </p>
+                        {calendars.map(c => {
+                          const on = (settings.calendars || []).includes(c.entity_id);
+                          return (
+                            <label key={c.entity_id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "5px 8px", borderRadius: 7, border: on ? "1px solid var(--accent)" : "1px solid var(--border)", background: on ? "var(--accent-10)" : "transparent", cursor: "pointer", marginBottom: 4 }}>
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                onChange={() => setSettings(s => {
+                                  const cur = s.calendars || [];
+                                  return { ...s, calendars: cur.includes(c.entity_id) ? cur.filter(x => x !== c.entity_id) : [...cur, c.entity_id] };
+                                })}
+                                style={{ accentColor: "var(--accent)" }}
+                              />
+                              <span style={{ fontSize: 11, color: "var(--text)" }}>{c.name}</span>
+                            </label>
+                          );
+                        })}
+                        {(settings.calendars || []).length > 0 && (
+                          <div style={{ fontSize: 9.5, opacity: 0.55, color: "var(--text)", marginTop: 6 }}>
+                            {calEvents.length} afspraken geladen voor je openstaande transacties.
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
                       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Heranalyseer alles</label>
                       <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.4 }}>

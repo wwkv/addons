@@ -3,10 +3,11 @@ import { Clock, List, Check, Star, Package, PartyPopper, ArrowDown, MapPin, Cale
 import { getSuggestion } from '../utils/helpers.js';
 import { fmt, fD } from '../utils/formatters.js';
 import { parseCounterparty, parseEvidence, evidenceLine } from '../utils/counterparty.js';
+import { matchEvent, eventLine } from '../utils/calendar.js';
 import CatPicker from '../components/CatPicker.jsx';
 import CatGrid from '../components/CatGrid.jsx';
 
-export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUndo, catUsage, blacklist = [], onAddToBlacklist, onClose}) {
+export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUndo, catUsage, blacklist = [], calEvents = [], onAddToBlacklist, onClose}) {
   const isBlacklisted = (cp) => blacklist.some(b => b.trim().toLowerCase() === (cp || "").trim().toLowerCase());
 
   const groups = useMemo(() => {
@@ -68,8 +69,22 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
     if (e.wallet) chips.push({ icon: <Smartphone size={10} />, text: e.wallet });
     else if (e.card) chips.push({ icon: <CreditCard size={10} />, text: `••${e.card}` });
 
-    return { title, chips, note: e.note, platform: cp.platform };
-  }, [tx, group]);
+    // Agenda cue. Deliberately NOT a chip among the others: it is weaker
+    // evidence than place/time (it says what you were doing, not where the
+    // money went) and it is the user's private calendar, so it stays a
+    // hover-revealed line rather than something always on screen.
+    // Shown for a group only when every transaction in it lands on the SAME
+    // event — two climbing-hall payments during "Klimmen 🧗" describe the
+    // group honestly, whereas picking the first transaction's event would be
+    // the same lie the day/time chip above already avoids.
+    let calEv = null;
+    if (calEvents.length > 0) {
+      const ms = group.txs.map(t => matchEvent(t, calEvents));
+      if (ms[0] && ms.every(m => m && m.start === ms[0].start && m.summary === ms[0].summary)) calEv = ms[0];
+    }
+
+    return { title, chips, note: e.note, platform: cp.platform, calEv };
+  }, [tx, group, calEvents]);
   const totalTxs = txs.length || 1;
   const catCount = txs.filter(t => t.categoryId || t.splits).length;
   const totalAmount = group ? group.txs.reduce((s, t) => s + t.amount, 0) : 0;
@@ -199,6 +214,20 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
                   {c.icon}{c.text}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Agenda cue — collapsed to an icon + title, full detail on hover.
+              Never presented as a reason for a category, only as "this is what
+              you were doing", which is the question an unrecognisable merchant
+              name actually raises. */}
+          {ev.calEv && (
+            <div
+              title={`Uit je agenda: ${eventLine(ev.calEv)}`}
+              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "var(--muted)", background: "var(--bg)", border: "1px dashed var(--border)", borderRadius: 8, padding: "5px 9px", marginBottom: 8, cursor: "help", wordBreak: "break-word" }}
+            >
+              <CalendarDays size={11} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{eventLine(ev.calEv)}</span>
             </div>
           )}
 

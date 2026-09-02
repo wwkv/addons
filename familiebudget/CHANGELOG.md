@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.3.0] - 2026-09-02
+
+### Added
+- **Agenda als hint**: toont bij het sorteren wat er in je agenda stond toen je
+  betaalde — "Klimmen 🧗", "Brunch Franne", "K2 klimschoenen". Alleen als hint,
+  er wordt nooit automatisch een categorie op gezet: een afspraak zegt wat je
+  aan het doen was, niet waar het geld heen ging. Aan te zetten in
+  Instellingen › Regels, waar je zelf kiest welke agenda's meetellen
+  (werkagenda's geven vooral ruis). Leest via Home Assistant — de add-on praat
+  met Supervisor over het interne netwerk, HA regelt de Google-koppeling; er
+  gaat niets naar buiten. Niet beschikbaar in de desktop-app, die heeft geen
+  Home Assistant.
+
+### Fixed
+- **De dag van de week klopte niet.** Die werd afgeleid uit de datum waarop de
+  bank de betaling boekte, en dat loopt bij kaartbetalingen 1 tot 6 dagen achter
+  op je aankoop (gemeten: 331 van 366 kaartlijnen, mediaan 2 dagen). "Koffieland,
+  maandag" ging dus over een koffie van vrijdagochtend. De echte datum stond al
+  in de mededeling en wordt nu gebruikt.
+- Groepen telden dagen op dezelfde verkeerde manier: één namiddag winkelen die
+  over drie dagen werd geboekt las als "3 dagen".
+
 ## [1.2.0] - 2026-09-01
 
 Categoriseren is nu een stuk minder giswerk. Alles gebeurt offline — geen

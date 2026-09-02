@@ -1,6 +1,6 @@
 name: "FamilieBudget"
 description: "Persoonlijk budget- en financieel beheer voor het hele gezin"
-version: "1.2.0"
+version: "1.3.0"
 slug: "familiebudget"
 url: "https://github.com/wwkv/addons/familiebudget"
 arch:
@@ -9,6 +9,7 @@ arch:
 init: false
 startup: "application"
 boot: "auto"
+homeassistant_api: true
 ingress: true
 ingress_port: 3001
 panel_icon: "mdi:cash-multiple"
