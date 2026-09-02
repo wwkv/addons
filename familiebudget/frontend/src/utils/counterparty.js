@@ -105,16 +105,23 @@ export function parseEvidence(tx) {
   const cp = parseCounterparty(tx?.counterparty || "");
   const out = {
     place: cp.place, time: null, day: null, dayShort: null,
+    date: tx?.date || null, booked: tx?.date || null, lagDays: 0,
     wallet: null, card: null, note: null, merchantPrefix: null,
   };
 
-  if (tx?.date) {
-    const dt = new Date(`${tx.date}T00:00:00`);
-    if (!Number.isNaN(dt.getTime())) {
-      out.day = DAYS[dt.getDay()];
-      out.dayShort = DAYS_SHORT[dt.getDay()];
-    }
-  }
+  /* Day-of-week is provisional here: tx.date is when the BANK booked the
+     transaction, which for card payments trails the actual purchase by 1-6
+     days (median 2 — measured over the real database, 331 of 366 card lines
+     disagree). The description carries the true purchase date, so if we find
+     one below we overwrite this. Never show a day derived from tx.date when a
+     real one is available: it names the wrong weekday ~90% of the time. */
+  const setDay = (iso) => {
+    const dt = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(dt.getTime())) return;
+    out.day = DAYS[dt.getDay()];
+    out.dayShort = DAYS_SHORT[dt.getDay()];
+  };
+  if (tx?.date) setDay(tx.date);
   if (!desc) return out;
 
   const hasCardShape = DMY.test(desc) || CARD_TAIL.test(desc);
@@ -134,6 +141,19 @@ export function parseEvidence(tx) {
   if (dm && dm.index > 0) {
     const prefix = desc.slice(0, dm.index).trim().replace(/\s+/g, " ");
     if (prefix) out.merchantPrefix = prefix;
+  }
+  // The real purchase date — what the day-of-week cue and any calendar lookup
+  // must key off, not tx.date.
+  if (dm) {
+    const [, d, m, y] = dm;
+    const iso = `${y}-${m}-${d}`;
+    if (!Number.isNaN(new Date(`${iso}T00:00:00`).getTime())) {
+      out.date = iso;
+      setDay(iso);
+      if (out.booked) {
+        out.lagDays = Math.round((new Date(`${out.booked}T00:00:00`) - new Date(`${iso}T00:00:00`)) / 86400000);
+      }
+    }
   }
 
   // Town sits between the time and the country code / card number.

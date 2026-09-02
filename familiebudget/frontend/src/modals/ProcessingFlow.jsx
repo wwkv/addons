@@ -22,7 +22,9 @@ function groupCues(g) {
   const evs = g.txs.map(parseEvidence);
   const places = [...new Set(evs.map(e => e.place).filter(Boolean))];
   const times = [...new Set(evs.map(e => e.time).filter(Boolean))].sort();
-  const days = [...new Set(g.txs.map(t => t.date))];
+  // Purchase dates, not tx.date — the bank books card payments 1-6 days late,
+  // so one afternoon's shopping can otherwise read as "3 dagen".
+  const days = [...new Set(evs.map(e => e.date).filter(Boolean))];
   const bits = [];
   if (places.length === 1) bits.push(places[0]);
   else if (places.length > 1) bits.push(`${places[0]} +${places.length - 1}`);
