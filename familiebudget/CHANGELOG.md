@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.5.0] - 2026-09-03
+
+Het overzicht beantwoordt nu vier vragen die het eerder niet kon.
+
+### Added
+- **Waar ging je geld heen** — twee balken op dezelfde schaal: wat er binnenkwam
+  en waar het heen ging, inclusief een gearceerd stuk voor wat nog niet is
+  ingedeeld en een stuk voor wat naar de spaarrekening ging. Geef je meer uit
+  dan er binnenkomt, dan is de onderste balk zichtbaar langer.
+- **Vaste lasten** — wat er elke maand al vastligt voordat je iets beslist
+  (nu ~€2.100). Herkend aan de domiciliëringen die de bank zelf aanduidt en aan
+  betalingen die maandelijks terugkomen, niet aan de vast/variabel-labels: die
+  zetten energie en abonnementen ten onrechte onder "variabel". Verzamel-
+  rekeningen zoals PayPal en losse gewoontes worden apart gezet en niet
+  meegeteld — zichtbaar, zodat je het bedrag kunt controleren.
+- **Doelen** — spaarbuffer en potjes staan nu ook op het overzicht, met dezelfde
+  cijfers als op de Sparen-pagina.
+- **Datadekking** — het overzicht toonde twee verschillende uitgavencijfers naast
+  elkaar (alles wat je uitgaf, én alleen het ingedeelde deel) zonder het verschil
+  te verklaren. Nu staat overal bij hoeveel van je geld een categorie heeft.
+
+### Fixed
+- Spaarbuffer en potjes werden op twee plaatsen apart uitgerekend en konden uit
+  elkaar lopen; dat is nu één berekening.
+
 ## [1.4.1] - 2026-09-02
 ### Fixed
 - De hover-popup was één blok cursieve tekst waarin dag, agenda en de ruwe
