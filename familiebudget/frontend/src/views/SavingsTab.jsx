@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Settings, Check, ChevronLeft, ChevronRight, Plus, Minus, X } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
 import NumberInput from '../components/NumberInput.jsx';
+import { ASSIGN_BLOCK } from '../utils/savings.js';
 
 const POT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)"];
 
@@ -15,6 +16,10 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
   const blocksAvailable = Math.floor((unassignedSavings || 0) / 250);
   const remainder = (unassignedSavings || 0) % 250;
   const knownDate = savings.knownDate || "";
+  /* You can open "verdelen" either because there is new money to place, or
+     because there is at least one potje holding €250 you could move elsewhere. */
+  const canDistribute = (unassignedSavings || 0) >= ASSIGN_BLOCK
+    || (savings.pots || []).some(p => (Number(p.saved) || 0) >= 250);
 
   /* Buffer, balances and the pot waterfall all come from utils/savings.js —
      this block used to be a verbatim second copy of the one in App.jsx, so
@@ -84,8 +89,11 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
         <div style={{ marginLeft: "auto" }}>
           <button
             onClick={() => setIsAssignMode(!isAssignMode)}
-            disabled={!isAssignMode && unassignedSavings < 250}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: isAssignMode ? "transparent" : "var(--accent)", color: isAssignMode ? "var(--muted)" : "var(--on-accent)", cursor: (!isAssignMode && unassignedSavings < 250) ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, opacity: (!isAssignMode && unassignedSavings < 250) ? 0.5 : 1, ...(isAssignMode ? { border: "1px solid var(--border)" } : {}) }}
+            /* Deliberately NOT gated on unassignedSavings: with everything
+               already allocated there is nothing to *add*, but moving €250
+               from one potje to another is precisely when you need this. */
+            disabled={!isAssignMode && !canDistribute}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: isAssignMode ? "transparent" : "var(--accent)", color: isAssignMode ? "var(--muted)" : "var(--on-accent)", cursor: canDistribute ? "pointer" : "not-allowed", fontSize: 12, fontWeight: 700, opacity: canDistribute ? 1 : 0.5, ...(isAssignMode ? { border: "1px solid var(--border)" } : {}) }}
           >
             {isAssignMode ? <><Check size={13} />Klaar met verdelen</> : "Verdeel geld"}
           </button>
@@ -141,7 +149,7 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
               </div>
               {isAssignMode && (
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                  <button onClick={() => handleAssign(pot.id, -250)} disabled={(pot.allocated || 0) < 250} style={stepperStyle((pot.allocated || 0) < 250)}><Minus size={13} /></button>
+                  <button onClick={() => handleAssign(pot.id, -250)} disabled={(Number(pot.saved) || 0) < 250} style={stepperStyle((Number(pot.saved) || 0) < 250)}><Minus size={13} /></button>
                   <button onClick={() => handleAssign(pot.id, 250)} disabled={unassignedSavings < 250} style={stepperStyle(unassignedSavings < 250)}><Plus size={13} /></button>
                 </div>
               )}

@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.6.0] - 2026-09-03
+
+### Fixed
+- **Het spaarsaldo telde te veel.** Het keek naar de hele categorie "Sparen &
+  Beleggen", dus alles onder Pensioensparen, Beleggingen en Spaarrekening
+  Kinderen kwam in hetzelfde bedrag terecht als je gewone spaarrekening. De
+  Sparen-pagina volgt nu alleen nog de subcategorie **Spaarrekening**. De
+  spaarbuffer blijft ongewijzigd: die negeert nog steeds álle spaartransacties,
+  want geld opzij zetten is geen uitgave.
+- **Je kon potjes niet herverdelen.** "Verdeel geld" was uitgeschakeld zodra er
+  niets meer te verdelen was — precies wanneer je geld tussen twee potjes wil
+  verschuiven. Je kan nu altijd verdelen zolang er iets te verplaatsen is: haal
+  €250 uit het ene potje en zet het in het andere.
+- De min-knop van een potje keek naar het toegewezen bedrag in plaats van naar
+  wat je erin gestoken hebt, waardoor een potje dat nog achter de buffer wacht
+  helemaal niet aanpasbaar was.
+
+### Changed
+- Het bolletje bij Sparen (en de melding na het sorteren) verschijnt pas vanaf
+  €250 — onder dat bedrag valt er toch niets te verdelen, dus vroeg het om iets
+  wat je niet kon doen.
+
 ## [1.5.3] - 2026-09-03
 
 ### Fixed

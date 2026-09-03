@@ -3,6 +3,7 @@ import { X, ArrowLeft, ChevronRight, Sparkles, List, Search, CheckCircle2 } from
 import { fmt } from '../utils/formatters.js';
 import CatPicker from '../components/CatPicker.jsx';
 import { parseCounterparty, parseEvidence } from '../utils/counterparty.js';
+import { ASSIGN_BLOCK } from '../utils/savings.js';
 
 import TinderMode from './TinderMode.jsx';
 
@@ -234,7 +235,7 @@ function Klaar({ initialStats, allDone, remaining, unassignedSavings, onClose, o
         <MiniStat label="Snel gesorteerd" value={initialStats.batch} />
         <MiniStat label="Dieper bekeken" value={initialStats.deep} />
       </div>
-      {allDone && unassignedSavings > 0 && (
+      {allDone && unassignedSavings >= ASSIGN_BLOCK && (
         <div style={{ width: "100%", maxWidth: 480, background: "var(--bg)", border: "1px solid var(--accent)", borderRadius: 14, padding: "16px 20px" }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Openstaand bedrag</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 30, color: "var(--green)", marginTop: 2 }}>{fmt(unassignedSavings)}</div>
@@ -243,8 +244,8 @@ function Klaar({ initialStats, allDone, remaining, unassignedSavings, onClose, o
       )}
       <div style={{ display: "flex", gap: 10 }}>
         {!allDone && <button onClick={onResume} style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontSize: 12.5, cursor: "pointer" }}>Verder gaan</button>}
-        <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12.5, cursor: "pointer" }}>{allDone && unassignedSavings > 0 ? "Later" : "Sluiten"}</button>
-        {allDone && unassignedSavings > 0 && (
+        <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12.5, cursor: "pointer" }}>{allDone && unassignedSavings >= ASSIGN_BLOCK ? "Later" : "Sluiten"}</button>
+        {allDone && unassignedSavings >= ASSIGN_BLOCK && (
           <button onClick={onGoToSavings} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 10, border: "none", background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Ga naar Sparen<ChevronRight size={14} /></button>
         )}
       </div>

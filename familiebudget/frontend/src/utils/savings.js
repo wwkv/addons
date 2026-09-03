@@ -6,24 +6,38 @@
  * copies of the same arithmetic drift the moment either is touched, and the
  * numbers they produce sit next to each other in the UI.
  *
- * Deliberately unchanged while lifting: the `expanded ?? txs` fallback, the
- * hardcoded `"sparen"` category id, and the round-up to the nearest €500. The
- * buffer is also still computed from all non-luxe spending even though the UI
- * calls it "vaste lasten" — that is a pre-existing quirk, and quietly changing
- * the maths during a de-duplication would be the wrong place to fix it.
+ * Two distinct notions of "savings" live here and they are not the same set:
+ *   - the BALANCE tracks one account (see SAVINGS_ACCOUNT_SUB below);
+ *   - the BUFFER excludes the whole `sparen` category from necessary spending,
+ *     because none of it is spending, whichever account it lands in.
  */
+/* The Sparen tab tracks ONE account: the spaarrekening.
+   It used to match the whole `sparen` category, which pooled Pensioensparen,
+   Beleggingen and Spaarrekening Kinderen into the same figure — three separate
+   pots of money reported as one balance, so the number read higher than the
+   account it claimed to show. Those are still categorised and still counted as
+   transfers everywhere else; they just are not this account. */
+export const SAVINGS_ACCOUNT_SUB = "spaarrekening";
+
+/* Money is assigned to potjes in €250 blocks, so anything below that cannot be
+   distributed. Prompts keyed on this rather than on "> 0", which nagged about
+   amounts you had no way to act on. */
+export const ASSIGN_BLOCK = 250;
+const isSavingsAccountTx = (tx) =>
+  tx.categoryId === "sparen" && tx.subCategoryId === SAVINGS_ACCOUNT_SUB;
+
 export function computeSavings({ txs, expanded, cats, year, savings, settings, commitmentKeys, keyOf }) {
   const startOfYear = `${year}-01-01`;
   const knownDate = savings?.knownDate || "";
 
   // Back-solve the 1 Jan balance from the balance the user actually vouched for.
   const savingsWindowTxs = knownDate
-    ? txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear && tx.date <= knownDate)
+    ? txs.filter(tx => isSavingsAccountTx(tx) && tx.date >= startOfYear && tx.date <= knownDate)
     : [];
   const netChange = savingsWindowTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
   const jan1Balance = (savings?.knownBalance || 0) - netChange;
 
-  const yearTxs = txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear);
+  const yearTxs = txs.filter(tx => isSavingsAccountTx(tx) && tx.date >= startOfYear);
   const totalSavedThisYear = yearTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
   const liveTotal = jan1Balance + totalSavedThisYear;
 

@@ -8,7 +8,7 @@ import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/ru
 import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { rangeFor } from './utils/calendar.js';
-import { computeSavings } from './utils/savings.js';
+import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
@@ -868,7 +868,7 @@ export default function App() {
           ].map(tab => (
             <button key={tab.id} title={tab.label} onClick={() => setView(tab.id)} className={`rail-btn${view === tab.id ? " active" : ""}${tab.desktopOnly ? " mobile-hide" : ""}`}>
               {tab.icon}
-              {tab.id === "savings" && unassignedSavings > 0 && <span className="rail-dot" />}
+              {tab.id === "savings" && unassignedSavings >= ASSIGN_BLOCK && <span className="rail-dot" />}
             </button>
           ))}
           <div className="rail-spacer" />
