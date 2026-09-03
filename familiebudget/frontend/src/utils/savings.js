@@ -12,7 +12,7 @@
  * calls it "vaste lasten" — that is a pre-existing quirk, and quietly changing
  * the maths during a de-duplication would be the wrong place to fix it.
  */
-export function computeSavings({ txs, expanded, cats, year, savings, settings }) {
+export function computeSavings({ txs, expanded, cats, year, savings, settings, commitmentKeys, keyOf }) {
   const startOfYear = `${year}-01-01`;
   const knownDate = savings?.knownDate || "";
 
@@ -44,6 +44,26 @@ export function computeSavings({ txs, expanded, cats, year, savings, settings })
   const avgMonthlyNodig = totalNodigSpend / (monthsCounted > 0 ? monthsCounted : 1);
   const bufferTarget = Math.ceil((avgMonthlyNodig * (settings?.bufferMultiplier || 5)) / 500) * 500;
 
+  /* The same necessary spending, split into what is already recognised as a
+     recurring commitment and what is not (groceries, fuel, pharmacy…).
+     Computed HERE, from the identical `nodigTxs` set the buffer uses, so the
+     dashboard breakdown and the buffer can never disagree — reimplementing the
+     filter elsewhere drifted by €4,50/month, which was enough to cross a €500
+     rounding boundary and show two different buffer targets. */
+  let fixedPart = 0;
+  if (commitmentKeys && keyOf) {
+    for (const t of nodigTxs) {
+      if (commitmentKeys.has(keyOf(t))) fixedPart += Math.abs(Number(t.amount));
+    }
+  }
+  const div = monthsCounted > 0 ? monthsCounted : 1;
+  const baseline = {
+    fixed: fixedPart / div,
+    variable: (totalNodigSpend - fixedPart) / div,
+    total: avgMonthlyNodig,
+    monthsCounted,
+  };
+
   /* Reality waterfall: the buffer fills first, then each pot takes what it
      asked for out of whatever cash is left. `saved` is intent; `allocated` is
      intent capped by money that actually exists. */
@@ -62,6 +82,7 @@ export function computeSavings({ txs, expanded, cats, year, savings, settings })
     liveTotal,
     avgMonthlyNodig,
     monthsCounted,
+    baseline,
     bufferTarget,
     bufferAllocated,
     // Guarded rather than leaning on `NaN || 0`: with no necessary spending

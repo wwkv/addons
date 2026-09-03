@@ -75,6 +75,19 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
         </div>
       </div>
 
+      {/* "Uit reserves" is otherwise unexplainable — it appears when transfers
+          to savings plus spending exceed what came in, which happens on any
+          month with a large transfer. State the sum rather than leaving a red
+          segment to be interpreted. */}
+      {deficit > 0 && (
+        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 9, lineHeight: 1.5, background: "var(--bg)", borderRadius: 8, padding: "7px 9px" }}>
+          Er ging <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(outTotal)}</span> de rekening uit
+          tegenover <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(inc)}</span> aan inkomsten
+          {saved > 0 && <> — waarvan <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(saved)}</span> naar je spaarrekening</>}.
+          Het verschil van <strong style={{ color: "var(--text)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(deficit)}</strong> kwam uit geld dat al op de rekening stond.
+        </div>
+      )}
+
       <div className="dash-legend">
         {out.map(s => (
           <div key={s.key} className="dash-legend-row">

@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { fmt } from '../utils/formatters.js';
 import DashSection from './DashSection.jsx';
 
@@ -5,55 +6,82 @@ const TIER_COLOR = { zeker: "var(--accent)", waarschijnlijk: "var(--neutral)", m
 const TIER_LABEL = { zeker: "Domiciliëring", waarschijnlijk: "Maandelijks patroon", mogelijk: "Vaste-lasten categorie" };
 
 /*
- * "Vaste lasten" — what you are locked into before you decide anything.
+ * "Wat je elke maand nodig hebt" — the household's monthly baseline.
  *
- * Deliberately payee-derived rather than category-derived, which means it stays
- * honest while half the transactions are still uncategorised: a direct debit is
- * a direct debit whether or not it has been filed yet.
+ * Two parts, because both matter and they are found in different ways:
+ *   - Vaste lasten: contracts and direct debits, detected per payee.
+ *   - Overige noodzakelijke uitgaven: groceries, bakker, fuel, pharmacy —
+ *     everything tagged `nodig` that isn't already one of those payees.
+ *
+ * The total is NOT recomputed here. It comes from computeSavings, which is the
+ * same figure the spaarbuffer multiplies, so the two can never disagree. An
+ * earlier version reimplemented the filter and drifted by €4,50/month — enough
+ * to cross a €500 rounding boundary and display two different buffer targets.
  */
-export default function CommittedCosts({ commitments, income, monthsWithData, onShowPayee }) {
-  const { payees, weak, monthlyTotal } = commitments;
+export default function CommittedCosts({ commitments, baseline, incomePerMonth, bufferTarget, bufferMultiplier, onShowPayee, onOpenSavings }) {
+  const { payees, weak } = commitments;
   const committed = payees.filter(p => p.counts);
   const alsoRecurring = payees.filter(p => !p.counts);
+  const months = baseline?.monthsCounted || 0;
 
-  if (committed.length === 0 && weak.length === 0) {
+  if (months === 0) {
     return (
-      <DashSection title="Vaste lasten">
+      <DashSection title="Wat je elke maand nodig hebt">
         <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.5 }}>
-          Nog geen vaste lasten gevonden. Er wordt gezocht naar domiciliëringen en
-          betalingen die elke maand terugkomen.
+          Nog geen noodzakelijke uitgaven gevonden in deze periode.
         </div>
       </DashSection>
     );
   }
 
-  // A per-month figure needs more than one month behind it.
-  const canAverage = monthsWithData >= 2;
-  const free = income > 0 ? income / Math.max(1, monthsWithData) - monthlyTotal : null;
+  const canAverage = months >= 2;
+  const free = incomePerMonth > 0 ? incomePerMonth - baseline.total : null;
+  const pct = (v) => baseline.total > 0 ? (v / baseline.total) * 100 : 0;
 
   return (
     <DashSection
-      title="Vaste lasten"
-      sub={canAverage ? `${committed.length} vaste betalers · gem. over ${monthsWithData} maanden met data` : "Nog te weinig maanden voor een betrouwbaar maandbedrag"}
+      title="Wat je elke maand nodig hebt"
+      sub={canAverage ? `gemiddeld over ${months} maanden met uitgaven` : "Nog te weinig maanden voor een betrouwbaar maandbedrag"}
       action={canAverage ? (
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 17, color: "var(--text)" }}>{fmt(-monthlyTotal)}</div>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 17, color: "var(--text)" }}>{fmt(-baseline.total)}</div>
           <div style={{ fontSize: 9, color: "var(--muted)" }}>per maand</div>
         </div>
       ) : null}
     >
-      {/* Not surplus — this still has to cover groceries, fuel and everything
-          else variable. Phrasing it as "blijft over" invited exactly that
-          misreading, so it names what the money is for. */}
+      {/* The split, so the total is visibly made of two things */}
+      <div className="stack-bar" style={{ height: 14, marginBottom: 9 }}>
+        <div className="stack-seg" style={{ flexGrow: baseline.fixed, background: "var(--accent)" }} title={`Vaste lasten · ${fmt(baseline.fixed)}/maand`} />
+        <div className="stack-seg" style={{ flexGrow: baseline.variable, background: "var(--neutral)" }} title={`Overige noodzakelijke uitgaven · ${fmt(baseline.variable)}/maand`} />
+      </div>
+      <div className="dash-legend" style={{ marginTop: 0, marginBottom: 11 }}>
+        <div className="dash-legend-row">
+          <span className="dash-swatch" style={{ background: "var(--accent)" }} />
+          <span style={{ flex: 1 }}>Vaste lasten</span>
+          <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>{fmt(baseline.fixed)}</span>
+        </div>
+        <div className="dash-legend-row">
+          <span className="dash-swatch" style={{ background: "var(--neutral)" }} />
+          <span style={{ flex: 1 }}>Boodschappen &amp; andere</span>
+          <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>{fmt(baseline.variable)}</span>
+        </div>
+      </div>
+
+      {/* Where the free-to-spend figure comes from, stated as the sum it is. */}
       {canAverage && free !== null && (
-        <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 11, lineHeight: 1.5 }}>
-          Blijft <strong style={{ color: "var(--text)", fontWeight: 600 }}>{fmt(free)}</strong> per maand
-          voor boodschappen, vervoer, ontspanning en sparen.
+        <div style={{ fontSize: 10.5, color: "var(--muted)", marginBottom: 11, lineHeight: 1.55, background: "var(--bg)", borderRadius: 8, padding: "8px 10px" }}>
+          <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(incomePerMonth)}</span> inkomsten
+          − <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(baseline.total)}</span> nodig
+          = <strong style={{ color: free >= 0 ? "var(--text)" : "var(--red)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(free)}</strong> per maand vrij
+          <div style={{ opacity: 0.75, marginTop: 2 }}>Voor luxe, extra sparen en onverwachte uitgaven.</div>
         </div>
       )}
 
+      <div style={{ fontSize: 9.5, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+        Vaste betalers
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {committed.slice(0, 8).map(p => (
+        {committed.slice(0, 7).map(p => (
           <div
             key={p.key}
             className="rank-row"
@@ -73,18 +101,29 @@ export default function CommittedCosts({ commitments, income, monthsWithData, on
         ))}
       </div>
 
-      {/* Recurring, but not something you're locked into. Kept visible so the
-          headline can be checked rather than taken on trust. */}
-      {alsoRecurring.length > 0 && (
-        <div style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 10, lineHeight: 1.5 }}>
-          Niet meegeteld: {alsoRecurring.map(p => p.name).join(", ")} — {alsoRecurring.some(p => p.aggregator) ? "verzamelrekeningen en losse gewoontes" : "losse gewoontes"}, geen vaste last.
+      {/* The buffer is five times this number — say so, and link to it. */}
+      {bufferTarget > 0 && (
+        <div
+          onClick={onOpenSavings}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border)", cursor: onOpenSavings ? "pointer" : "default", fontSize: 10.5, color: "var(--muted)", lineHeight: 1.5 }}
+        >
+          <span>
+            Je spaarbuffer is <strong style={{ color: "var(--text)", fontWeight: 600 }}>{bufferMultiplier}×</strong> dit bedrag
+            = <span style={{ fontFamily: "'DM Mono',monospace", color: "var(--text)" }}>{fmt(bufferTarget)}</span>
+          </span>
+          <ChevronRight size={13} style={{ flexShrink: 0, opacity: 0.5 }} />
         </div>
       )}
 
+      {alsoRecurring.length > 0 && (
+        <div style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 10, lineHeight: 1.5 }}>
+          Niet meegeteld als vaste last: {alsoRecurring.map(p => p.name).join(", ")} — verzamelrekeningen en losse gewoontes.
+        </div>
+      )}
       {weak.length > 0 && (
         <div style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 6, lineHeight: 1.5 }}>
-          Mogelijk ook vast, maar nog te weinig data voor een maandbedrag: {weak.slice(0, 5).map(p => p.name).join(", ")}
-          {weak.length > 5 ? ` +${weak.length - 5}` : ""}. Kwartaal- en jaarfacturen worden pas na een vol jaar herkend.
+          Mogelijk ook vast, maar nog te weinig data: {weak.slice(0, 4).map(p => p.name).join(", ")}
+          {weak.length > 4 ? ` +${weak.length - 4}` : ""}. Kwartaal- en jaarfacturen worden pas na een vol jaar herkend.
         </div>
       )}
     </DashSection>

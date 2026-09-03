@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.5.1] - 2026-09-03
+
+### Changed
+- **"Vaste lasten" heet nu "Wat je elke maand nodig hebt"** en telt ook
+  boodschappen, bakker, apotheek en brandstof mee — niet alleen de
+  domiciliëringen. Het bedrag is gesplitst in vaste lasten en de rest, zodat je
+  ziet waar het uit bestaat.
+- **Dit is exact het bedrag waar je spaarbuffer op gebaseerd is**, en dat staat
+  er nu bij: "je spaarbuffer is 5× dit bedrag". Op de Sparen-pagina stond
+  "5× gem. vaste lasten", maar dat werd gerekend met álle noodzakelijke
+  uitgaven — die tekst klopte niet en is aangepast.
+
+### Fixed
+- "Uit reserves" in de geldstroom-balk was niet te herleiden. Er staat nu bij
+  hoe het bedrag ontstaat: wat er de rekening uit ging, wat er binnenkwam,
+  hoeveel daarvan naar de spaarrekening ging, en dus wat er uit bestaand saldo
+  kwam.
+- Ook het bedrag dat per maand vrij overblijft toont nu zijn eigen som
+  (inkomsten − nodig = vrij) in plaats van alleen een uitkomst.
+- Dat vrije bedrag vergeleek de inkomsten van één maand met een gemiddelde over
+  meerdere maanden zodra je op een maand filterde; beide kanten gebruiken nu
+  hetzelfde jaargemiddelde.
+
 ## [1.5.0] - 2026-09-03
 
 Het overzicht beantwoordt nu vier vragen die het eerder niet kon.

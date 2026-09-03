@@ -10,7 +10,7 @@ import CommittedCosts from '../components/CommittedCosts.jsx';
 import GoalsCard from '../components/GoalsCard.jsx';
 import FlowBars from '../components/FlowBars.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary, bufferMultiplier }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -25,6 +25,11 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
   /* Headline totals. Complete — isSpendingTx has no category test, so these
      include uncategorised money. See utils/totals.js. */
   const { inc, exp, net, spaarquote, monthsWithData } = periodTotals(expanded, cats, year, months);
+  /* The monthly baseline is a whole-year average (the buffer is a yearly
+     concept), so the "vrij per maand" comparison has to use whole-year income
+     too. Using the month-scoped `inc` would put one month's salary next to a
+     four-month average and call the difference free money. */
+  const yearTotals = months.length ? periodTotals(expanded, cats, year, []) : { inc, monthsWithData };
   /* What the category breakdowns actually cover. Built from catStats, never
      from `exp` — see utils/totals.js. */
   const cov = coverage(catStats, totalExp);
@@ -115,7 +120,15 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
       />
 
       <div className="dash-two">
-        <CommittedCosts commitments={commitments} income={inc} monthsWithData={monthsWithData} onShowPayee={showPayee} />
+        <CommittedCosts
+          commitments={commitments}
+          baseline={savingsSummary.baseline}
+          incomePerMonth={yearTotals.monthsWithData > 0 ? yearTotals.inc / yearTotals.monthsWithData : 0}
+          bufferTarget={savingsSummary.bufferTarget}
+          bufferMultiplier={bufferMultiplier}
+          onShowPayee={showPayee}
+          onOpenSavings={() => setView("savings")}
+        />
         <GoalsCard savingsSummary={savingsSummary} onOpen={() => setView("savings")} />
       </div>
 

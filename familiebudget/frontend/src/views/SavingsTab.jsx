@@ -19,7 +19,7 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
   /* Buffer, balances and the pot waterfall all come from utils/savings.js —
      this block used to be a verbatim second copy of the one in App.jsx, so
      the Sparen page and the notification dot could disagree after an edit. */
-  const { jan1Balance, totalSavedThisYear, liveTotal, bufferTarget, bufferAllocated, potsWithAllocation } = savingsSummary;
+  const { jan1Balance, totalSavedThisYear, liveTotal, bufferTarget, bufferAllocated, potsWithAllocation, baseline } = savingsSummary;
 
   const updatePot = (id, patch) => setSavings(s => ({ ...s, pots: s.pots.map(p => p.id === id ? { ...p, ...patch } : p) }));
   const removePot = (id) => setSavings(s => ({ ...s, pots: s.pots.filter(p => p.id !== id) }));
@@ -97,7 +97,7 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
         <div style={{ gridColumn: "1 / -1", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div style={{ flex: "0 0 170px" }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>Spaarbuffer</div>
-            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {bufferMultiplier}× gem. vaste lasten</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {bufferMultiplier}× {fmt(baseline?.total || 0)} per maand nodig</div>
           </div>
           <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden", minWidth: 100 }}>
             <div style={{ width: `${bufferTarget > 0 ? Math.min((bufferAllocated / bufferTarget) * 100, 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--accent)", transition: "width 0.4s" }} />

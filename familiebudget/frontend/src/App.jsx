@@ -798,12 +798,6 @@ export default function App() {
      Sparen tab, its notification dot, and the dashboard Doelen section, all
      from one definition (utils/savings.js) rather than the two copies that
      used to sit here and in SavingsTab. */
-  const savingsSummary = useMemo(
-    () => computeSavings({ txs, expanded, cats, year, savings, settings }),
-    [txs, expanded, cats, year, settings, savings]
-  );
-  const unassignedSavings = savingsSummary.unassigned;
-
   /* Recurring commitments. Detected on raw txs (splits would double-count
      occurrences) and memoised here rather than in the view, which re-renders
      on every search keystroke. */
@@ -811,6 +805,19 @@ export default function App() {
     () => detectCommitments(txs, cats, { year, notRecurring: settings.notRecurring }),
     [txs, cats, year, settings.notRecurring]
   );
+
+  /* Savings gets the commitment keys so it can split its own necessary-spend
+     figure into fixed vs variable — the number the buffer is built on, broken
+     down, from one computation. */
+  const commitmentKeys = useMemo(
+    () => new Set(commitments.payees.filter(p => p.counts).map(p => p.key)),
+    [commitments]
+  );
+  const savingsSummary = useMemo(
+    () => computeSavings({ txs, expanded, cats, year, savings, settings, commitmentKeys, keyOf: t => parseCounterparty(t.counterparty).key }),
+    [txs, expanded, cats, year, settings, savings, commitmentKeys]
+  );
+  const unassignedSavings = savingsSummary.unassigned;
 
   const sortedPreview = useMemo(() => {
     if (!preview) return [];
@@ -1091,7 +1098,7 @@ export default function App() {
             catStats={catStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
-            setSearch={setSearch} commitments={commitments} savingsSummary={savingsSummary}
+            setSearch={setSearch} commitments={commitments} savingsSummary={savingsSummary} bufferMultiplier={settings.bufferMultiplier || 5}
           />
         )}
 
