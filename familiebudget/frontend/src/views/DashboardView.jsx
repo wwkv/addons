@@ -7,8 +7,9 @@ import DashSection from '../components/DashSection.jsx';
 import { periodTotals, coverage } from '../utils/totals.js';
 import CoverageCard, { CoverageNote } from '../components/CoverageCard.jsx';
 import CommittedCosts from '../components/CommittedCosts.jsx';
+import GoalsCard from '../components/GoalsCard.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -99,7 +100,10 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         </div>
       </div>
 
-      <CommittedCosts commitments={commitments} income={inc} monthsWithData={monthsWithData} onShowPayee={showPayee} />
+      <div className="dash-two">
+        <CommittedCosts commitments={commitments} income={inc} monthsWithData={monthsWithData} onShowPayee={showPayee} />
+        <GoalsCard savingsSummary={savingsSummary} onOpen={() => setView("savings")} />
+      </div>
 
       <DashSection title="Grootste uitgaven" sub={<CoverageNote coverage={cov} />}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

@@ -1091,7 +1091,7 @@ export default function App() {
             catStats={catStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
-            setSearch={setSearch} commitments={commitments}
+            setSearch={setSearch} commitments={commitments} savingsSummary={savingsSummary}
           />
         )}
 
