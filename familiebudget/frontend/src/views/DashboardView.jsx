@@ -1,11 +1,12 @@
 import { Inbox, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
-import { isSubExcluded, isSpendingTx } from '../utils/helpers.js';
 import MonthSelector from '../components/MonthSelector.jsx';
 import NetTrendChart from '../components/NetTrendChart.jsx';
+import DashSection from '../components/DashSection.jsx';
+import { periodTotals } from '../utils/totals.js';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, years }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -17,14 +18,9 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
     </div>
   );
 
-  /* ── KPI scope: year + optional month filter, same scope as catStats/totalExp ── */
-  const notExcluded = t => !isSubExcluded(cats, t.categoryId, t.subCategoryId);
-  const scoped = expanded.filter(t => t.date.startsWith(year) && (!months.length || months.includes(t.date.slice(5, 7))));
-  const inc = scoped.filter(t => t.amount > 0 && notExcluded(t)).reduce((a, t) => a + t.amount, 0);
-  // Transfers to savings are not spending — see isSpendingTx.
-  const exp = scoped.filter(t => isSpendingTx(cats, t)).reduce((a, t) => a + Math.abs(t.amount), 0);
-  const net = inc - exp;
-  const spaarquote = inc > 0 ? Math.round((net / inc) * 100) : null;
+  /* Headline totals. Complete — isSpendingTx has no category test, so these
+     include uncategorised money. See utils/totals.js. */
+  const { inc, exp, net, spaarquote } = periodTotals(expanded, cats, year, months);
 
   /* ── Trend: only meaningful when scoped to exactly one month ── */
   let trend = null;
@@ -91,9 +87,8 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         </div>
       </div>
 
-      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 15, padding: "17px 19px", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, flexShrink: 0 }}>Grootste uitgaven</div>
-        <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+      <DashSection title="Grootste uitgaven">
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {ranked.map(({ cat, total }) => (
             <div key={cat.id} onClick={() => setCatDetail(cat.id)} className="rank-row" style={{ cursor: "pointer" }}>
               <div className="rank-name" style={{ color: "var(--text)" }} title={cat.name}>{cat.name}</div>
@@ -106,7 +101,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           ))}
           {ranked.length === 0 && <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 12 }}>Geen uitgaven in deze periode</div>}
         </div>
-      </div>
+      </DashSection>
     </>
   );
 }

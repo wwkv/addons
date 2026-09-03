@@ -5,7 +5,7 @@ import NumberInput from '../components/NumberInput.jsx';
 
 const POT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)"];
 
-export default function SavingsTab({ txs, expanded, cats, savings, setSavings, year, settings, unassignedSavings }) {
+export default function SavingsTab({ txs, savings, setSavings, year, savingsSummary, unassignedSavings, bufferMultiplier = 5 }) {
   const [showSetup, setShowSetup] = useState(!savings.knownBalance);
   const [editingPotId, setEditingPotId] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -14,44 +14,12 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
 
   const blocksAvailable = Math.floor((unassignedSavings || 0) / 250);
   const remainder = (unassignedSavings || 0) % 250;
-  const startOfYear = `${year}-01-01`;
   const knownDate = savings.knownDate || "";
 
-  /* Spaarbuffer target: matches Noodzakelijk vs Luxe pie chart exactly */
-  const { bufferTarget } = (() => {
-    const data = expanded ?? txs;
-    const yearExpenses = data.filter(t => t.date.startsWith(year.toString()) && Number(t.amount) < 0);
-    const nodigTxs = yearExpenses.filter(t => {
-      const cat = cats.find(c => c.id === t.categoryId);
-      const sub = cat ? cat.subs.find(ss => ss.id === t.subCategoryId) : null;
-      if (!cat || !sub || sub.excluded || cat.id === "sparen") return false;
-      return (sub.necessity || "nodig") !== "luxe";
-    });
-    const uniqueMonths = new Set(nodigTxs.map(t => t.date.substring(0, 7)));
-    const totalNodigSpend = Math.abs(nodigTxs.reduce((sum, t) => sum + Number(t.amount), 0));
-    const activeMonthsCount = uniqueMonths.size > 0 ? uniqueMonths.size : 1;
-    const avgMonthlyNodigVal = totalNodigSpend / activeMonthsCount;
-    const rawBuffer = avgMonthlyNodigVal * (settings?.bufferMultiplier || 5);
-    return { bufferTarget: Math.ceil(rawBuffer / 500) * 500 };
-  })();
-
-  const savingsWindowTxs = knownDate ? txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear && tx.date <= knownDate) : [];
-  const netChange = savingsWindowTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
-  const jan1Balance = (savings.knownBalance || 0) - netChange;
-
-  const yearTxs = txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear);
-  const totalSavedThisYear = yearTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
-  const liveTotal = jan1Balance + totalSavedThisYear;
-
-  /* Reality Waterfall: buffer first, then pots get actual allocations capped by remaining cash */
-  const bufferAllocated = Math.min(liveTotal, bufferTarget);
-  let rollingAvailable = Math.max(0, liveTotal - bufferAllocated);
-  const potsWithAllocation = [...(savings.pots || [])].map((pot) => {
-    const intent = Number(pot.saved) || 0;
-    const actualAllocated = Math.min(intent, rollingAvailable);
-    rollingAvailable -= actualAllocated;
-    return { ...pot, allocated: actualAllocated, intent };
-  });
+  /* Buffer, balances and the pot waterfall all come from utils/savings.js —
+     this block used to be a verbatim second copy of the one in App.jsx, so
+     the Sparen page and the notification dot could disagree after an edit. */
+  const { jan1Balance, totalSavedThisYear, liveTotal, bufferTarget, bufferAllocated, potsWithAllocation } = savingsSummary;
 
   const updatePot = (id, patch) => setSavings(s => ({ ...s, pots: s.pots.map(p => p.id === id ? { ...p, ...patch } : p) }));
   const removePot = (id) => setSavings(s => ({ ...s, pots: s.pots.filter(p => p.id !== id) }));
@@ -129,7 +97,7 @@ export default function SavingsTab({ txs, expanded, cats, savings, setSavings, y
         <div style={{ gridColumn: "1 / -1", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div style={{ flex: "0 0 170px" }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>Spaarbuffer</div>
-            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {settings?.bufferMultiplier || 5}× gem. vaste lasten</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{fmt(bufferAllocated).replace("€", "")} / {fmt(bufferTarget).replace("€", "")} · {bufferMultiplier}× gem. vaste lasten</div>
           </div>
           <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden", minWidth: 100 }}>
             <div style={{ width: `${bufferTarget > 0 ? Math.min((bufferAllocated / bufferTarget) * 100, 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--accent)", transition: "width 0.4s" }} />

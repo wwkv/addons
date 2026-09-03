@@ -439,6 +439,89 @@
 .cmp-summary-delta { margin-left: auto; text-align: right; }
 .cmp-summary-figure { justify-content: flex-end; }
 
+/* ── Dashboard sections ──
+   Card chrome shared by every dashboard section (see DashSection.jsx), so the
+   six properties below live in one place instead of being inlined per card. */
+.dash-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 17px 19px;
+  margin-bottom: 14px;
+}
+.dash-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.dash-h {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.dash-sub {
+  font-size: 9.5px;
+  color: var(--muted);
+  opacity: 0.85;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Two sections side by side on wide screens, stacked below. minmax(0,1fr)
+   rather than 1fr so long merchant names can ellipsis instead of forcing
+   the column wider. */
+.dash-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.dash-two > .dash-section { margin-bottom: 14px; }
+@media (max-width: 900px) {
+  .dash-two { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ── Stacked proportion bar ──
+   One idiom for every composition bar on the dashboard. Segments are sized by
+   flex-grow so they always fill the track exactly, with a floor so a 0.5%
+   slice stays visible instead of collapsing to nothing the legend still names. */
+.stack-bar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.stack-seg { min-width: 3px; height: 100%; }
+/* Diagonal hatch marks "not known" — a solid fill would read as just another
+   category rather than as an absence. */
+.stack-seg--unknown {
+  background-image: repeating-linear-gradient(
+    45deg, var(--muted) 0 3px, transparent 3px 7px
+  );
+  background-color: var(--bg);
+  opacity: 0.55;
+}
+.dash-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 14px;
+  margin-top: 11px;
+}
+.dash-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text);
+  min-width: 0;
+}
+.dash-swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
 /* ── Dashboard KPI cards ── */
 .kpi-grid {
   display: grid;

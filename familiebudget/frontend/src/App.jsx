@@ -8,6 +8,7 @@ import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/ru
 import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { rangeFor } from './utils/calendar.js';
+import { computeSavings } from './utils/savings.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
@@ -792,45 +793,15 @@ export default function App() {
   const totalExp = cats.filter(c => c.type !== "inkomsten" && catStats[c.id]).reduce((s, c) => s + catStats[c.id].total, 0);
   const uncatN = useMemo(() => txs.filter(t => t.date.startsWith(year) && !t.categoryId).length, [txs, year]);
 
-  /* Unassigned savings: for Sparen tab notification dot */
-  const unassignedSavings = useMemo(() => {
-    const startOfYear = `${year}-01-01`;
-    const knownDate = savings?.knownDate || "";
-    const savingsWindowTxs = knownDate
-      ? txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear && tx.date <= knownDate)
-      : [];
-    const netChange = savingsWindowTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
-    const jan1Balance = (savings?.knownBalance || 0) - netChange;
-    const yearTxs = txs.filter(tx => tx.categoryId === "sparen" && tx.date >= startOfYear);
-    const totalSavedThisYear = yearTxs.reduce((sum, tx) => sum + (-(tx.amount || 0)), 0);
-    const liveTotal = jan1Balance + totalSavedThisYear;
-
-    const data = expanded ?? txs;
-    const yearExpenses = data.filter(t => t.date.startsWith(year.toString()) && Number(t.amount) < 0);
-    const nodigTxs = yearExpenses.filter(t => {
-      const cat = cats.find(c => c.id === t.categoryId);
-      const sub = cat ? cat.subs.find(ss => ss.id === t.subCategoryId) : null;
-      if (!cat || !sub || sub.excluded || cat.id === "sparen") return false;
-      const necessity = sub.necessity || "nodig";
-      return necessity !== "luxe";
-    });
-    const uniqueMonths = new Set(nodigTxs.map(t => t.date.substring(0, 7)));
-    const totalNodigSpend = Math.abs(nodigTxs.reduce((sum, t) => sum + Number(t.amount), 0));
-    const activeMonthsCount = uniqueMonths.size > 0 ? uniqueMonths.size : 1;
-    const avgMonthlyNodig = totalNodigSpend / activeMonthsCount;
-    const mult = settings?.bufferMultiplier || 5;
-    const rawBuffer = avgMonthlyNodig * mult;
-    const bufferTarget = Math.ceil(rawBuffer / 500) * 500;
-
-    const bufferAllocated = Math.min(liveTotal, bufferTarget);
-    let rollingAvailable = Math.max(0, liveTotal - bufferAllocated);
-    for (const pot of (savings?.pots || [])) {
-      const intent = Number(pot.saved) || 0;
-      const actualAllocated = Math.min(intent, rollingAvailable);
-      rollingAvailable -= actualAllocated;
-    }
-    return rollingAvailable;
-  }, [txs, expanded, cats, year, settings, savings]);
+  /* The savings waterfall — buffer, pots, and what's left to assign. Feeds the
+     Sparen tab, its notification dot, and the dashboard Doelen section, all
+     from one definition (utils/savings.js) rather than the two copies that
+     used to sit here and in SavingsTab. */
+  const savingsSummary = useMemo(
+    () => computeSavings({ txs, expanded, cats, year, savings, settings }),
+    [txs, expanded, cats, year, settings, savings]
+  );
+  const unassignedSavings = savingsSummary.unassigned;
 
   const sortedPreview = useMemo(() => {
     if (!preview) return [];
@@ -1110,7 +1081,7 @@ export default function App() {
             txs={txs} expanded={expanded} year={year} months={months} cats={cats}
             catStats={catStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
-            setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail} years={years}
+            setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
           />
         )}
 
@@ -1124,7 +1095,7 @@ export default function App() {
 
         {/* ═══ BUDGET ═══ */}
         {view === "budget" && <BudgetTab cats={cats} />}
-        {view === "savings" && <SavingsTab txs={txs} expanded={expanded} cats={cats} savings={savings} setSavings={setSavings} year={year} settings={settings} unassignedSavings={unassignedSavings} />}
+        {view === "savings" && <SavingsTab txs={txs} savings={savings} setSavings={setSavings} year={year} savingsSummary={savingsSummary} unassignedSavings={unassignedSavings} bufferMultiplier={settings.bufferMultiplier || 5} />}
 
 
         {/* ═══ TRANSACTIONS ═══ */}
