@@ -4,7 +4,8 @@ import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import MonthSelector from '../components/MonthSelector.jsx';
 import NetTrendChart from '../components/NetTrendChart.jsx';
 import DashSection from '../components/DashSection.jsx';
-import { periodTotals } from '../utils/totals.js';
+import { periodTotals, coverage } from '../utils/totals.js';
+import CoverageCard, { CoverageNote } from '../components/CoverageCard.jsx';
 
 export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
@@ -21,6 +22,10 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
   /* Headline totals. Complete — isSpendingTx has no category test, so these
      include uncategorised money. See utils/totals.js. */
   const { inc, exp, net, spaarquote } = periodTotals(expanded, cats, year, months);
+  /* What the category breakdowns actually cover. Built from catStats, never
+     from `exp` — see utils/totals.js. */
+  const cov = coverage(catStats, totalExp);
+  const showUncategorised = () => { setFCats(["_none"]); setView("transactions"); };
 
   /* ── Trend: only meaningful when scoped to exactly one month ── */
   let trend = null;
@@ -70,6 +75,11 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 13, padding: "13px 15px" }}>
           <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Uitgaven</div>
           <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 500, marginTop: 6, color: "var(--text)" }}>{fmt(exp)}</div>
+          {/* This total is complete; the breakdowns below are not. Saying so
+              here is what stops the two numbers looking contradictory. */}
+          <div style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 3, lineHeight: 1.3 }}>
+            {cov.unknown > 0 ? `waarvan ${fmt(cov.unknown)} nog niet ingedeeld` : "volledig ingedeeld"}
+          </div>
         </div>
         <div
           onClick={() => setView("savings")}
@@ -87,7 +97,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         </div>
       </div>
 
-      <DashSection title="Grootste uitgaven">
+      <DashSection title="Grootste uitgaven" sub={<CoverageNote coverage={cov} />}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {ranked.map(({ cat, total }) => (
             <div key={cat.id} onClick={() => setCatDetail(cat.id)} className="rank-row" style={{ cursor: "pointer" }}>
@@ -102,6 +112,8 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           {ranked.length === 0 && <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 12 }}>Geen uitgaven in deze periode</div>}
         </div>
       </DashSection>
+
+      <CoverageCard coverage={cov} onShowUncategorised={showUncategorised} />
     </>
   );
 }
