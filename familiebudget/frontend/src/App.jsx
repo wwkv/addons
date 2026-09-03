@@ -9,6 +9,7 @@ import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
+import { knownCards } from './utils/cards.js';
 import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
@@ -809,6 +810,8 @@ export default function App() {
   /* Savings gets the commitment keys so it can split its own necessary-spend
      figure into fixed vs variable — the number the buffer is built on, broken
      down, from one computation. */
+  const cardsInData = useMemo(() => knownCards(txs), [txs]);
+
   const commitmentKeys = useMemo(
     () => new Set(commitments.payees.filter(p => p.counts).map(p => p.key)),
     [commitments]
@@ -967,7 +970,7 @@ export default function App() {
 
       {/* ─── MODALS ─── */}
       {tinderMode && <ProcessingFlow
-        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents}
+        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents} cardOwners={settings.cardOwners}
         onAddToBlacklist={(cp) => { if (!blacklist.some(b => b.trim().toLowerCase() === cp.trim().toLowerCase())) setBlacklist(p => [...p, cp.trim()]); }}
         assign={assign}
         bulkAssign={bulkAssign}
@@ -1125,7 +1128,7 @@ export default function App() {
             setEndDate={setEndDate} setSearch={setSearch} setSort={setSort} setSel={setSel}
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
-            searchInputRef={searchInputRef} calEvents={calEvents}
+            searchInputRef={searchInputRef} calEvents={calEvents} cardOwners={settings.cardOwners}
           />
         )}
 
@@ -1231,6 +1234,35 @@ export default function App() {
                             {calEvents.length} afspraken geladen voor je openstaande transacties.
                           </div>
                         )}
+                      </div>
+                    )}
+                    {/* Card owners. The bank puts a masked card number on every
+                        card and Google Pay line; in a two-adult household those
+                        four digits say who paid, which is often what decides the
+                        subcategory. Only cards actually seen in the data are
+                        offered, so nobody has to recall digits. */}
+                    {cardsInData.length > 0 && (
+                      <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Wie hoort bij welke kaart</label>
+                        <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
+                          Bij het sorteren zie je dan wie er betaald heeft. Handig als dezelfde winkel een andere categorie is naargelang wie er ging.
+                        </p>
+                        {cardsInData.map(({ card, count }) => (
+                          <div key={card} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: 11, color: "var(--muted)", minWidth: 62 }}>••{card}</span>
+                            <input
+                              type="text"
+                              value={(settings.cardOwners || {})[card] || ""}
+                              placeholder="naam"
+                              onChange={e => {
+                                const name = e.target.value;
+                                setSettings(s => ({ ...s, cardOwners: { ...(s.cardOwners || {}), [card]: name } }));
+                              }}
+                              style={{ flex: 1, maxWidth: 160, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 11 }}
+                            />
+                            <span style={{ fontSize: 9.5, color: "var(--muted)" }}>{count} transacties</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                     <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>

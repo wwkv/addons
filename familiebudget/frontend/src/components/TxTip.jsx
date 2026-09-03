@@ -1,6 +1,7 @@
 import { TipLabel } from './HoverTip.jsx';
 import { dayContext } from '../utils/calendar.js';
 import { parseEvidence } from '../utils/counterparty.js';
+import { cardLabel } from '../utils/cards.js';
 
 const DAY_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 const MONTH = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
@@ -20,12 +21,12 @@ function longDate(iso) {
  * parsed into place/wallet/card rather than dumped with its card number and
  * country code.
  */
-export default function TxTip({ tx, calEvents = [] }) {
+export default function TxTip({ tx, calEvents = [], cardOwners }) {
   const e = parseEvidence(tx);
   const ctx = dayContext(tx, calEvents);
   const events = ctx ? ctx.events : [];
 
-  const details = [e.place, e.wallet, e.card ? `••${e.card}` : null].filter(Boolean);
+  const details = [e.place, e.wallet, cardLabel(tx, cardOwners)].filter(Boolean);
 
   return (
     <span style={{ display: "block" }}>

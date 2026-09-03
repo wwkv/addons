@@ -4,10 +4,11 @@ import { getSuggestion } from '../utils/helpers.js';
 import { fmt, fD } from '../utils/formatters.js';
 import { parseCounterparty, parseEvidence, evidenceLine } from '../utils/counterparty.js';
 import { matchEvent, eventLine } from '../utils/calendar.js';
+import { cardOwner } from '../utils/cards.js';
 import CatPicker from '../components/CatPicker.jsx';
 import CatGrid from '../components/CatGrid.jsx';
 
-export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUndo, catUsage, blacklist = [], calEvents = [], onAddToBlacklist, onClose}) {
+export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUndo, catUsage, blacklist = [], calEvents = [], cardOwners, onAddToBlacklist, onClose}) {
   const isBlacklisted = (cp) => blacklist.some(b => b.trim().toLowerCase() === (cp || "").trim().toLowerCase());
 
   const groups = useMemo(() => {
@@ -66,8 +67,16 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
       chips.push({ icon: <Clock size={10} />, text: times[0] });
     }
     if (tx.type) chips.push({ icon: <CreditCard size={10} />, text: tx.type });
+    /* Who paid comes first, and independently of the wallet. Google Pay lines
+       carry BOTH a wallet name and a card number — 277 of 366 card
+       transactions here — and the old `wallet ? … : card` precedence meant the
+       person was hidden behind "Google Pay" on exactly the transactions where
+       the card is the useful signal. The wallet is a payment channel; the
+       person is what decides the subcategory. */
+    const owner = cardOwner(tx, cardOwners);
+    if (owner) chips.push({ icon: <CreditCard size={10} />, text: owner });
     if (e.wallet) chips.push({ icon: <Smartphone size={10} />, text: e.wallet });
-    else if (e.card) chips.push({ icon: <CreditCard size={10} />, text: `••${e.card}` });
+    else if (e.card && !owner) chips.push({ icon: <CreditCard size={10} />, text: `••${e.card}` });
 
     // Agenda cue. Deliberately NOT a chip among the others: it is weaker
     // evidence than place/time (it says what you were doing, not where the
@@ -84,7 +93,7 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
     }
 
     return { title, chips, note: e.note, platform: cp.platform, calEv };
-  }, [tx, group, calEvents]);
+  }, [tx, group, calEvents, cardOwners]);
   const totalTxs = txs.length || 1;
   const catCount = txs.filter(t => t.categoryId || t.splits).length;
   const totalAmount = group ? group.txs.reduce((s, t) => s + t.amount, 0) : 0;

@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.0] - 2026-09-03
+
+### Added
+- **Wie heeft er betaald.** De bank zet het kaartnummer bij elke kaart- en
+  Google Pay-betaling. In Instellingen › Regels koppel je een naam aan elke
+  kaart die in je data voorkomt; daarna zie je bij het sorteren en in de hover
+  van de transactielijst wie er betaald heeft. Vaak is dat net wat de
+  subcategorie bepaalt — dezelfde kledingwinkel is iets anders naargelang wie
+  er ging.
+
+### Fixed
+- Bij Google Pay-betalingen stond alleen "Google Pay" en verdween het
+  kaartnummer. Dat trof 277 van de 366 kaarttransacties — precies die waar de
+  kaart het nuttige signaal is. De persoon staat er nu altijd bij; de wallet is
+  maar een betaalkanaal.
+
 ## [1.6.0] - 2026-09-03
 
 ### Fixed

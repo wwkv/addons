@@ -43,7 +43,7 @@ function groupCues(g) {
  * reimplemented here — it reuses the same counterparty grouping TinderMode
  * already does, and the same `bulkAssign` used by manual multi-select.
  */
-export default function ProcessingFlow({ txs, cats, autoCat, catUsage, blacklist, calEvents, onAddToBlacklist, assign, bulkAssign, onSkip, onUndo, unassignedSavings, onClose, onGoToSavings }) {
+export default function ProcessingFlow({ txs, cats, autoCat, catUsage, blacklist, calEvents, cardOwners, onAddToBlacklist, assign, bulkAssign, onSkip, onUndo, unassignedSavings, onClose, onGoToSavings }) {
   const [stage, setStage] = useState("voortgang");
   const [groupBy, setGroupBy] = useState("counterparty");
 
@@ -88,7 +88,7 @@ export default function ProcessingFlow({ txs, cats, autoCat, catUsage, blacklist
   if (stage === "diepgang") {
     return (
       <TinderMode
-        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents}
+        txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents} cardOwners={cardOwners}
         onAddToBlacklist={onAddToBlacklist}
         onAssign={(id, c, s) => assign(id, c, s, false)}
         onSkip={onSkip}
