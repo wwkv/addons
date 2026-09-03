@@ -15,7 +15,7 @@ import DashSection from './DashSection.jsx';
  * whole point; drawing each bar to its own 100% would hide exactly what you
  * want to see.
  */
-export default function FlowBars({ inc, exp, catStats, cats, uncategorised, saved, onPickCategory, onShowUncategorised }) {
+export default function FlowBars({ inc, exp, catStats, cats, uncategorised, savedNet = 0, onPickCategory, onShowUncategorised }) {
   if (inc <= 0 && exp <= 0) return null;
 
   const spent = cats
@@ -31,7 +31,17 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
   // Mandatory: at this coverage the unknown slice is among the largest, and
   // leaving it out would make the bar claim the money was accounted for.
   if (uncategorised > 0) out.push({ key: "_none", name: "Nog niet ingedeeld", value: uncategorised, unknown: true });
-  if (saved > 0) out.push({ key: "_saved", name: "Naar spaarrekening", value: saved, color: "var(--cat-2)" });
+
+  /* Savings transfers are NOT an outflow segment.
+     Moving money to your own savings account is not spending, and counting it
+     here reintroduces exactly the distortion the `excluded` setting exists to
+     prevent: a €2.000 transfer out with €2.000 back the same month would
+     inflate this bar by €2.000 while nothing actually left the household.
+     Worse, it was one-sided — the return leg is a positive amount in an
+     excluded subcategory, so it is filtered from income and never came back.
+     On the real data that manufactured a €3.731 "uit reserves" band out of a
+     €2.780 surplus. Net savings is reported below the bars instead, where it
+     explains the surplus without being able to distort a total. */
 
   const outTotal = out.reduce((s, x) => s + x.value, 0);
   const surplus = Math.max(0, inc - outTotal);
@@ -75,16 +85,35 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
         </div>
       </div>
 
-      {/* "Uit reserves" is otherwise unexplainable — it appears when transfers
-          to savings plus spending exceed what came in, which happens on any
-          month with a large transfer. State the sum rather than leaving a red
-          segment to be interpreted. */}
+      {/* A real overspend — spending alone exceeded income. Now that savings
+          transfers are out of the bar this only fires when it is actually
+          true, so it is worth stating plainly. */}
       {deficit > 0 && (
         <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 9, lineHeight: 1.5, background: "var(--bg)", borderRadius: 8, padding: "7px 9px" }}>
-          Er ging <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(outTotal)}</span> de rekening uit
-          tegenover <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(inc)}</span> aan inkomsten
-          {saved > 0 && <> — waarvan <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(saved)}</span> naar je spaarrekening</>}.
+          Je gaf <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(outTotal)}</span> uit
+          tegenover <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(inc)}</span> aan inkomsten.
           Het verschil van <strong style={{ color: "var(--text)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(deficit)}</strong> kwam uit geld dat al op de rekening stond.
+        </div>
+      )}
+
+      {/* What happened to what was kept. Reported, never added to a total —
+          `savedNet` counts both directions, so a round-trip nets to zero. */}
+      {savedNet !== 0 && (
+        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 9, lineHeight: 1.5, background: "var(--bg)", borderRadius: 8, padding: "7px 9px" }}>
+          {savedNet < 0 ? (
+            <>Je haalde <strong style={{ color: "var(--text)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(-savedNet)}</strong> van je spaarrekening.</>
+          ) : savedNet > surplus ? (
+            <>
+              Je zette <strong style={{ color: "var(--text)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(savedNet)}</strong> opzij —
+              meer dan je overhield, dus <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmt(savedNet - surplus)}</span> daarvan
+              kwam uit geld dat al op de rekening stond.
+            </>
+          ) : (
+            <>
+              Daarvan ging <strong style={{ color: "var(--text)", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt(savedNet)}</strong> naar je spaarrekening;
+              <span style={{ fontFamily: "'DM Mono',monospace" }}> {fmt(surplus - savedNet)}</span> bleef op de zichtrekening.
+            </>
+          )}
         </div>
       )}
 

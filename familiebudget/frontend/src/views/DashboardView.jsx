@@ -35,13 +35,15 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
   const cov = coverage(catStats, totalExp);
   const showUncategorised = () => { setFCats(["_none"]); setView("transactions"); };
   const showPayee = (p) => { setSearch(p.name); setView("transactions"); };
-  /* Transfers to savings are excluded from `exp` (they aren't spending), but
-     the flow bar has to account for every euro that left the account or the
-     two bars won't reconcile. */
-  const savedOut = expanded
+  /* NET savings movement for the scoped period — both directions, using the
+     same construction utils/savings.js uses for the balance. Reported under
+     the flow bars to explain the surplus; deliberately never added to a total,
+     because gross one-way savings traffic is exactly what the user's
+     `excluded` setting exists to keep out of income and expenses. */
+  const savedNet = expanded
     .filter(t => t.date.startsWith(year) && (!months.length || months.includes(t.date.slice(5, 7))))
-    .filter(t => t.amount < 0 && t.categoryId === "sparen")
-    .reduce((a, t) => a + Math.abs(t.amount), 0);
+    .filter(t => t.categoryId === "sparen")
+    .reduce((a, t) => a + (-(t.amount || 0)), 0);
 
   /* ── Trend: only meaningful when scoped to exactly one month ── */
   let trend = null;
@@ -115,7 +117,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
 
       <FlowBars
         inc={inc} exp={exp} catStats={catStats} cats={cats}
-        uncategorised={cov.unknown} saved={savedOut}
+        uncategorised={cov.unknown} savedNet={savedNet}
         onPickCategory={setCatDetail} onShowUncategorised={showUncategorised}
       />
 

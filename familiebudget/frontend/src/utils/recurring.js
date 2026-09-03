@@ -1,5 +1,6 @@
 import { parseCounterparty } from './counterparty.js';
 import { MULTI } from './rules.js';
+import { isSubExcluded } from './helpers.js';
 
 /*
  * What are we locked into every month?
@@ -45,6 +46,13 @@ export function detectCommitments(txs, cats, { year, notRecurring = [] } = {}) {
   const groups = new Map();
   for (const t of txs) {
     if (t.amount >= 0) continue;
+    /* Excluded subcategories are out. Without this a monthly standing order to
+       your own savings account is detected as a "vaste betaler" and added to
+       the committed total — moving money to yourself is not a commitment, and
+       the offsetting transfer back is invisible here because it is a positive
+       amount. Latent rather than active on the current data (the transfers are
+       irregular, so no cadence signal fires), which is luck, not design. */
+    if (isSubExcluded(cats, t.categoryId, t.subCategoryId)) continue;
     const p = parseCounterparty(t.counterparty);
     const key = p.key || t.counterparty.trim().toLowerCase();
     if (!key || excluded.has(key)) continue;

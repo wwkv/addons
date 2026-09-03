@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.2] - 2026-09-03
+
+### Fixed
+- **Spaarverkeer telde weer mee als uitgave in de geldstroom-balk** — precies
+  wat je met de uitsluiting van "Spaarrekening" wilde vermijden. Erger nog: het
+  telde alleen het geld dat érnaartoe ging (€16.980) en niet wat terugkwam
+  (€6.511), omdat dat als inkomst wordt uitgesloten. Daardoor verscheen een
+  "uit reserves" van €3.731 terwijl je in werkelijkheid €2.780 overhield.
+  Sparen zit nu helemaal niet meer in de balk: de uitgavenbalk is exact je
+  Uitgaven-KPI en wat overblijft is exact je Netto.
+- Wat er met het overschot gebeurde staat er nu onder, zonder in een totaal
+  mee te tellen — en netto, dus een bedrag dat heen en weer gaat valt weg
+  tegen elkaar. In mei zette je €5.000 opzij terwijl je €3.977,89 overhield;
+  dat verschil van €1.022,11 kwam wél uit bestaand saldo, en dat staat er nu
+  ook zo. Haal je geld van de spaarrekening, dan staat dát er.
+- Een maandelijkse spaaropdracht kon bij de "vaste betalers" belanden en het
+  maandbedrag opdrijven. Uitgesloten subcategorieën worden daar nu overgeslagen.
+
 ## [1.5.1] - 2026-09-03
 
 ### Changed
