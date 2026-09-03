@@ -6,8 +6,9 @@ import NetTrendChart from '../components/NetTrendChart.jsx';
 import DashSection from '../components/DashSection.jsx';
 import { periodTotals, coverage } from '../utils/totals.js';
 import CoverageCard, { CoverageNote } from '../components/CoverageCard.jsx';
+import CommittedCosts from '../components/CommittedCosts.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -21,11 +22,12 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
 
   /* Headline totals. Complete — isSpendingTx has no category test, so these
      include uncategorised money. See utils/totals.js. */
-  const { inc, exp, net, spaarquote } = periodTotals(expanded, cats, year, months);
+  const { inc, exp, net, spaarquote, monthsWithData } = periodTotals(expanded, cats, year, months);
   /* What the category breakdowns actually cover. Built from catStats, never
      from `exp` — see utils/totals.js. */
   const cov = coverage(catStats, totalExp);
   const showUncategorised = () => { setFCats(["_none"]); setView("transactions"); };
+  const showPayee = (p) => { setSearch(p.name); setView("transactions"); };
 
   /* ── Trend: only meaningful when scoped to exactly one month ── */
   let trend = null;
@@ -96,6 +98,8 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           </div>
         </div>
       </div>
+
+      <CommittedCosts commitments={commitments} income={inc} monthsWithData={monthsWithData} onShowPayee={showPayee} />
 
       <DashSection title="Grootste uitgaven" sub={<CoverageNote coverage={cov} />}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

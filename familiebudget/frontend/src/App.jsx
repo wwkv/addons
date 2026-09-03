@@ -9,6 +9,7 @@ import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings } from './utils/savings.js';
+import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
@@ -803,6 +804,14 @@ export default function App() {
   );
   const unassignedSavings = savingsSummary.unassigned;
 
+  /* Recurring commitments. Detected on raw txs (splits would double-count
+     occurrences) and memoised here rather than in the view, which re-renders
+     on every search keystroke. */
+  const commitments = useMemo(
+    () => detectCommitments(txs, cats, { year, notRecurring: settings.notRecurring }),
+    [txs, cats, year, settings.notRecurring]
+  );
+
   const sortedPreview = useMemo(() => {
     if (!preview) return [];
     const f = [...preview];
@@ -1082,6 +1091,7 @@ export default function App() {
             catStats={catStats} totalExp={totalExp} mStats={mStats}
             uncatN={uncatN} fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
+            setSearch={setSearch} commitments={commitments}
           />
         )}
 
