@@ -8,6 +8,7 @@ import { periodTotals, coverage } from '../utils/totals.js';
 import CoverageCard, { CoverageNote } from '../components/CoverageCard.jsx';
 import CommittedCosts from '../components/CommittedCosts.jsx';
 import GoalsCard from '../components/GoalsCard.jsx';
+import FlowBars from '../components/FlowBars.jsx';
 
 export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
@@ -29,6 +30,13 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
   const cov = coverage(catStats, totalExp);
   const showUncategorised = () => { setFCats(["_none"]); setView("transactions"); };
   const showPayee = (p) => { setSearch(p.name); setView("transactions"); };
+  /* Transfers to savings are excluded from `exp` (they aren't spending), but
+     the flow bar has to account for every euro that left the account or the
+     two bars won't reconcile. */
+  const savedOut = expanded
+    .filter(t => t.date.startsWith(year) && (!months.length || months.includes(t.date.slice(5, 7))))
+    .filter(t => t.amount < 0 && t.categoryId === "sparen")
+    .reduce((a, t) => a + Math.abs(t.amount), 0);
 
   /* ── Trend: only meaningful when scoped to exactly one month ── */
   let trend = null;
@@ -99,6 +107,12 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
           </div>
         </div>
       </div>
+
+      <FlowBars
+        inc={inc} exp={exp} catStats={catStats} cats={cats}
+        uncategorised={cov.unknown} saved={savedOut}
+        onPickCategory={setCatDetail} onShowUncategorised={showUncategorised}
+      />
 
       <div className="dash-two">
         <CommittedCosts commitments={commitments} income={inc} monthsWithData={monthsWithData} onShowPayee={showPayee} />
