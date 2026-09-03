@@ -43,6 +43,30 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
      €2.780 surplus. Net savings is reported below the bars instead, where it
      explains the surplus without being able to distort a total. */
 
+  /* catStats is NOT a complete partition of `exp`, so the segments above can
+     sum to less than what actually left the account. It skips income-typed
+     categories outright (`App.jsx`: `if (c.type === "inkomsten") continue`),
+     and its `_uncat` bucket only catches transactions with NO category at all.
+     A negative amount filed under Inkomsten — repaying received money, a
+     salary correction — is therefore in neither, and so is anything on a
+     category id that no longer exists.
+     Those euros still reduce Netto, so without this the flow bar's
+     "Overgehouden" came out HIGHER than the Netto hero above it, with nothing
+     accounting for the difference. Book the remainder explicitly instead of
+     letting it vanish: outTotal then always equals `exp`, and the surplus
+     always equals Netto, whatever odd categorisation exists. */
+  const accounted = out.reduce((s, x) => s + x.value, 0);
+  const residual = exp - accounted;
+  if (residual > 0.005) {
+    out.push({
+      key: "_other",
+      name: "Overig",
+      value: residual,
+      color: "var(--neutral)",
+      hint: "Uitgaven die onder een inkomsten-categorie of een verwijderde categorie staan",
+    });
+  }
+
   const outTotal = out.reduce((s, x) => s + x.value, 0);
   const surplus = Math.max(0, inc - outTotal);
   if (surplus > 0) out.push({ key: "_left", name: "Overgehouden", value: surplus, color: "var(--green)", faded: true });
@@ -75,7 +99,7 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
               key={s.key}
               className={`stack-seg${s.unknown ? " stack-seg--unknown" : ""}`}
               style={{ ...seg(s), cursor: (s.unknown || catStats[s.key]) ? "pointer" : "default" }}
-              title={`${s.name} · ${fmt(s.value)}`}
+              title={`${s.name} · ${fmt(s.value)}${s.hint ? ` — ${s.hint}` : ""}`}
               onClick={() => {
                 if (s.unknown) onShowUncategorised && onShowUncategorised();
                 else if (catStats[s.key]) onPickCategory && onPickCategory(s.key);
@@ -119,7 +143,7 @@ export default function FlowBars({ inc, exp, catStats, cats, uncategorised, save
 
       <div className="dash-legend">
         {out.map(s => (
-          <div key={s.key} className="dash-legend-row">
+          <div key={s.key} className="dash-legend-row" title={s.hint || `${s.name} · ${fmt(s.value)}`}>
             <span
               className={`dash-swatch${s.unknown ? " stack-seg--unknown" : ""}`}
               style={{ background: s.unknown ? undefined : s.color, opacity: s.faded ? 0.45 : 1 }}

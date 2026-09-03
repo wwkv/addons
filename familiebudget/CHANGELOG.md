@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.3] - 2026-09-03
+
+### Fixed
+- **"Overgehouden" in de geldstroom-balk kwam niet overeen met het Netto-bedrag
+  bovenaan.** De balk bouwt zijn uitgaven op uit de categorie-totalen, en die
+  slaan inkomsten-categorieën helemaal over. Een negatief bedrag dat onder
+  Inkomsten staat — bijvoorbeeld loon dat je terugbetaalt — verlaagde dus wél je
+  netto, maar was onzichtbaar in de balk, waardoor "Overgehouden" te hoog uitviel.
+  Hetzelfde gold voor transacties op een categorie die niet meer bestaat.
+  Die bedragen krijgen nu een eigen segment "Overig" (met uitleg bij het
+  aanwijzen), zodat de balk altijd optelt tot je Uitgaven-KPI en "Overgehouden"
+  altijd gelijk is aan je Netto.
+
 ## [1.5.2] - 2026-09-03
 
 ### Fixed
