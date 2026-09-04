@@ -67,7 +67,7 @@ export default function OnboardingFlow({ settings, setSettings, cats, setCats })
 
       {step === 0 && (
         <div style={{ width: "100%", maxWidth: 520, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, textAlign: "center" }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 400, margin: 0 }}>Welkom bij FamilieBudget</h1>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 400, margin: 0 }}>Welkom bij Squirrel</h1>
           <p style={{ fontSize: 13.5, color: "var(--muted)", margin: 0, maxWidth: 380, lineHeight: 1.5 }}>Laten we je huishouden instellen — dit duurt ongeveer 2 minuten.</p>
           {[
             { key: "householdAdults", l: "Aantal volwassenen", s: "Inclusief jezelf", min: 1 },
@@ -144,7 +144,7 @@ export default function OnboardingFlow({ settings, setSettings, cats, setCats })
         {step < 2 ? (
           <button onClick={() => setStep(s => s + 1)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 20px", borderRadius: 11, background: "var(--accent)", color: "var(--on-accent)", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Volgende<ChevronRight size={14} /></button>
         ) : (
-          <button onClick={finish} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 12, background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>Start met FamilieBudget<Check size={16} /></button>
+          <button onClick={finish} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 12, background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>Start met Squirrel<Check size={16} /></button>
         )}
       </div>
       {step === 2 && (

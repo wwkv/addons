@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   FamilieBudget Theme
+   Squirrel Theme
    ═══════════════════════════════════════════════ */
 
 /* ── Base tokens ──
@@ -145,10 +145,14 @@
 .app-rail::-webkit-scrollbar { display: none; }
 
 .rail-logo {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   background: var(--accent);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 10px;
   flex-shrink: 0;
 }

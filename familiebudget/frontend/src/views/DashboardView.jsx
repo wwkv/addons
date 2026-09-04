@@ -16,7 +16,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
   if (txs.length === 0) return (
     <div style={{ textAlign: "center", padding: "80px 20px" }}>
       <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--accent-20)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><Inbox size={26} strokeWidth={1.8} /></div>
-      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 6px" }}>Welkom bij FamilieBudget</h2>
+      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 6px" }}>Welkom bij Squirrel</h2>
       <p style={{ fontSize: 12.5, opacity: 0.6, color: "var(--text)", maxWidth: 380, margin: "0 auto 18px" }}>Importeer je eerste Crelan CSV.</p>
       <button onClick={() => fRef.current && fRef.current.click()} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 22px", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}><Inbox size={14} />Importeer</button>
     </div>

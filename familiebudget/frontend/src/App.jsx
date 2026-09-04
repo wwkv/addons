@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Brain, Database, Upload, Download, Trash2, AlertTriangle, MessageSquare, Tag, Lock, Scale, Rocket, User, Check, CheckCircle2, Link2, Ban, Lightbulb, Plus, Minus, Sun, Moon, LayoutGrid, Wallet, PiggyBank, Search, RefreshCw, Sparkles, HelpCircle} from "lucide-react";
+import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Brain, Database, Upload, Download, Trash2, AlertTriangle, MessageSquare, Tag, Lock, Scale, Rocket, User, Check, CheckCircle2, Link2, Ban, Lightbulb, Plus, Minus, Sun, Moon, LayoutGrid, Wallet, PiggyBank, Search, RefreshCw, Sparkles, HelpCircle, Squirrel} from "lucide-react";
 
 /* Utils */
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
@@ -915,7 +915,7 @@ export default function App() {
 
         {/* ─── ICON RAIL ─── */}
         <nav className="app-rail">
-          <div className="rail-logo" />
+          <div className="rail-logo" title="Squirrel"><Squirrel size={17} strokeWidth={1.9} /></div>
           {[
             { id: "dashboard", label: "Overzicht", icon: <LayoutGrid size={19} /> },
             { id: "compare", label: "Vergelijk", icon: <Scale size={19} /> },

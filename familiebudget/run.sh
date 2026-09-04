@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bashio
 
-echo "Starting FamilieBudget..."
+echo "Starting Squirrel..."
 
 # Navigate to the backend folder
 cd /app/backend

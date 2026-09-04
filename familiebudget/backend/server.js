@@ -199,7 +199,7 @@ function lookupKbo(name) {
 
 // NOMINATIM_URL overrides the endpoint so the offline path can be tested.
 const NOMINATIM = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
-const LOOKUP_UA = 'FamilieBudget/1.7 (self-hosted personal budget add-on)';
+const LOOKUP_UA = 'Squirrel/1.10 (self-hosted personal budget add-on)';
 const lookupCache = new Map();              // "name|town" -> { at, data }
 const LOOKUP_TTL = 30 * 24 * 60 * 60 * 1000;
 const LOOKUP_CACHE_MAX = 500;
@@ -324,7 +324,7 @@ if (existsSync(publicDir)) {
 
 // ─── Start ───
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  FamilieBudget server running on http://0.0.0.0:${PORT}\n`);
+  console.log(`\n  Squirrel server running on http://0.0.0.0:${PORT}\n`);
   scheduleDailyBackup(db);
 });
 

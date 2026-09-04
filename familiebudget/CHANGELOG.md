@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.0] - 2026-09-04
+
+### Changed
+- **De app heet nu Squirrel.** Naar het prentenboek met de twee eekhoorns: de
+  ene legt de hele herfst nootjes aan voor de winter, de andere feest gewoon
+  door. Een eekhoorn moet ook budgetteren.
+- Nieuw icoon in de HA-zijbalk (een nootje — Material Design heeft geen
+  eekhoorn) en een echte eekhoorn als logo linksboven in de app.
+- De interne naam van de add-on blijft `familiebudget`. Die gebruikt Home
+  Assistant als identiteit én als pad naar je database
+  (`/addon_configs/{repo}_familiebudget`); hem hernoemen zou er een nieuwe
+  add-on van maken en je gegevens achterlaten. Je ziet die naam nergens.
+
 ## [1.9.2] - 2026-09-04
 
 ### Fixed

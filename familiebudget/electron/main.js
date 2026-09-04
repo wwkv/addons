@@ -1,11 +1,11 @@
 'use strict';
 
 /**
- * FamilieBudget – Electron main process
+ * Squirrel – Electron main process
  *
  * Starts the Express/SQLite backend then opens a BrowserWindow that loads
  * the app from http://127.0.0.1:3001.  SQLite data is stored in the OS
- * user-data folder (e.g. %APPDATA%/FamilieBudget on Windows).
+ * user-data folder (e.g. %APPDATA%/Squirrel on Windows).
  */
 
 const { app, BrowserWindow, shell, dialog } = require('electron');
@@ -54,7 +54,7 @@ function createWindow() {
     height: 820,
     minWidth: 800,
     minHeight: 600,
-    title: 'FamilieBudget',
+    title: 'Squirrel',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -96,7 +96,7 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.error('[Electron] Startup failed:', err.message);
     dialog.showErrorBox(
-      'FamilieBudget kon niet starten',
+      'Squirrel kon niet starten',
       `De backend server kon niet worden gestart.\n\n${err.message}\n\nServer pad: ${getServerPath()}`
     );
     app.quit();
