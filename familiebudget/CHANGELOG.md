@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.9.2] - 2026-09-04
+
+### Fixed
+- **Zelfs Colruyt werd niet gevonden.** De bank schrijft "COLRUYT ANTWERPEN 1"
+  en "3573 COLRUYT ANTWERPEN ANTWERPEN 1" — dat filiaalnummer bleef aan de naam
+  plakken, waardoor geen enkele bron iets vond. Losse cijfers vooraan (3 of meer)
+  en achteraan worden nu weggehaald. "COLRUYT ANTWERPEN" vindt nu gewoon een
+  supermarkt.
+- **Betaalplatformen die hun domein vooraan zetten** in plaats van een sterretje:
+  "pay.nl fietsen de geus" leverde niets op, "fietsen de geus" is een
+  fietsenwinkel. Nu herkend voor pay.nl, mollie.com, ccv.eu, sumup.com,
+  buckaroo.nl, adyen.com en payconiq.com. Namen die écht op .com eindigen
+  (Bol.com, Zara.com) blijven ongemoeid.
+- **Platformen die achteraan staan**: "De Groeispurters via Mollie" wordt nu
+  "De Groeispurters".
+
 ## [1.9.1] - 2026-09-04
 
 ### Added

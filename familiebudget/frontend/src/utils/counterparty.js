@@ -35,6 +35,20 @@ const PSP_PREFIX = /^(CCV|BCK|NYA|PAY|INT|ZTL|IZ|SUMUP|SumUp|MOLLIE|Mollie|ZETTL
 const SP_PREFIX = /^SP\s+(?=\S+\s)/i;
 const DOCCLE_PREFIX = /^Doccle\s*-\s*/i;
 
+/* Some processors put their domain in front instead of a starred code:
+   "pay.nl fietsen de geus", "mollie.com ...". Without stripping it the lookup
+   asks for a company called "pay.nl fietsen de geus" and finds nothing, while
+   "fietsen de geus" is a bicycle shop in the register. Only a known list —
+   a bare domain rule would eat "Bol.com" and "Zara.com", which ARE the name. */
+const DOMAIN_PSP = /^(pay\.nl|mollie\.com|ccv\.eu|sumup\.com|buckaroo\.nl|adyen\.com|payconiq\.com)\s+/i;
+
+/* And some put themselves at the END: "De Groeispurters via Mollie". */
+const PSP_SUFFIX = /\s+via\s+(mollie|ccv|sumup|payconiq|buckaroo|adyen|stripe|paypal)\s*$/i;
+
+/* A leading branch number — "3573 COLRUYT ANTWERPEN ANTWERPEN 1". Three digits
+   or more so a name that genuinely starts with a small number survives. */
+const LEADING_STORE = /^\d{3,}\s+/;
+
 /* Legal forms at the very end only — "BV Bakkerij" must keep its name. */
 const LEGAL_SUFFIX = /[\s,]+(bvba|bv|nv|vzw|srl|sa|comm\.?\s?v)\.?$/i;
 
@@ -61,6 +75,11 @@ export function parseCounterparty(raw) {
   let place = null;
 
   s = s.replace(SP_PREFIX, '');
+  const dom = s.match(DOMAIN_PSP);
+  if (dom) { platform = dom[1]; s = s.slice(dom[0].length); }
+  const suf = s.match(PSP_SUFFIX);
+  if (suf) { platform = platform || suf[1]; s = s.replace(PSP_SUFFIX, ''); }
+  s = s.replace(LEADING_STORE, '');
   const psp = s.match(PSP_PREFIX);
   if (psp) { platform = psp[1]; s = s.slice(psp[0].length); }
   else if (DOCCLE_PREFIX.test(s)) { platform = "Doccle"; s = s.replace(DOCCLE_PREFIX, ""); }
@@ -77,8 +96,12 @@ export function parseCounterparty(raw) {
   let p2p = false;
   if (/\bP2P\s*MOBILE\b/i.test(s)) { p2p = true; s = s.replace(/\bP2P\s*MOBILE\b/gi, ""); }
 
-  // Trailing store number, but only with leading whitespace so "HM BE0250" survives
+  /* Trailing branch number. Leading whitespace required so "HM BE0250"
+     survives. A single digit counts too — "COLRUYT ANTWERPEN 1" is a branch,
+     and leaving the 1 on meant no source could match it — but only when enough
+     name is left over that we are clearly not eating the name itself. */
   s = s.replace(/\s+\d{2,}\s*$/, "");
+  s = s.replace(/\s+\d\s*$/, (m, o, str) => (str.slice(0, o).trim().length >= 6 ? "" : m));
   s = s.replace(LEGAL_SUFFIX, "");
   s = s.replace(/\s+/g, " ").trim();
 
