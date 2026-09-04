@@ -3,6 +3,7 @@ import cors from 'cors';
 import { join, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import Database from 'better-sqlite3';
 import { getState, setState, getAllState, importAll, closeDb } from './db.js';
 import db from './db.js';
 import { scheduleDailyBackup, createBackup, listBackups } from './backup.js';
@@ -138,7 +139,47 @@ app.get('/api/health', (req, res) => {
      endpoint here and must never be one.
    - A business type does not change, so results are cached hard. The cache is
      size-capped, unlike the calendar one, because merchant keys are unbounded. */
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+/* The local KBO index, if the user has built one (see
+   tools/build-kbo-index.mjs). Opened read-only at startup; absent simply means
+   this half of the lookup never answers. Unlike the OSM half it makes no
+   network request at all, so it is not behind the opt-in — there is nothing to
+   consent to. */
+const KBO_PATH = join(process.env.DATA_DIR || join(__dirname, 'data'), 'kbo-index.db');
+let kboDb = null;
+try {
+  if (existsSync(KBO_PATH)) {
+    kboDb = new Database(KBO_PATH, { readonly: true, fileMustExist: true });
+    const n = kboDb.prepare('SELECT COUNT(*) c FROM biz').get().c;
+    console.log(`[KBO] index geladen: ${n.toLocaleString('nl-BE')} namen`);
+  }
+} catch (e) {
+  console.error('[KBO] index kon niet geopend worden:', e.message);
+  kboDb = null;
+}
+const kboStmt = kboDb
+  ? kboDb.prepare('SELECT b.code AS code, n.nl AS nl FROM biz b LEFT JOIN nace n ON n.code = b.code WHERE b.name = ?')
+  : null;
+
+/* Must mirror build-kbo-index.mjs exactly, or the two sides key differently
+   and nothing ever matches. */
+const LEGAL_FORM = /\b(bv|bvba|nv|vzw|srl|sa|sprl|cvba|cv|vof|comm\.?\s*v|scs|se)\b\.?/gi;
+const kboKey = (s) => String(s || '')
+  .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(LEGAL_FORM, ' ')
+  .replace(/[^a-z0-9 ]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+function lookupKbo(name) {
+  if (!kboStmt) return null;
+  const k = kboKey(name);
+  if (k.length < 4) return null;
+  try { return kboStmt.get(k) || null; } catch { return null; }
+}
+
+// NOMINATIM_URL overrides the endpoint so the offline path can be tested.
+const NOMINATIM = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
 const LOOKUP_UA = 'FamilieBudget/1.7 (self-hosted personal budget add-on)';
 const lookupCache = new Map();              // "name|town" -> { at, data }
 const LOOKUP_TTL = 30 * 24 * 60 * 60 * 1000;
@@ -148,140 +189,88 @@ let lastLookupAt = 0;
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-app.get('/api/lookup', async (req, res) => {
+async function lookupOsm(name, town) {
+  const key = `${norm(name)}|${norm(town)}`;
+  const hit = lookupCache.get(key);
+  if (hit && Date.now() - hit.at < LOOKUP_TTL) return { cached: true, result: hit.data };
+
+  /* Rate limit on the server, not on the click. The policy binds this
+     application as a whole, and nothing stops a user clicking three rows in
+     a second. */
+  const wait = LOOKUP_MIN_GAP - (Date.now() - lastLookupAt);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastLookupAt = Date.now();
+
+  const qs = new URLSearchParams({
+    q: [name, town].filter(Boolean).join(' '),
+    format: 'jsonv2', limit: '1', addressdetails: '1', extratags: '1', countrycodes: 'be',
+  });
+  const r = await fetch(`${NOMINATIM}?${qs}`, {
+    headers: { 'User-Agent': LOOKUP_UA, 'Accept-Language': 'nl' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`Nominatim ${r.status}`);
+  const rows = await r.json();
+
+  let result = null;
+  if (Array.isArray(rows) && rows.length) {
+    const h = rows[0];
+    const a = h.address || {};
+    const got = a.city || a.town || a.village || a.suburb || '';
+    /* Town check. Without it "Vroom & Vroom" matched an arts centre in
+       Brussels — a confident answer about the wrong business is worse than
+       no answer, so an unverifiable hit is discarded. */
+    const townOk = !town
+      || norm(got).includes(norm(town)) || norm(town).includes(norm(got))
+      || norm(h.display_name).includes(norm(town));
+    if (townOk) {
+      result = {
+        name: h.name || null,
+        category: h.category || null,
+        type: h.type || null,
+        address: { road: a.road || null, city: got || null },
+        display_name: h.display_name || null,
+      };
+    }
+  }
+
+  if (lookupCache.size >= LOOKUP_CACHE_MAX) lookupCache.delete(lookupCache.keys().next().value);
+  lookupCache.set(key, { at: Date.now(), data: result });
+  return { cached: false, result };
+}
+
+/* Two endpoints rather than one, deliberately.
+   Combining them behind a single request meant the instant local answer waited
+   on the network one: with an unreachable Nominatim the whole response took 10
+   seconds to deliver a KBO result that was ready in 20 ms. The frontend fires
+   both at once and renders each as it arrives, so the local half is never held
+   hostage by the outbound half. */
+app.get('/api/lookup/kbo', (req, res) => {
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  if (!name) return res.status(400).json({ error: 'name required' });
+  let kbo = null;
+  try { kbo = lookupKbo(name); } catch { /* index trouble is "no answer" */ }
+  res.json({ available: !!kboStmt, kbo });
+});
+
+app.get('/api/lookup/osm', async (req, res) => {
   const name = String(req.query.name || '').trim().slice(0, 80);
   const town = String(req.query.town || '').trim().slice(0, 40);
   if (!name) return res.status(400).json({ error: 'name required' });
-
-  const key = `${norm(name)}|${norm(town)}`;
-  const hit = lookupCache.get(key);
-  if (hit && Date.now() - hit.at < LOOKUP_TTL) {
-    return res.json({ available: true, cached: true, result: hit.data });
-  }
-
   try {
-    /* Rate limit on the server, not on the click. The policy binds this
-       application as a whole, and nothing stops a user clicking three rows in
-       a second. */
-    const wait = LOOKUP_MIN_GAP - (Date.now() - lastLookupAt);
-    if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    lastLookupAt = Date.now();
-
-    const qs = new URLSearchParams({
-      q: [name, town].filter(Boolean).join(' '),
-      format: 'jsonv2', limit: '1', addressdetails: '1', extratags: '1', countrycodes: 'be',
-    });
-    const r = await fetch(`${NOMINATIM}?${qs}`, {
-      headers: { 'User-Agent': LOOKUP_UA, 'Accept-Language': 'nl' },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!r.ok) throw new Error(`Nominatim ${r.status}`);
-    const rows = await r.json();
-
-    let result = null;
-    if (Array.isArray(rows) && rows.length) {
-      const h = rows[0];
-      const a = h.address || {};
-      const got = a.city || a.town || a.village || a.suburb || '';
-      /* Town check. Without it "Vroom & Vroom" matched an arts centre in
-         Brussels — a confident answer about the wrong business is worse than
-         no answer, so an unverifiable hit is discarded. */
-      const townOk = !town
-        || norm(got).includes(norm(town)) || norm(town).includes(norm(got))
-        || norm(h.display_name).includes(norm(town));
-      if (townOk) {
-        result = {
-          name: h.name || null,
-          category: h.category || null,
-          type: h.type || null,
-          address: { road: a.road || null, city: got || null },
-          display_name: h.display_name || null,
-        };
-      }
-    }
-
-    if (lookupCache.size >= LOOKUP_CACHE_MAX) lookupCache.delete(lookupCache.keys().next().value);
-    lookupCache.set(key, { at: Date.now(), data: result });
-    res.json({ available: true, cached: false, result });
+    const { cached, result } = await lookupOsm(name, town);
+    res.json({ available: true, cached, osm: result });
   } catch (e) {
     // Same contract as the calendar routes: a failure is "no answer", not a
     // server error the user has to interpret.
-    res.json({ available: false, result: null, reason: String(e.message || e) });
+    res.json({ available: false, osm: null, reason: String(e.message || e) });
   }
 });
 
-/* ─── Calendar cues (Home Assistant only) ───
-   Answers "what was on the agenda when this was paid" by reading the user's
-   own calendars through the Supervisor proxy. Nothing leaves the machine: the
-   add-on talks to Supervisor over Docker's internal network, and Home
-   Assistant — not us — owns the Google OAuth. Requires homeassistant_api in
-   config.yaml, which is what mints SUPERVISOR_TOKEN.
-
-   Outside HA (Electron desktop, local dev) there is no token and no
-   supervisor, so every route here answers 200 with `available: false` rather
-   than an error — the frontend then simply renders no cue. */
-// HA_API_URL/HA_TOKEN override the supervisor defaults — used to point a dev
-// copy at a real Home Assistant, since there is no supervisor outside the add-on.
-const SUPERVISOR = process.env.HA_API_URL || 'http://supervisor/core/api';
-const HA_TOKEN = process.env.SUPERVISOR_TOKEN || process.env.HA_TOKEN;
-const calCache = new Map();          // key -> { at, data }
-const CAL_TTL = 15 * 60 * 1000;      // events move rarely; HA itself polls every 15m
-
-async function ha(path) {
-  const r = await fetch(`${SUPERVISOR}${path}`, {
-    headers: { Authorization: `Bearer ${HA_TOKEN}`, 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!r.ok) throw new Error(`HA ${r.status}`);
-  return r.json();
-}
-
-app.get('/api/calendar/list', async (req, res) => {
-  if (!HA_TOKEN) return res.json({ available: false, calendars: [] });
-  try {
-    res.json({ available: true, calendars: await ha('/calendars') });
-  } catch (e) {
-    // A missing calendar component 404s here; that is "none configured",
-    // not a server fault the user should see as an error.
-    res.json({ available: false, calendars: [], reason: String(e.message || e) });
-  }
-});
-
-app.get('/api/calendar/events', async (req, res) => {
-  const { start, end, entities } = req.query;
-  if (!HA_TOKEN) return res.json({ available: false, events: [] });
-  if (!start || !end || !entities) return res.status(400).json({ error: 'start, end and entities required' });
-
-  const key = `${start}|${end}|${entities}`;
-  const hit = calCache.get(key);
-  if (hit && Date.now() - hit.at < CAL_TTL) return res.json({ available: true, cached: true, events: hit.data });
-
-  try {
-    const ids = String(entities).split(',').map(s => s.trim()).filter(Boolean).slice(0, 12);
-    const events = [];
-    for (const id of ids) {
-      if (!/^calendar\.[a-z0-9_]+$/i.test(id)) continue;   // never interpolate unvalidated input into the path
-      try {
-        const list = await ha(`/calendars/${id}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-        for (const e of Array.isArray(list) ? list : []) {
-          // Keep only what the cue needs — summary/location/times. Descriptions
-          // can be long and are none of this app's business.
-          events.push({
-            cal: id,
-            summary: e.summary || '',
-            location: e.location || '',
-            start: e.start?.dateTime || e.start?.date || null,
-            end: e.end?.dateTime || e.end?.date || null,
-            allDay: !e.start?.dateTime,
-          });
-        }
-      } catch { /* one bad calendar must not sink the rest */ }
-    }
-    calCache.set(key, { at: Date.now(), data: events });
-    res.json({ available: true, cached: false, events });
-  } catch (e) {
-    res.json({ available: false, events: [], reason: String(e.message || e) });
-  }
+// Does this install have a KBO index? Lets the UI show the "?" button when the
+// local half works even though the outbound half is switched off.
+app.get('/api/lookup/status', (req, res) => {
+  res.json({ kbo: !!kboStmt });
 });
 
 // ─── Serve frontend build ───

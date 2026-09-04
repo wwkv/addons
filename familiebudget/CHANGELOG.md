@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.9.0] - 2026-09-04
+
+### Added
+- **Het handelsregister (KBO) als tweede bron bij de ?-knop.** OpenStreetMap
+  vindt vooral winkels die je zelf al herkent; de namen die écht raadselachtig
+  zijn, zijn vennootschapsnamen. Die staan in de KBO met hun geregistreerde
+  activiteit — dezelfde info die je op het Staatsblad vindt als je ze googelt.
+  Koffieland, Konditori, House of FAMM, Vroom & Vroom, 'T Stad Leest en De
+  Bloemerie worden nu wél herkend; OpenStreetMap kon geen van die zes plaatsen.
+- Beide bronnen worden **tegelijk** bevraagd en elk resultaat verschijnt zodra
+  het binnen is, met de bron erbij. Zo zie je ook wanneer ze het oneens zijn:
+  bij Vroom & Vroom wees OpenStreetMap naar een kunstencentrum in Brussel (fout,
+  wordt verworpen) terwijl de KBO "restaurant" zegt.
+- **De KBO-zoekactie gaat nergens naartoe.** De index staat lokaal op je eigen
+  machine, dus die werkt ook als je het online opzoeken uit laat staan. De
+  instelling gaat voortaan alleen nog over OpenStreetMap.
+
+### Setup
+De index bouw je zelf uit je eigen KBO-download (je moet daarvoor geregistreerd
+zijn — de licentie staat gebruik toe, geen herverdeling, en er zitten namen van
+eenmanszaken in):
+
+    node backend/tools/build-kbo-index.mjs ~/Downloads/KboOpenData_..._Full ~/kbo-index.db
+
+Duurt ongeveer een halve minuut en levert één bestand van 81 MB. Kopieer dat
+naar /config van Home Assistant, naast budget.db. Zonder dat bestand werkt
+alles gewoon verder, alleen zonder deze bron.
+
 ## [1.8.0] - 2026-09-04
 
 ### Added

@@ -12,3 +12,6 @@ familiebudget/screenshots/
 # in there. This repo is public. Only the *derived* patterns belong in git.
 KboOpenData_*/
 familiebudget/KboOpenData_*/
+# The derived lookup index (backend/tools/build-kbo-index.mjs). Same reasons:
+# it holds sole traders' names, and the licence covers use, not redistribution.
+kbo-index.db

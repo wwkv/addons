@@ -11,6 +11,7 @@ import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { knownCards } from './utils/cards.js';
 import { describeHit } from './utils/osmCategories.js';
+import { describeNace } from './utils/naceCategories.js';
 import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
@@ -398,6 +399,7 @@ export default function App() {
      outside HA, which leaves `calendars` empty and hides the feature. */
   useEffect(() => {
     if (!loaded) return;
+    fetch('api/lookup/status').then(r => r.json()).then(d => setKboAvailable(!!d.kbo)).catch(() => setKboAvailable(false));
     fetch('api/calendar/list')
       .then(r => r.json())
       .then(d => setCalendars(d.available && Array.isArray(d.calendars) ? d.calendars : []))
@@ -836,6 +838,9 @@ export default function App() {
      has switched it on in Settings. */
   const [lookupBusy, setLookupBusy] = useState(() => new Set());
   const [lookupResult, setLookupResult] = useState(null);
+  // Does this install have a local KBO index? It needs no consent (nothing
+  // leaves the machine), so it alone is enough to show the "?" button.
+  const [kboAvailable, setKboAvailable] = useState(false);
 
   const runLookup = useCallback(async (tx) => {
     const cp = parseCounterparty(tx.counterparty);
@@ -846,27 +851,41 @@ export default function App() {
     if (!name) return;
 
     setLookupBusy(s => new Set(s).add(tx.id));
-    let hit = null, ok = false;
-    try {
-      const qs = new URLSearchParams({ name, town });
-      const r = await fetch(`api/lookup?${qs}`);
-      if (r.ok) {
-        const d = await r.json();
-        ok = !!d.available;
-        hit = d.result ? describeHit(d.result) : null;
-      }
-    } catch { /* offline or blocked — treated as "no answer" below */ }
+    setLookupResult({ tx, kbo: null, osm: null, pending: true });
 
-    // Log every attempt, hit or miss. The user asked to be able to see exactly
-    // what was sent out; capped so it cannot grow without bound.
-    setSettings(st => ({
-      ...st,
-      lookupLog: [{ name, town, at: new Date().toISOString(), hit: !!hit }, ...(st.lookupLog || [])].slice(0, 100),
-    }));
+    /* Both sources at once, each rendered the moment it lands. The KBO index is
+       local and answers in milliseconds; OSM is a network call that may be slow,
+       blocked, or switched off. Awaiting them together would make the fast half
+       wait on the slow one — measured at 10s with an unreachable Nominatim. */
+    const kboReq = fetch(`api/lookup/kbo?${new URLSearchParams({ name })}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => (d && d.kbo) ? describeNace(d.kbo) : null)
+      .catch(() => null);
+
+    const osmReq = settings.lookupEnabled
+      ? fetch(`api/lookup/osm?${new URLSearchParams({ name, town })}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => (d && d.osm) ? describeHit(d.osm) : null)
+          .catch(() => null)
+      : Promise.resolve(null);
+
+    kboReq.then(kbo => setLookupResult(r => (r && r.tx.id === tx.id) ? { ...r, kbo } : r));
+    osmReq.then(osm => setLookupResult(r => (r && r.tx.id === tx.id) ? { ...r, osm } : r));
+
+    const [kbo, osm] = await Promise.all([kboReq, osmReq]);
+
+    // Log every attempt. Only the OSM half leaves the house, so only that half
+    // is worth recording — the KBO answer never went anywhere.
+    if (settings.lookupEnabled) {
+      setSettings(st => ({
+        ...st,
+        lookupLog: [{ name, town, at: new Date().toISOString(), hit: !!osm }, ...(st.lookupLog || [])].slice(0, 100),
+      }));
+    }
 
     setLookupBusy(s => { const n = new Set(s); n.delete(tx.id); return n; });
-    setLookupResult({ tx, hit, available: ok });
-  }, []);
+    setLookupResult(r => (r && r.tx.id === tx.id) ? { ...r, kbo, osm, pending: false } : r);
+  }, [settings.lookupEnabled]);
 
   /* A failed read must never look like an empty app, or the user would start
      entering data on top of a database that is still there. */
@@ -1118,43 +1137,53 @@ export default function App() {
       {/* Lookup result. Never writes anything on its own — the category is a
           button the user presses, and the note is saved explicitly. */}
       {lookupResult && (() => {
-        const { tx, hit, available } = lookupResult;
-        const rs = hit && hit.catId ? resolveCatSub(cats, hit.catId, hit.subId) : { cat: null, sub: null };
+        const { tx, kbo, osm, pending } = lookupResult;
+        const rows = [
+          kbo && { ...kbo, src: "KBO / Staatsblad", note: kbo.code ? `NACE ${kbo.code}` : null },
+          osm && { ...osm, src: "OpenStreetMap", note: null },
+        ].filter(Boolean);
+        const Row = ({ r }) => {
+          const rs = r.catId ? resolveCatSub(cats, r.catId, r.subId) : { cat: null, sub: null };
+          return (
+            <div style={{ marginBottom: 9 }}>
+              <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--muted)", marginBottom: 3 }}>
+                {r.src}{r.note ? ` · ${r.note}` : ""}
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.45, background: "var(--bg)", borderRadius: 9, padding: "9px 11px" }}>{r.summary}</div>
+              {rs.cat && rs.sub && (
+                <button
+                  onClick={() => { assign(tx.id, rs.cat.id, rs.sub.id, false); setLookupResult(null); }}
+                  style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", marginTop: 6, padding: "8px 11px", borderRadius: 9, border: `1px solid ${rs.cat.color}55`, background: `${rs.cat.color}18`, color: "var(--text)", cursor: "pointer", fontSize: 11.5, fontWeight: 600, textAlign: "left" }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: rs.cat.color, flexShrink: 0 }} />
+                  Zet op {rs.cat.name} › {rs.sub.name}
+                </button>
+              )}
+            </div>
+          );
+        };
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setLookupResult(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 400, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 420, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
               <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", display: "flex", alignItems: "center", gap: 7 }}><HelpCircle size={15} strokeWidth={1.8} />Wat voor zaak is dit?</h3>
-              <p style={{ margin: "0 0 10px", fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{tx.counterparty.trim()} · {fmt(tx.amount)}</p>
+              <p style={{ margin: "0 0 11px", fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{tx.counterparty.trim()} · {fmt(tx.amount)}</p>
 
-              {hit ? (
-                <>
-                  <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.5, background: "var(--bg)", borderRadius: 9, padding: "10px 12px" }}>{hit.summary}</div>
-                  {rs.cat && rs.sub && (
-                    <button
-                      onClick={() => { assign(tx.id, rs.cat.id, rs.sub.id, false); setLookupResult(null); }}
-                      style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", marginTop: 9, padding: "9px 12px", borderRadius: 9, border: `1px solid ${rs.cat.color}55`, background: `${rs.cat.color}18`, color: "var(--text)", cursor: "pointer", fontSize: 12, fontWeight: 600, textAlign: "left" }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: rs.cat.color, flexShrink: 0 }} />
-                      Zet op {rs.cat.name} › {rs.sub.name}
-                    </button>
-                  )}
-                </>
-              ) : (
+              {rows.map((r, i) => <Row key={i} r={r} />)}
+
+              {rows.length === 0 && (
                 <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, background: "var(--bg)", borderRadius: 9, padding: "10px 12px" }}>
-                  {available
-                    ? "Niets gevonden. Veel kleine zaken staan niet op de kaart, en afgekorte of online namen zijn moeilijk terug te vinden."
-                    : "Opzoeken lukte niet — geen verbinding of de dienst antwoordde niet."}
+                  {pending ? "Bezig met opzoeken…" : "Niets gevonden. Veel kleine zaken staan niet in het handelsregister of op de kaart, en afgekorte of online namen zijn moeilijk terug te vinden."}
                 </div>
               )}
+              {rows.length > 0 && pending && (
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: -4, marginBottom: 8 }}>Nog aan het zoeken…</div>
+              )}
 
-              <div style={{ display: "flex", gap: 6, marginTop: 10, justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 9, color: "var(--muted)" }}>Bron: OpenStreetMap</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {hit && (
-                    <button onClick={() => { setTxs(p => p.map(t => t.id === tx.id ? { ...t, lookup: { summary: hit.summary, catId: hit.catId, subId: hit.subId, osmType: hit.osmType, source: "osm", at: new Date().toISOString() } } : t)); setLookupResult(null); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Bewaar als notitie</button>
-                  )}
-                  <button onClick={() => setLookupResult(null)} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Sluiten</button>
-                </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 10, justifyContent: "flex-end" }}>
+                {rows.length > 0 && (
+                  <button onClick={() => { const best = rows[0]; setTxs(p => p.map(t => t.id === tx.id ? { ...t, lookup: { summary: best.summary, catId: best.catId, subId: best.subId, source: best.src, at: new Date().toISOString() } } : t)); setLookupResult(null); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Bewaar als notitie</button>
+                )}
+                <button onClick={() => setLookupResult(null)} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Sluiten</button>
               </div>
             </div>
           </div>
@@ -1212,7 +1241,7 @@ export default function App() {
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
             searchInputRef={searchInputRef} calEvents={calEvents} cardOwners={settings.cardOwners}
-            lookupEnabled={!!settings.lookupEnabled} lookupBusy={lookupBusy} onLookup={runLookup}
+            lookupEnabled={!!settings.lookupEnabled || kboAvailable} lookupBusy={lookupBusy} onLookup={runLookup}
           />
         )}
 
@@ -1332,12 +1361,14 @@ export default function App() {
                           style={{ accentColor: "var(--accent)", marginTop: 2 }}
                         />
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Zaak opzoeken toestaan</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Ook online opzoeken (OpenStreetMap)</div>
                           <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1.45 }}>
-                            Zet een <strong>?</strong>-knop bij elke transactie. Klik je die aan, dan gaan de <strong>naam van de zaak en de gemeente</strong> naar OpenStreetMap om te achterhalen wat voor zaak het is. Alleen wanneer jij klikt, één transactie per keer. Staat dit uit, dan verlaat er niets je huis.
+                            Bij het <strong>?</strong> ook op OpenStreetMap zoeken. Dan gaan de <strong>naam van de zaak en de gemeente</strong> naar buiten — alleen wanneer jij klikt, één transactie per keer.
                           </p>
                           <p style={{ fontSize: 10, color: "var(--muted)", margin: "5px 0 0", lineHeight: 1.45, opacity: 0.8 }}>
-                            Ongeveer één op vier zaken wordt gevonden — kleine, afgekorte en online namen staan meestal niet op de kaart.
+                            {kboAvailable
+                              ? "Het handelsregister (KBO) staat lokaal op deze machine en werkt sowieso — daarvoor hoeft er niets naar buiten. OpenStreetMap vindt vooral winkels met een adres; samen lost dat ongeveer een derde van de onbekende zaken op."
+                              : "Ongeveer één op vier zaken wordt gevonden — kleine, afgekorte en online namen staan meestal niet op de kaart."}
                           </p>
                         </div>
                       </label>
