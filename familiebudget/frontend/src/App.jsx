@@ -1226,7 +1226,10 @@ export default function App() {
         )}
 
         {/* ═══ BUDGET ═══ */}
-        {view === "budget" && <BudgetTab cats={cats} />}
+        {/* txs (raw, not `expanded` — split rows would fake a cadence) so the
+            budget can be seeded from real spending; mStats for the actuals
+            ghost behind each month's bar. */}
+        {view === "budget" && <BudgetTab cats={cats} txs={txs} mStats={mStats} />}
         {view === "savings" && <SavingsTab txs={txs} savings={savings} setSavings={setSavings} year={year} savingsSummary={savingsSummary} unassignedSavings={unassignedSavings} bufferMultiplier={settings.bufferMultiplier || 5} />}
 
 

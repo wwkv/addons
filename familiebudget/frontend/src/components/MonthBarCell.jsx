@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { safeEvalMath } from '../utils/helpers.js';
-import { fmt } from '../utils/formatters.js';
 
 export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, onChange, barColor, onStreamRight }) {
   const [localValue, setLocalValue] = useState("");
@@ -9,17 +8,39 @@ export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, o
   const [isHovered, setIsHovered] = useState(false);
 
   const displayVal = Number(value) || 0;
+  const ghost = Number(ghostValue) || 0;
 
+  /* Both bars share one scale, and the scale has to include the ghost or an
+     overspent month draws a grey bar wider than the cell. */
+  const scale = Math.max(maxScale, ghost, 1);
+  const barWidth = (n) => Math.min(80, (Math.max(0, n) / scale) * 80);
+
+  /* safeEvalMath returns NaN for anything it cannot evaluate, and
+     Math.max(0, NaN) is NaN — which JSON.stringify writes to the database as
+     `null`. It reads back as 0, so the cell looks fine while the stored array
+     is corrupt. Keep the old value instead of writing a hole. */
   const getParsedValue = () => {
     const parsed = safeEvalMath(localValue || String(displayVal));
-    return Math.max(0, parsed);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : displayVal;
   };
 
-  const commit = () => {
+  /* `keepEditing` matters more than it looks. Enter used to commit AND clear
+     `focused`, but the input keeps DOM focus — so no second focus event ever
+     fired, the `focused &&` guard on onChange swallowed every further
+     keystroke, and the cell went dead. Typing a value, pressing Enter, spotting
+     a typo and retyping did nothing at all, silently. So Enter stays in edit
+     mode with the committed value seeded, the way a spreadsheet behaves; only a
+     real blur leaves. */
+  const commit = (keepEditing = false) => {
     const final = getParsedValue();
     onChange(final);
-    setLocalValue("");
-    setFocused(false);
+    if (keepEditing) {
+      setLocalValue(String(final));
+      setFocused(true);
+    } else {
+      setLocalValue("");
+      setFocused(false);
+    }
   };
 
   const handleFocus = () => {
@@ -34,7 +55,7 @@ export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, o
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      commit();
+      commit(true);
     }
     if (e.key === "Escape") {
       setLocalValue("");
@@ -108,7 +129,13 @@ export default function MonthBarCell({ value, ghostValue = 0, maxScale = 2000, o
           <ArrowRight size={10} />
         </button>
       )}
-      <div style={{ position: "absolute", bottom: "2px", left: "10%", width: `${Math.min(80, (Math.max(0, Number(value)) / Math.max(maxScale, 1)) * 80)}%`, height: "3px", borderRadius: "9999px", background: barColor || "var(--accent)", opacity: 0.5, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />
+      {/* What was actually spent here, drawn as a wider track BEHIND the
+          budget bar. Where the grey sticks out past the coloured bar you
+          overspent that month — readable at 3px without needing a legend. */}
+      {ghost > 0 && (
+        <div style={{ position: "absolute", bottom: "1px", left: "10%", width: `${barWidth(ghost)}%`, height: "5px", borderRadius: "9999px", background: "var(--muted)", opacity: 0.25, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />
+      )}
+      <div style={{ position: "absolute", bottom: "2px", left: "10%", width: `${barWidth(Number(value))}%`, height: "3px", borderRadius: "9999px", background: barColor || "var(--accent)", opacity: 0.5, transition: "width 0.3s ease-in-out", pointerEvents: "none" }} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 name: "Squirrel"
-description: "Huishoudbudget — verzamelen voor de winter"
-version: "1.10.0"
+description: "Huishoudbudget"
+version: "1.11.0"
 # NB: de slug blijft bewust "familiebudget". Home Assistant gebruikt hem als
 # identiteit én als pad voor de database (/addon_configs/{repo}_familiebudget).
 # Hem hernoemen maakt er een nieuwe add-on van en laat je data achter.
@@ -15,7 +15,12 @@ boot: "auto"
 homeassistant_api: true
 ingress: true
 ingress_port: 3001
-panel_icon: "mdi:peanut"
+# Material Design Icons heeft geen eekhoorn — 7.447 iconen nagekeken, de enige
+# knaagdieren zijn "rodent" (muis/rat, mét gekrulde staart) en "peanut". HA
+# accepteert alleen mdi:-namen voor de zijbalk, geen eigen SVG, dus dit is zo
+# dicht als de zijbalk kan komen. De échte eekhoorn staat in icon.png/logo.png
+# en linksboven in de app zelf.
+panel_icon: "mdi:rodent"
 panel_title: "Squirrel"
 map:
   - addon_config:rw

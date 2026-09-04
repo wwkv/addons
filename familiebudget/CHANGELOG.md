@@ -1,5 +1,68 @@
 # Changelog
 
+## [1.11.0] - 2026-09-04
+
+### Changed
+- **Een echte eekhoorn als add-on-icoon.** Er stond helemaal geen `icon.png` in
+  de add-on, en dan toont Home Assistant een puzzelstukje — vandaar het
+  legopoppetje in het add-on-overzicht. Nu staan er een `icon.png` en een
+  `logo.png` met dezelfde eekhoorn die ook linksboven in de app staat
+  (letterlijk hetzelfde pad uit lucide), in de kleuren van de app.
+- **Zijbalkicoon is nu `mdi:rodent`** in plaats van een pinda. Material Design
+  Icons heeft geen eekhoorn — alle 7.447 iconen nagekeken — en Home Assistant
+  laat voor de zijbalk alleen `mdi:`-namen toe, geen eigen afbeelding. `rodent`
+  is een knaagdier mét gekrulde staart en komt daarmee het dichtst in de buurt.
+- Beschrijving is nu gewoon "Huishoudbudget".
+
+### Added
+- **Budget opbouwen uit je historiek.** Het budgettabblad was tot nu toe 120
+  lege vakjes en de vraag om te gokken — en dat was ook te zien: er stond nog
+  nooit één budget in. De knop "Opbouwen uit historiek" leest nu je echte
+  uitgaven en vult het jaar in.
+- **Elke betaler krijgt een ritme.** Maandelijks, per kwartaal, jaarlijks,
+  seizoensgebonden, doorlopend variabel of eenmalig — en het bedrag komt in de
+  maanden waarin het écht valt, niet uitgesmeerd over twaalf. Dat is het hele
+  verschil: alles gemiddeld × 12 gaf €47.971, met ritme €35.976. Overige
+  Verzekeringen alleen al ging van €4.457 naar €1.717, omdat daar één
+  maandpremie naast twee jaarpremies van AXA staat.
+- **Drie stappen, en er wordt niets geschreven tot je "Overnemen" klikt**:
+  welke jaren als bron, dan alles nakijken (onzekere rijen bovenaan, met een
+  strip van twaalf vakjes die toont wat er in het raster komt), dan het
+  jaaroverzicht.
+- **Gestopte inkomsten worden niet doorgetrokken.** Als een betaler in dezelfde
+  subcategorie wordt opgevolgd door een andere — VOXDALE stopt in juni,
+  BLACKBIRDS begint in juli — staat dat erbij en telt de oude niet meer mee.
+  Zonder dat stond er €44.571 aan loon in het budget dat niemand nog verdient.
+- **Jaaroverzicht boven het raster**: inkomsten, uitgaven, netto en de zwaarste
+  maanden ("juni €4.233 tegenover €2.997 gemiddeld"). Allemaal afgeleid van het
+  raster zelf, dus elke wijziging in een cel beweegt mee.
+- Achter elke rij die niet alle twaalf maanden vult staat nu een merkteken
+  (J, K, 4×), zodat één bedrag in december leest als een jaarfactuur en niet
+  als elf vergeten vakjes.
+- `backend/tools/check-rhythm.mjs` controleert de indeling tegen een echte
+  database. Zes invarianten, waaronder "er mag geen euro verdwijnen".
+
+### Fixed
+- **Rondklikken door de jaren schreef lege jaren weg.** Laden en opslaan
+  hingen allebei aan het geselecteerde jaar; duurde het laden langer dan de 500
+  ms van de autosave, dan werden de cijfers van het vórige jaar in het nieuwe
+  geschreven. Zo zijn de lege schillen voor 2025 en 2027 in de database
+  ontstaan zonder dat er ooit iets ingevuld is. Er wordt nu pas opgeslagen als
+  het laden gelukt is én je zelf iets gewijzigd hebt.
+- **Een mislukte lading werd als leeg budget opgeslagen.** Nu blokkeert dat het
+  opslaan en staat er een waarschuwing.
+- **Ongeldige invoer schreef `null` in de database.** `Math.max(0, NaN)` is
+  `NaN`; op het scherm werd dat weer 0, dus het zag er goed uit terwijl de
+  opgeslagen rij stuk was.
+- **Een cel ging dood na Enter.** De invoer hield de focus, maar de component
+  dacht van niet — elke volgende toetsaanslag werd genegeerd. Typen, Enter,
+  typfout zien en opnieuw typen deed niets. Enter blijft nu in bewerkmodus.
+- Gearchiveerde categorieën verschenen alsnog in het budgetraster.
+- Bedragen gebruiken nu hetzelfde minteken als de rest van de app
+  (−€500 in plaats van €-500).
+- De grijze balk achter elke maandcel toont eindelijk wat je in die maand
+  werkelijk uitgaf. Die stond al drie versies klaar maar werd nooit getekend.
+
 ## [1.10.0] - 2026-09-04
 
 ### Changed
