@@ -5,6 +5,7 @@ import { fmt, fD } from '../utils/formatters.js';
 import { parseCounterparty, parseEvidence, evidenceLine } from '../utils/counterparty.js';
 import { matchEvent, eventLine } from '../utils/calendar.js';
 import { cardOwner } from '../utils/cards.js';
+import { MULTI } from '../utils/rules.js';
 import CatPicker from '../components/CatPicker.jsx';
 import CatGrid from '../components/CatGrid.jsx';
 
@@ -99,12 +100,21 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
   const totalAmount = group ? group.txs.reduce((s, t) => s + t.amount, 0) : 0;
   const EXIT_DURATION = 350;
 
-  const doAssignGroup = (catId, subId) => {
+  /* `force` teaches the pattern even for a counterparty on the MULTI list.
+     BANKSYS is the case that matters: 58 deposits with an empty description and
+     one type, so the app cannot tell them apart — but the household can, and
+     they are all the same thing. autoCat refuses to suggest anything for MULTI
+     names and learnRule refuses to remember them, so without a way to force it
+     these got re-asked on every import forever. The capability already existed
+     as an undiscoverable modifier-click; this surfaces it where it is needed. */
+  const doAssignGroup = (catId, subId, force = false) => {
     const txIds = group.txs.map(t => t.id);
     setHistory(h => [...h, { txIds }]);
     setAnimDir("up");
-    setTimeout(() => { txIds.forEach(id => onAssign(id, catId, subId)); setAnimDir("fromBottom"); }, EXIT_DURATION);
+    setTimeout(() => { txIds.forEach((id, i) => onAssign(id, catId, subId, force && i === 0)); setAnimDir("fromBottom"); }, EXIT_DURATION);
   };
+  // Counterparties the app deliberately never learns on its own.
+  const isMulti = group ? MULTI.some(p => p.test(group.counterparty.toLowerCase())) : false;
   const doSkipGroup = () => {
     const txIds = group.txs.map(t => t.id);
     setHistory(h => [...h, { txIds }]);
@@ -274,6 +284,14 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
             ) : (
               <div style={{ textAlign: "center", marginBottom: 16, padding: 12, borderRadius: 10, background: "var(--bg)", border: "1px dashed var(--border)" }}>
                 <div style={{ fontSize: 12, opacity: 0.5, color: "var(--text)" }}>Geen suggestie — kies handmatig of sla over</div>
+                {isMulti && (
+                  <div style={{ fontSize: 10, color: "var(--muted)", background: "var(--bg)", borderRadius: 8, padding: "8px 10px", marginTop: 8, lineHeight: 1.5, textAlign: "left" }}>
+                    Achter <strong style={{ color: "var(--text)" }}>{group.counterparty}</strong> zit meestal van alles, dus onthoudt de app hier geen categorie —
+                    daarom komen deze {group.txs.length} terug bij elke import.
+                    Zijn ze bij jou wél altijd hetzelfde? Kies een categorie met <strong style={{ color: "var(--text)" }}>⌘</strong> of <strong style={{ color: "var(--text)" }}>Shift</strong> ingedrukt,
+                    dan leert de app het patroon toch.
+                  </div>
+                )}
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 8 }}>
@@ -290,7 +308,7 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
               <div style={{ textAlign: "center" }}>
                 <button
                   disabled={!suggestion}
-                  onClick={() => suggestion && doAssignGroup(suggestion.catId, suggestion.subId)}
+                  onClick={(e) => suggestion && doAssignGroup(suggestion.catId, suggestion.subId, !!(e.metaKey || e.shiftKey))}
                   style={{
                     width: 56,
                     height: 56,
@@ -316,12 +334,19 @@ export default function TinderMode({ txs, cats, autoCat, onAssign, onSkip, onUnd
             {favSubs.length > 0 && (
               <div style={{ marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", marginBottom: 4 }}><Star size={10} fill="currentColor" strokeWidth={0} />Meest gebruikt</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{favSubs.map(({ cat: fc, sub: fs }) => <button key={fs.id} onClick={() => { doAssignGroup(fc.id, fs.id); setShowAlts(false); }} style={{ padding: "4px 9px", borderRadius: 999, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10.5 }}><span style={{ color: fc.color, fontWeight: 700 }}>{fc.name.slice(0, 8)}</span> › {fs.name}</button>)}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{favSubs.map(({ cat: fc, sub: fs }) => <button key={fs.id} onClick={(e) => { doAssignGroup(fc.id, fs.id, !!(e.metaKey || e.shiftKey)); setShowAlts(false); }} style={{ padding: "4px 9px", borderRadius: 999, border: "none", background: fc.color + "25", color: "var(--text)", cursor: "pointer", fontSize: 10.5 }}><span style={{ color: fc.color, fontWeight: 700 }}>{fc.name.slice(0, 8)}</span> › {fs.name}</button>)}</div>
               </div>
             )}
             <button onClick={() => { doAssignGroup("nog_te_verwerken", "te_categoriseren"); setShowAlts(false); }} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left", padding: "5px 8px", background: "var(--bg)", border: "none", color: "var(--muted)", cursor: "pointer", borderRadius: 7, fontSize: 10.5, fontStyle: "italic", marginBottom: 8 }}><Package size={12} />Nog te verwerken</button>
             <div style={{ maxHeight: 280, overflow: "auto" }}>
-              <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={(catId, subId) => { doAssignGroup(catId, subId); setShowAlts(false); }} />
+              <CatGrid cats={cats} catUsage={catUsage} tx={tx} handleSelect={(catId, subId, e) => {
+                /* CatGrid already hands us the click event; TinderMode was
+                   dropping it, so ⌘/Shift-click could force-learn everywhere
+                   EXCEPT the sorting screen — the one place you meet a MULTI
+                   counterparty like BANKSYS. */
+                doAssignGroup(catId, subId, !!(e && (e.metaKey || e.shiftKey)));
+                setShowAlts(false);
+              }} />
             </div>
             <button onClick={() => setShowAlts(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 8, width: "100%", padding: "7px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}><ArrowDown size={11} style={{ transform: "rotate(90deg)" }} />Terug</button>
           </>

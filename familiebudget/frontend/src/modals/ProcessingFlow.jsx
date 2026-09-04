@@ -90,7 +90,10 @@ export default function ProcessingFlow({ txs, cats, autoCat, catUsage, blacklist
       <TinderMode
         txs={txs} cats={cats} autoCat={autoCat} catUsage={catUsage} blacklist={blacklist} calEvents={calEvents} cardOwners={cardOwners}
         onAddToBlacklist={onAddToBlacklist}
-        onAssign={(id, c, s) => assign(id, c, s, false)}
+        /* Pass the force flag through. It was hardcoded false here, so
+           ⌘/Shift-click could never teach a pattern from the sorting screen —
+           which is the only place you meet a MULTI counterparty like BANKSYS. */
+        onAssign={(id, c, s, force) => assign(id, c, s, !!force)}
         onSkip={onSkip}
         onUndo={onUndo}
         onClose={() => setStage("klaar")}

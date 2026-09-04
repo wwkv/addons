@@ -26,6 +26,13 @@
    ("CCV*LINTS", "SumUp  *Snackbar", "Mollie *KOFFIELAND"), so this has to run
    before whitespace collapsing or the merchant name is what gets thrown away. */
 const PSP_PREFIX = /^(CCV|BCK|NYA|PAY|INT|ZTL|IZ|SUMUP|SumUp|MOLLIE|Mollie|ZETTLE|STRIPE|ADYEN|PAYCONIQ|PAYPAL)\s*\*\s*/i;
+
+/* A bare "SP " prefix is the same idea without the star — the bank writes
+   "SP IN DEN OLIFANT BV", "SP BRAUZZ. BV", "SP FRNCH POP-UP". Left in place it
+   defeats every lookup: "in den olifant" is a toy shop in both OSM and the KBO
+   register, "sp in den olifant" is nothing. Requires at least two more words so
+   a company genuinely starting with "SP" keeps its name. */
+const SP_PREFIX = /^SP\s+(?=\S+\s)/i;
 const DOCCLE_PREFIX = /^Doccle\s*-\s*/i;
 
 /* Legal forms at the very end only — "BV Bakkerij" must keep its name. */
@@ -53,6 +60,7 @@ export function parseCounterparty(raw) {
   let platform = null;
   let place = null;
 
+  s = s.replace(SP_PREFIX, '');
   const psp = s.match(PSP_PREFIX);
   if (psp) { platform = psp[1]; s = s.slice(psp[0].length); }
   else if (DOCCLE_PREFIX.test(s)) { platform = "Doccle"; s = s.replace(DOCCLE_PREFIX, ""); }

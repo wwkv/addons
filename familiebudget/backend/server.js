@@ -159,6 +159,15 @@ try {
 const kboStmt = kboDb
   ? kboDb.prepare('SELECT b.code AS code, n.nl AS nl FROM biz b LEFT JOIN nace n ON n.code = b.code WHERE b.name = ?')
   : null;
+/* The bank truncates the counterparty column, so the exact name often is not
+   the real one: "CAMPAGNE COMPAGN" is "campagne compagnie", "KLIM EN
+   BOULDERZAAL THE I" is cut mid-word. A prefix search recovers those. Two
+   results are taken as no answer — the same rule the index build uses, since a
+   stem matching several businesses cannot say which one this was. */
+const kboPrefixStmt = kboDb
+  ? kboDb.prepare('SELECT b.code AS code, n.nl AS nl FROM biz b LEFT JOIN nace n ON n.code = b.code WHERE b.name LIKE ? LIMIT 2')
+  : null;
+const KBO_MIN_PREFIX = 8;
 
 /* Must mirror build-kbo-index.mjs exactly, or the two sides key differently
    and nothing ever matches. */
@@ -175,7 +184,17 @@ function lookupKbo(name) {
   if (!kboStmt) return null;
   const k = kboKey(name);
   if (k.length < 4) return null;
-  try { return kboStmt.get(k) || null; } catch { return null; }
+  try {
+    const exact = kboStmt.get(k);
+    if (exact) return { ...exact, matched: 'exact' };
+    // Only try a prefix once the stem is long enough to mean something; a
+    // four-letter LIKE would match half the register.
+    if (k.length >= KBO_MIN_PREFIX && kboPrefixStmt) {
+      const rows = kboPrefixStmt.all(`${k.replace(/[%_]/g, '')}%`);
+      if (rows.length === 1) return { ...rows[0], matched: 'prefix' };
+    }
+    return null;
+  } catch { return null; }
 }
 
 // NOMINATIM_URL overrides the endpoint so the offline path can be tested.

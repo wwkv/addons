@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.9.1] - 2026-09-04
+
+### Added
+- **Afgekorte namen worden nu ook herkend.** De bank kapt de tegenpartij af
+  ("CAMPAGNE COMPAGN", "KLIM EN BOULDERZAAL THE I"), waardoor het opzoeken
+  niets vond. Er wordt nu ook op het begin van de naam gezocht, en alleen als
+  er precies één bedrijf op past. Dat lost er zeven extra op, waaronder
+  CAMPAGNE COMPAGN → cultureel onderwijs.
+
+### Fixed
+- **"SP " voor een naam werd niet weggehaald.** De bank schrijft "SP IN DEN
+  OLIFANT BV" en "SP BRAUZZ. BV"; met dat voorvoegsel erbij vindt geen enkele
+  bron iets. Zonder is "in den olifant" gewoon een speelgoedwinkel. Namen die
+  écht met SP beginnen (SPAR) blijven ongemoeid.
+- **BANKSYS-transacties bleven bij elke import terugkomen.** De bank geeft er
+  niets bij: lege mededeling, altijd hetzelfde type. De app weigert daarom een
+  patroon te onthouden voor dat soort verzamelnamen. Je kon dat al forceren met
+  ⌘/Shift+klik, maar dat werkte overal behalve op het sorteerscherm — precies
+  waar je ze tegenkomt — en niemand kon het weten. Nu staat het erbij, en het
+  werkt: één keer met ⌘ een categorie kiezen zet alle 58 goed én zorgt dat ze
+  niet meer terugkomen. Zonder ⌘ blijft het gedrag zoals het was.
+
 ## [1.9.0] - 2026-09-04
 
 ### Added
