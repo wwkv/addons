@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.8.0] - 2026-09-04
+
+### Added
+- **"?"-knop bij elke transactie** die opzoekt wat voor zaak een tegenpartij is.
+  Klik je erop, dan krijg je een zin als "Sportwinkel in de Willem Tellstraat,
+  Antwerpen" en, als het type herkend wordt, één knop om meteen de juiste
+  categorie te zetten. Er wordt nooit iets automatisch weggeschreven.
+- **Staat standaard uit.** Dit is de enige functie die iets naar buiten stuurt,
+  dus je zet ze zelf aan in Instellingen › Regels. Daar staat ook precies wat er
+  verstuurd wordt (naam van de zaak en de gemeente, naar OpenStreetMap) en een
+  **logboek van elke opzoeking** die je gedaan hebt.
+- Ongeveer één op vier zaken wordt gevonden. Kleine, afgekorte en online namen
+  staan meestal niet op de kaart; dan zegt de app gewoon dat er niets gevonden is.
+
 ## [1.7.0] - 2026-09-03
 
 ### Added

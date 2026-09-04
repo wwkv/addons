@@ -1,17 +1,18 @@
 import { useMemo } from "react";
-import { X, MessageSquare, Scissors, ChevronUp, ChevronDown } from "lucide-react";
+import { X, MessageSquare, Scissors, ChevronUp, ChevronDown, HelpCircle, Loader } from "lucide-react";
 import { fmt, fD, mN } from '../utils/formatters.js';
 import { resolveCatSub } from '../utils/helpers.js';
 import HoverTip from '../components/HoverTip.jsx';
 import CatPicker from '../components/CatPicker.jsx';
 import MultiSelect from '../components/MultiSelect.jsx';
 import TxTip from '../components/TxTip.jsx';
+import { parseCounterparty } from '../utils/counterparty.js';
 
 export default function TransactionsView({
   displayed, months, fCats, cats, sel, sort, search, startDate, endDate, settings, catUsage,
   setMonths, setFCats, setStartDate, setEndDate, setSearch, setSort, setSel,
   setSplitTx, setEditComment, setContextMenu,
-  assign, bulkAssign, handleRowClick, searchInputRef, calEvents = [], cardOwners,
+  assign, bulkAssign, handleRowClick, searchInputRef, calEvents = [], cardOwners, lookupEnabled, lookupBusy, onLookup,
 }) {
   const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(m => ({ value: m, label: mN(m) })), []);
   const catOptions = useMemo(() => [{ value: "_none", label: "Ongecategoriseerd" }, ...cats.map(c => ({ value: c.id, label: c.name, color: c.color }))], [cats]);
@@ -56,7 +57,7 @@ export default function TransactionsView({
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>{col.l} {sort.field === col.f && (sort.dir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}</span>
                 </th>
               ))}
-              <th style={{ width: 70, background: "var(--card)", position: "sticky", top: 0, zIndex: 4, borderBottom: "2px solid var(--border)", fontSize: 9, color: "var(--muted)", fontWeight: 600 }}>Acties</th>
+              <th style={{ width: lookupEnabled ? 92 : 70, background: "var(--card)", position: "sticky", top: 0, zIndex: 4, borderBottom: "2px solid var(--border)", fontSize: 9, color: "var(--muted)", fontWeight: 600 }}>Acties</th>
             </tr></thead>
             <tbody>{displayed.map((tx, idx) => {
               const hasSp = tx.splits && tx.splits.length > 1;
@@ -106,6 +107,21 @@ export default function TransactionsView({
                   <td style={{ padding: "3px 3px", textAlign: "center", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => setEditComment({ ...tx })} title="Opmerking" style={{ display: "inline-flex", background: "none", border: "none", color: tx.comment ? "var(--accent)" : "var(--muted)", cursor: "pointer", padding: "1px 2px", opacity: tx.comment ? 1 : 0.5 }}><MessageSquare size={11} /></button>
                     <button onClick={() => setSplitTx(tx)} title="Splitsen" style={{ display: "inline-flex", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "1px 2px", opacity: 0.5 }}><Scissors size={11} /></button>
+                    {/* Merchant lookup. Hidden unless enabled in Settings, and
+                        skipped for person-to-person rows — parseCounterparty
+                        already knows those are people, not businesses. */}
+                    {lookupEnabled && !parseCounterparty(tx.counterparty).p2p && (
+                      <button
+                        onClick={() => onLookup(tx)}
+                        disabled={lookupBusy.has(tx.id)}
+                        title={tx.lookup ? tx.lookup.summary : "Zoek op wat voor zaak dit is"}
+                        style={{ display: "inline-flex", background: "none", border: "none", color: tx.lookup ? "var(--accent)" : "var(--muted)", cursor: lookupBusy.has(tx.id) ? "default" : "pointer", padding: "1px 2px", opacity: tx.lookup ? 1 : 0.5 }}
+                      >
+                        {lookupBusy.has(tx.id)
+                          ? <Loader size={11} style={{ animation: "spin 1s linear infinite" }} />
+                          : <HelpCircle size={11} />}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

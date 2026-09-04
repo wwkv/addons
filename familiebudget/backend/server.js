@@ -125,6 +125,91 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
+/* ─── Merchant lookup (OpenStreetMap) ───
+   Answers "what kind of business is this" for a counterparty the user cannot
+   place. This is the ONE route in the app that talks to the outside world, so
+   it is deliberately narrow:
+
+   - It only ever runs on an explicit click, one transaction at a time. The
+     frontend hides the button entirely unless the user has opted in.
+   - Nominatim is a free community service. Its usage policy requires an
+     identifying User-Agent and at most one request per second, and forbids
+     systematic/bulk querying — which is why there is no "look up everything"
+     endpoint here and must never be one.
+   - A business type does not change, so results are cached hard. The cache is
+     size-capped, unlike the calendar one, because merchant keys are unbounded. */
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const LOOKUP_UA = 'FamilieBudget/1.7 (self-hosted personal budget add-on)';
+const lookupCache = new Map();              // "name|town" -> { at, data }
+const LOOKUP_TTL = 30 * 24 * 60 * 60 * 1000;
+const LOOKUP_CACHE_MAX = 500;
+const LOOKUP_MIN_GAP = 1100;                // ms between outbound calls
+let lastLookupAt = 0;
+
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+app.get('/api/lookup', async (req, res) => {
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  const town = String(req.query.town || '').trim().slice(0, 40);
+  if (!name) return res.status(400).json({ error: 'name required' });
+
+  const key = `${norm(name)}|${norm(town)}`;
+  const hit = lookupCache.get(key);
+  if (hit && Date.now() - hit.at < LOOKUP_TTL) {
+    return res.json({ available: true, cached: true, result: hit.data });
+  }
+
+  try {
+    /* Rate limit on the server, not on the click. The policy binds this
+       application as a whole, and nothing stops a user clicking three rows in
+       a second. */
+    const wait = LOOKUP_MIN_GAP - (Date.now() - lastLookupAt);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastLookupAt = Date.now();
+
+    const qs = new URLSearchParams({
+      q: [name, town].filter(Boolean).join(' '),
+      format: 'jsonv2', limit: '1', addressdetails: '1', extratags: '1', countrycodes: 'be',
+    });
+    const r = await fetch(`${NOMINATIM}?${qs}`, {
+      headers: { 'User-Agent': LOOKUP_UA, 'Accept-Language': 'nl' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) throw new Error(`Nominatim ${r.status}`);
+    const rows = await r.json();
+
+    let result = null;
+    if (Array.isArray(rows) && rows.length) {
+      const h = rows[0];
+      const a = h.address || {};
+      const got = a.city || a.town || a.village || a.suburb || '';
+      /* Town check. Without it "Vroom & Vroom" matched an arts centre in
+         Brussels — a confident answer about the wrong business is worse than
+         no answer, so an unverifiable hit is discarded. */
+      const townOk = !town
+        || norm(got).includes(norm(town)) || norm(town).includes(norm(got))
+        || norm(h.display_name).includes(norm(town));
+      if (townOk) {
+        result = {
+          name: h.name || null,
+          category: h.category || null,
+          type: h.type || null,
+          address: { road: a.road || null, city: got || null },
+          display_name: h.display_name || null,
+        };
+      }
+    }
+
+    if (lookupCache.size >= LOOKUP_CACHE_MAX) lookupCache.delete(lookupCache.keys().next().value);
+    lookupCache.set(key, { at: Date.now(), data: result });
+    res.json({ available: true, cached: false, result });
+  } catch (e) {
+    // Same contract as the calendar routes: a failure is "no answer", not a
+    // server error the user has to interpret.
+    res.json({ available: false, result: null, reason: String(e.message || e) });
+  }
+});
+
 /* ─── Calendar cues (Home Assistant only) ───
    Answers "what was on the agenda when this was paid" by reading the user's
    own calendars through the Supervisor proxy. Nothing leaves the machine: the

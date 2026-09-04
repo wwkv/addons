@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Brain, Database, Upload, Download, Trash2, AlertTriangle, MessageSquare, Tag, Lock, Scale, Rocket, User, Check, CheckCircle2, Link2, Ban, Lightbulb, Plus, Minus, Sun, Moon, LayoutGrid, Wallet, PiggyBank, Search, RefreshCw, Sparkles } from "lucide-react";
+import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Brain, Database, Upload, Download, Trash2, AlertTriangle, MessageSquare, Tag, Lock, Scale, Rocket, User, Check, CheckCircle2, Link2, Ban, Lightbulb, Plus, Minus, Sun, Moon, LayoutGrid, Wallet, PiggyBank, Search, RefreshCw, Sparkles, HelpCircle} from "lucide-react";
 
 /* Utils */
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
@@ -10,6 +10,7 @@ import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { knownCards } from './utils/cards.js';
+import { describeHit } from './utils/osmCategories.js';
 import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
@@ -830,7 +831,43 @@ export default function App() {
     return f;
   }, [preview, importSort]);
 
-  /* Lookup Button */
+  /* Merchant lookup. The only outbound request in the app, so it is
+     deliberately explicit: one click, one transaction, and only when the user
+     has switched it on in Settings. */
+  const [lookupBusy, setLookupBusy] = useState(() => new Set());
+  const [lookupResult, setLookupResult] = useState(null);
+
+  const runLookup = useCallback(async (tx) => {
+    const cp = parseCounterparty(tx.counterparty);
+    const town = parseEvidence(tx).place || cp.place || "";
+    // The PSP-stripped name, not the raw column: "CCV*LINTS ANTWERPEN" finds
+    // nothing, "LINTS" might.
+    const name = cp.name;
+    if (!name) return;
+
+    setLookupBusy(s => new Set(s).add(tx.id));
+    let hit = null, ok = false;
+    try {
+      const qs = new URLSearchParams({ name, town });
+      const r = await fetch(`api/lookup?${qs}`);
+      if (r.ok) {
+        const d = await r.json();
+        ok = !!d.available;
+        hit = d.result ? describeHit(d.result) : null;
+      }
+    } catch { /* offline or blocked — treated as "no answer" below */ }
+
+    // Log every attempt, hit or miss. The user asked to be able to see exactly
+    // what was sent out; capped so it cannot grow without bound.
+    setSettings(st => ({
+      ...st,
+      lookupLog: [{ name, town, at: new Date().toISOString(), hit: !!hit }, ...(st.lookupLog || [])].slice(0, 100),
+    }));
+
+    setLookupBusy(s => { const n = new Set(s); n.delete(tx.id); return n; });
+    setLookupResult({ tx, hit, available: ok });
+  }, []);
+
   /* A failed read must never look like an empty app, or the user would start
      entering data on top of a database that is still there. */
   if (loadError) return (
@@ -1078,6 +1115,52 @@ export default function App() {
       )}
 
       {/* Comment */}
+      {/* Lookup result. Never writes anything on its own — the category is a
+          button the user presses, and the note is saved explicitly. */}
+      {lookupResult && (() => {
+        const { tx, hit, available } = lookupResult;
+        const rs = hit && hit.catId ? resolveCatSub(cats, hit.catId, hit.subId) : { cat: null, sub: null };
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setLookupResult(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 400, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", display: "flex", alignItems: "center", gap: 7 }}><HelpCircle size={15} strokeWidth={1.8} />Wat voor zaak is dit?</h3>
+              <p style={{ margin: "0 0 10px", fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{tx.counterparty.trim()} · {fmt(tx.amount)}</p>
+
+              {hit ? (
+                <>
+                  <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.5, background: "var(--bg)", borderRadius: 9, padding: "10px 12px" }}>{hit.summary}</div>
+                  {rs.cat && rs.sub && (
+                    <button
+                      onClick={() => { assign(tx.id, rs.cat.id, rs.sub.id, false); setLookupResult(null); }}
+                      style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", marginTop: 9, padding: "9px 12px", borderRadius: 9, border: `1px solid ${rs.cat.color}55`, background: `${rs.cat.color}18`, color: "var(--text)", cursor: "pointer", fontSize: 12, fontWeight: 600, textAlign: "left" }}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: rs.cat.color, flexShrink: 0 }} />
+                      Zet op {rs.cat.name} › {rs.sub.name}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, background: "var(--bg)", borderRadius: 9, padding: "10px 12px" }}>
+                  {available
+                    ? "Niets gevonden. Veel kleine zaken staan niet op de kaart, en afgekorte of online namen zijn moeilijk terug te vinden."
+                    : "Opzoeken lukte niet — geen verbinding of de dienst antwoordde niet."}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 6, marginTop: 10, justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 9, color: "var(--muted)" }}>Bron: OpenStreetMap</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {hit && (
+                    <button onClick={() => { setTxs(p => p.map(t => t.id === tx.id ? { ...t, lookup: { summary: hit.summary, catId: hit.catId, subId: hit.subId, osmType: hit.osmType, source: "osm", at: new Date().toISOString() } } : t)); setLookupResult(null); }} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11 }}>Bewaar als notitie</button>
+                  )}
+                  <button onClick={() => setLookupResult(null)} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Sluiten</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {editComment && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 380, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
@@ -1129,6 +1212,7 @@ export default function App() {
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
             searchInputRef={searchInputRef} calEvents={calEvents} cardOwners={settings.cardOwners}
+            lookupEnabled={!!settings.lookupEnabled} lookupBusy={lookupBusy} onLookup={runLookup}
           />
         )}
 
@@ -1236,6 +1320,50 @@ export default function App() {
                         )}
                       </div>
                     )}
+                    {/* Merchant lookup. Off by default and stated plainly:
+                        this is the only feature that sends anything out of the
+                        house, so it should never be a surprise. */}
+                    <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)" }}>
+                      <label style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!settings.lookupEnabled}
+                          onChange={() => setSettings(s => ({ ...s, lookupEnabled: !s.lookupEnabled }))}
+                          style={{ accentColor: "var(--accent)", marginTop: 2 }}
+                        />
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Zaak opzoeken toestaan</div>
+                          <p style={{ fontSize: 10.5, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1.45 }}>
+                            Zet een <strong>?</strong>-knop bij elke transactie. Klik je die aan, dan gaan de <strong>naam van de zaak en de gemeente</strong> naar OpenStreetMap om te achterhalen wat voor zaak het is. Alleen wanneer jij klikt, één transactie per keer. Staat dit uit, dan verlaat er niets je huis.
+                          </p>
+                          <p style={{ fontSize: 10, color: "var(--muted)", margin: "5px 0 0", lineHeight: 1.45, opacity: 0.8 }}>
+                            Ongeveer één op vier zaken wordt gevonden — kleine, afgekorte en online namen staan meestal niet op de kaart.
+                          </p>
+                        </div>
+                      </label>
+
+                      {(settings.lookupLog || []).length > 0 && (
+                        <details style={{ marginTop: 10 }}>
+                          <summary style={{ fontSize: 10.5, color: "var(--muted)", cursor: "pointer" }}>
+                            Wat is er opgezocht ({(settings.lookupLog || []).length})
+                          </summary>
+                          <div style={{ maxHeight: 150, overflowY: "auto", marginTop: 6 }}>
+                            {(settings.lookupLog || []).map((l, i) => (
+                              <div key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 10, color: "var(--muted)", padding: "2px 0" }}>
+                                <span style={{ fontFamily: "var(--font-mono), monospace", flexShrink: 0 }}>{String(l.at || "").slice(0, 16).replace("T", " ")}</span>
+                                <span style={{ flex: 1, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}{l.town ? ` · ${l.town}` : ""}</span>
+                                <span style={{ flexShrink: 0 }}>{l.hit ? "gevonden" : "niets"}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setSettings(s => ({ ...s, lookupLog: [] }))}
+                            style={{ marginTop: 6, padding: "3px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10 }}
+                          >Wis logboek</button>
+                        </details>
+                      )}
+                    </div>
+
                     {/* Card owners. The bank puts a masked card number on every
                         card and Google Pay line; in a two-adult household those
                         four digits say who paid, which is often what decides the

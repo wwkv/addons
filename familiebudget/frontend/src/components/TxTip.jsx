@@ -64,6 +64,15 @@ export default function TxTip({ tx, calEvents = [], cardOwners }) {
         </span>
       )}
 
+      {/* Saved lookup result, kept separate from the user's own comment so the
+          provenance stays visible. */}
+      {tx.lookup?.summary && (
+        <span style={{ display: "block", marginTop: 7 }}>
+          <TipLabel>Opgezocht</TipLabel>
+          <span style={{ wordBreak: "break-word" }}>{tx.lookup.summary}</span>
+        </span>
+      )}
+
       {details.length > 0 && (
         <span style={{ display: "block", marginTop: 7, fontSize: 9, color: "var(--muted)" }}>
           {details.join(" · ")}

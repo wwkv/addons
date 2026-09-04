@@ -790,3 +790,6 @@
   overflow: hidden;
   clip: rect(0,0,0,0);
 }
+
+/* Spinner for the per-row merchant lookup — the only async row action. */
+@keyframes spin { to { transform: rotate(360deg); } }

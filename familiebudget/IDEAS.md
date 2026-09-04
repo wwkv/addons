@@ -7,10 +7,23 @@ Connect to Google Calendar so that, when reviewing an uncategorized or unclear t
 
 Rough shape: show calendar events for a transaction's date inline (e.g. in the CatPicker or a hover tooltip), likely read-only, likely via Google Calendar API with OAuth.
 
-## 2. AI-assisted category suggestion from counterparty lookup
-A button that looks up what a company/name is (e.g. via web search or an LLM) and suggests a category based on that, for counterparties that don't match any existing rule or pattern. Useful for one-off or unfamiliar merchants where the auto-categorization rules (`rules.js`) don't have a match.
+## 2. ~~AI-assisted category suggestion from counterparty lookup~~ — shipped in 1.8.0
+Shipped as a `?` button on each transaction row, opt-in in Instellingen › Regels.
 
-Open questions: which lookup source (LLM with web access vs. a fixed API), where the button lives (CatPicker? import preview?), and how it interacts with the existing pattern-learning system.
+The open questions resolved as: **OpenStreetMap/Nominatim**, not an LLM or a web
+search — a text search would need a model to summarise it (the cost that was
+rejected at the outset), and DuckDuckGo's free API returned nothing for every
+local business tested. Nominatim is free, keyless, and returns a *structured*
+business type that maps straight onto a category, which is more useful than
+prose. It does **not** feed the pattern-learning system: every result is a
+suggestion the user accepts or ignores.
+
+Measured before building: ~1 in 4 merchants is found, but the ones found map
+correctly. Town validation is essential — without it "Vroom & Vroom" matched an
+arts centre in another city.
+
+Still open: whether a confirmed lookup should extend the offline lexicon in
+`merchants.js`, so the same shop is recognised without a request next time.
 
 ## 3. Projects with their own budget (cross-category)
 A "Project" (e.g. wedding, home renovation) as a cross-cutting label with its own budget target and running "€X / €Y spent" total — distinct from a regular category. Today, project-like spending (e.g. the existing "Projecten" category with "Trouw"/"Renovatie" subcategories) is just a normal category, which forces a tradeoff: either lump everything under it and lose the fact that catering money would otherwise count as food budget, or spread costs across normal categories and lose the "total project cost so far" view.
