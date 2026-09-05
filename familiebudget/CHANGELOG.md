@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.11.3] - 2026-09-05
+
+### Fixed
+- **"Nieuwe categorie" deed niets in de desktop-app.** Electron heeft geen
+  `window.prompt()` — Chromium ondersteunt het niet in een ingebedde app. De
+  knop vroeg om een naam, kreeg niets terug, en stopte er stilzwijgend mee:
+  geen venster, geen foutmelding, niets. In de browser (Home Assistant) werkte
+  hij wel, dus het viel nergens anders op.
+
+  Het waren er **vijf**, niet één: categorie toevoegen, subcategorie toevoegen,
+  categorie hernoemen, subcategorie hernoemen, en een patroon handmatig
+  toevoegen. Allemaal dood in de standalone app. Er is nu een eigen
+  invoervenster (`components/TextPrompt.jsx`) dat overal werkt — met Enter om
+  te bevestigen, Escape om te annuleren, en bij hernoemen staat de huidige naam
+  al ingevuld en geselecteerd.
+- **Een handmatig patroon vroeg vroeger om een "Categorie ID" en een "Sub
+  ID"** — interne identificatiecodes die je onmogelijk uit je hoofd kan weten.
+  Nu tik je de tekst in en kies je de categorie met dezelfde kiezer als overal
+  elders in de app.
+- **Paars vierkantje op het setupscherm.** Linksboven stond een gekleurd blokje
+  als tijdelijke plaatshouder. De hernoeming naar Squirrel heeft het logo in de
+  zijbalk vervangen maar dit vergeten, dus het allereerste scherm dat een
+  nieuwe gebruiker ziet toonde een lege paarse tegel. Nu staat de eekhoorn er.
+
 ## [1.11.2] - 2026-09-05
 
 ### Desktop-app (macOS)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Minus, ChevronLeft, ChevronRight, Check, Home, Baby, ShoppingCart, HeartPulse, UtensilsCrossed, Gamepad2, User, ShoppingBag, Landmark, Hammer, Car } from "lucide-react";
+import { Plus, Minus, ChevronLeft, ChevronRight, Check, Home, Baby, ShoppingCart, HeartPulse, UtensilsCrossed, Gamepad2, User, ShoppingBag, Landmark, Hammer, Car, Squirrel } from "lucide-react";
 
 const CAT_ICONS = {
   wonen: Home, kinderen: Baby, boodschappen: ShoppingCart, gezondheid: HeartPulse,
@@ -59,7 +59,13 @@ export default function OnboardingFlow({ settings, setSettings, cats, setCats })
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--bg)", zIndex: 500, display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px", fontFamily: "var(--font-body)", color: "var(--text)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 640 }}>
-        <div style={{ width: 24, height: 24, borderRadius: 7, background: "var(--accent)" }} />
+        {/* The logo, not a coloured box. This was a placeholder square that the
+            rename to Squirrel never reached — the rail logo was updated, this
+            was not, so the very first screen a new user sees showed a blank
+            purple tile where the app's identity should be. */}
+        <div style={{ width: 26, height: 26, borderRadius: 8, background: "var(--accent)", color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} title="Squirrel">
+          <Squirrel size={17} strokeWidth={1.9} />
+        </div>
         <div style={{ display: "flex", gap: 6 }}>
           {[0, 1, 2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: i <= step ? "var(--accent)" : "var(--border)" }} />)}
         </div>

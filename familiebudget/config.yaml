@@ -1,6 +1,6 @@
 name: "Squirrel"
 description: "Huishoudbudget"
-version: "1.11.2"
+version: "1.11.3"
 # NB: de slug blijft bewust "familiebudget". Home Assistant gebruikt hem als
 # identiteit én als pad voor de database (/addon_configs/{repo}_familiebudget).
 # Hem hernoemen maakt er een nieuwe add-on van en laat je data achter.

@@ -1,5 +1,6 @@
 import { Plus, PieChart, Pencil, Archive, ArchiveRestore, Trash2, ChevronUp, ChevronDown, Receipt, Wallet, ArrowLeftRight, Package } from "lucide-react";
 import { TYPE_ORDER } from '../utils/constants.js';
+import { useTextPrompt } from '../components/TextPrompt.jsx';
 
 const TYPE_META = {
   uitgaven: { label: "Uitgaven", icon: Receipt },
@@ -12,9 +13,13 @@ const iconBtn = { padding: "3px 6px", borderRadius: 6, border: "1px solid var(--
 const dangerBtn = { ...iconBtn, border: "1px solid var(--danger)", color: "var(--danger)" };
 
 export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetail }) {
-  const renameCat = (cat) => {
-    const n = prompt("Nieuwe naam:", cat.name);
-    if (!n || !n.trim()) return;
+  /* window.prompt() does not exist in Electron, so every one of these was a
+     dead button in the desktop app — silently, with no error. */
+  const { ask, promptEl } = useTextPrompt();
+
+  const renameCat = async (cat) => {
+    const n = await ask({ title: "Categorie hernoemen", label: "Naam", defaultValue: cat.name });
+    if (!n) return;
     setCats(p => p.map(c => c.id === cat.id ? { ...c, name: n.trim() } : c));
   };
 
@@ -32,9 +37,9 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
     setCats(p => p.filter(c => c.id !== cat.id));
   };
 
-  const renameSub = (cat, sub) => {
-    const n = prompt("Nieuwe naam:", sub.name);
-    if (!n || !n.trim()) return;
+  const renameSub = async (cat, sub) => {
+    const n = await ask({ title: "Subcategorie hernoemen", label: "Naam", defaultValue: sub.name });
+    if (!n) return;
     setCats(p => p.map(c => c.id === cat.id ? { ...c, subs: c.subs.map(s => s.id === sub.id ? { ...s, name: n.trim() } : s) } : c));
   };
 
@@ -54,9 +59,10 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
 
   return (
     <div>
+      {promptEl}
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Categorieën</h1>
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 14 }}>
-        <button onClick={() => { const n = prompt("Naam:"); if (!n) return; const id = n.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 20) + "_" + Date.now().toString(36).slice(-3); setCats(p => [...p, { id, name: n, type: "uitgaven", color: "#6B7B8D", subs: [] }]); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Plus size={12} />Nieuwe categorie</button>
+        <button onClick={async () => { const n = await ask({ title: "Nieuwe categorie", label: "Naam", placeholder: "bv. Huisdieren" }); if (!n) return; const id = n.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 20) + "_" + Date.now().toString(36).slice(-3); setCats(p => [...p, { id, name: n, type: "uitgaven", color: "#6B7B8D", subs: [] }]); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Plus size={12} />Nieuwe categorie</button>
       </div>
 
       {TYPE_ORDER.map(type => {
@@ -82,7 +88,7 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
                     <div style={{ display: "flex", gap: 3 }}>
                       {ci > 0 && <button onClick={() => setCats(p => { const a = [...p]; const idx = a.findIndex(c => c.id === cat.id); if (idx > 0) { [a[idx - 1], a[idx]] = [a[idx], a[idx - 1]]; } return a; })} style={iconBtn} title="Omhoog"><ChevronUp size={11} /></button>}
                       {ci < typeCats.length - 1 && <button onClick={() => setCats(p => { const a = [...p]; const idx = a.findIndex(c => c.id === cat.id); if (idx < a.length - 1) { [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; } return a; })} style={iconBtn} title="Omlaag"><ChevronDown size={11} /></button>}
-                      <button onClick={() => { const n = prompt("Naam subcategorie:"); if (!n || !n.trim()) return; const id = n.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 20) + "_" + Date.now().toString(36).slice(-3); const catId = cat.id; setCats(p => p.map(c => c.id === catId ? { ...c, subs: [...(c.subs || []), { id, name: n.trim(), label: "variabel", type: "variabel", necessity: "nodig", excluded: c.type === "transfers" }] } : c)); }} style={{ ...iconBtn, gap: 3, fontSize: 9, fontWeight: 600 }} title="Subcategorie toevoegen"><Plus size={10} />Sub</button>
+                      <button onClick={async () => { const n = await ask({ title: "Nieuwe subcategorie", label: "Naam", placeholder: "bv. Dierenarts" }); if (!n) return; const id = n.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 20) + "_" + Date.now().toString(36).slice(-3); const catId = cat.id; setCats(p => p.map(c => c.id === catId ? { ...c, subs: [...(c.subs || []), { id, name: n.trim(), label: "variabel", type: "variabel", necessity: "nodig", excluded: c.type === "transfers" }] } : c)); }} style={{ ...iconBtn, gap: 3, fontSize: 9, fontWeight: 600 }} title="Subcategorie toevoegen"><Plus size={10} />Sub</button>
                       <button onClick={() => setCatDetail(cat.id)} style={iconBtn} title="Details"><PieChart size={11} /></button>
                       {!isSystemCat && <>
                         <button onClick={() => renameCat(cat)} title="Hernoemen" style={iconBtn}><Pencil size={11} /></button>

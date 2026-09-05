@@ -1,19 +1,52 @@
+import { useState } from "react";
 import { X, Plus, Hourglass, User, Check, Ban, Brain, ChevronUp, ChevronDown } from "lucide-react";
+import { useTextPrompt } from '../components/TextPrompt.jsx';
+import CatPicker from '../components/CatPicker.jsx';
 
 export default function PatternsView({
   cats, rules, pending, settings, blacklist, patternSearch, pendingSort, rulesSort, filteredRulesEntries,
   patternSearchInputRef,
   setRules, setPending, setBlacklist, setToast, setPatternSearch, setPendingSort, setRulesSort,
 }) {
+  /* Adding a rule by hand used to be three window.prompt() calls in a row —
+     pattern text, then a raw "Categorie ID", then a raw "Sub ID". Those are
+     internal identifiers nobody can be expected to know, and in Electron
+     prompt() does not exist at all, so the button did nothing whatsoever.
+     Now: ask for the text, then pick the category from the same picker used
+     everywhere else in the app. */
+  const { ask, promptEl } = useTextPrompt();
+  const [manualPattern, setManualPattern] = useState(null);
+
   return (
     <div>
+      {promptEl}
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Patronen</h1>
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => { const p = prompt("Patroon (tekst):"); if (!p) return; const catId = prompt("Categorie ID:"); const subId = prompt("Sub ID:"); if (catId && subId) setRules(prev => ({ ...prev, [p.toLowerCase()]: { catId, subId } })); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><Plus size={10} />Handmatig</button>
+          <button onClick={async () => { const t = await ask({ title: "Nieuw patroon", label: "Tekst die in de tegenpartij voorkomt", placeholder: "bv. colruyt" }); if (t) setManualPattern(t.toLowerCase()); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><Plus size={10} />Handmatig</button>
           <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 10 }}>Wis alles</button>
         </div>
       </div>
+
+      {manualPattern && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--card)", border: "1px solid var(--accent)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+          <span style={{ fontSize: 11.5, color: "var(--text)" }}>
+            Kies een categorie voor <strong>&ldquo;{manualPattern}&rdquo;</strong>
+          </span>
+          <CatPicker
+            tx={{ categoryId: null, subCategoryId: null, id: "manual" }}
+            cats={cats}
+            onSelect={(catId, subId) => {
+              if (catId && subId) setRules(prev => ({ ...prev, [manualPattern]: { catId, subId } }));
+              setManualPattern(null);
+            }}
+            compact
+          />
+          <button onClick={() => setManualPattern(null)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 10, marginLeft: "auto" }}>
+            <X size={10} />Annuleer
+          </button>
+        </div>
+      )}
 
       <p style={{ fontSize: 11, opacity: 0.5, marginBottom: 12 }}>
         Patronen worden geleerd na {settings.patternThreshold || 3}× dezelfde categorie ({settings.personThreshold || 6}× voor personen). ⌘+klik of ⇧+klik forceert direct. (Totaal: {Object.keys(rules).length})
