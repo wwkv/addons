@@ -141,6 +141,14 @@ function createWindow() {
 
    Never runs unpackaged: in development there is no release to compare
    against, and electron-updater throws rather than shrugging. */
+/* The installer filename must contain no spaces, which is set via
+   nsis.artifactName in package.json rather than left at the default. Three
+   names for one file otherwise: electron-builder writes the file as
+   "Squirrel Setup 1.11.0.exe", records "Squirrel-Setup-1.11.0.exe" as the URL
+   in latest.yml, and GitHub stores a release asset with spaces turned into
+   dots. The updater then 404s on every check, silently. (The explanation lives
+   here because electron-builder validates its config block against a schema and
+   rejects any comment key you try to add to it.) */
 function checkForUpdates() {
   if (!app.isPackaged) return;
   try {

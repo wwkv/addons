@@ -52,7 +52,6 @@
       ],
       "category": "Office"
     },
-    "_artifactNameComment": "Geen spaties in de bestandsnaam: GitHub zet spaties om naar punten bij het uploaden van release-assets, terwijl electron-builder in latest.yml koppeltekens schrijft. Die twee liepen uiteen en de auto-update kreeg een 404.",
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
       "oneClick": false,
