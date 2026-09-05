@@ -20,11 +20,20 @@ jobs:
         include:
           - os: windows-latest
             platform: win
-            artifact_glob: "familiebudget/dist/*.exe"
+            # latest.yml is the auto-update feed. Without it electron-updater
+            # has nothing to compare against and updates silently never happen,
+            # so it ships alongside the installer, not instead of it.
+            artifact_glob: |
+              familiebudget/dist/*.exe
+              familiebudget/dist/*.exe.blockmap
+              familiebudget/dist/latest.yml
             artifact_label: "Windows installer (.exe)"
           - os: macos-latest
             platform: mac
-            artifact_glob: "familiebudget/dist/*.dmg"
+            artifact_glob: |
+              familiebudget/dist/*.dmg
+              familiebudget/dist/*.dmg.blockmap
+              familiebudget/dist/latest-mac.yml
             artifact_label: "macOS disk image (.dmg)"
 
     runs-on: ${{ matrix.os }}
@@ -73,19 +82,35 @@ jobs:
         working-directory: familiebudget
         run: npm run electron:build:${{ matrix.platform }}
 
-      # ── Upload installer to the GitHub release ────────────────────────────
-      - name: Upload installer to release
-        uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'
-        with:
-          files: ${{ matrix.artifact_glob }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # ── Show what was actually built ──────────────────────────────────────
+      # Every previous failure was in the upload, not the build, and with no
+      # listing there was no way to tell a missing file from a bad token.
+      - name: List build output
+        if: always()
+        shell: bash
+        run: ls -la familiebudget/dist/ || echo "geen dist/ — de build heeft niets opgeleverd"
 
-      # ── Also upload as workflow artifact for workflow_dispatch runs ───────
+      # ── Keep the artifact FIRST, before anything that can fail ────────────
+      # This is the step that matters. The 1.0.20 release built a working .exe
+      # and then threw it away because the release upload failed, leaving
+      # nothing to download. `always()` means a broken publish can no longer
+      # destroy a good build — and it is what makes hand-delivery possible.
       - name: Upload as workflow artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Squirrel-${{ matrix.platform }}
           path: ${{ matrix.artifact_glob }}
-          if-no-files-found: warn
+          if-no-files-found: error
+          retention-days: 90
+
+      # ── Attach to the GitHub release (this is also the update feed) ───────
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release' || inputs.tag != ''
+        with:
+          tag_name: ${{ inputs.tag || github.event.release.tag_name }}
+          files: ${{ matrix.artifact_glob }}
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

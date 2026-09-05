@@ -126,6 +126,87 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
+/* ─── Calendar cues (Home Assistant only) ───
+   Answers "what was on the agenda when this was paid" by reading the user's
+   own calendars through the Supervisor proxy. Nothing leaves the machine: the
+   add-on talks to Supervisor over Docker's internal network, and Home
+   Assistant — not us — owns the Google OAuth. Requires homeassistant_api in
+   config.yaml, which is what mints SUPERVISOR_TOKEN.
+
+   Outside HA (Electron desktop, local dev) there is no token and no
+   supervisor, so every route here answers 200 with `available: false` rather
+   than an error — the frontend then simply renders no cue.
+
+   NOTE: these two routes were accidentally deleted while this file was
+   rewritten for the KBO lookup, and nothing caught it — the frontend
+   .catch()es a failed lookup into an empty array, so the feature just stopped
+   appearing. Silent degradation is right for a cue that may legitimately have
+   no answer, but it also means a missing route looks exactly like a missing
+   calendar. Do not delete these without deleting the fetches in App.jsx too. */
+// HA_API_URL/HA_TOKEN override the supervisor defaults — used to point a dev
+// copy at a real Home Assistant, since there is no supervisor outside the add-on.
+const SUPERVISOR = process.env.HA_API_URL || 'http://supervisor/core/api';
+const HA_TOKEN = process.env.SUPERVISOR_TOKEN || process.env.HA_TOKEN;
+const calCache = new Map();          // key -> { at, data }
+const CAL_TTL = 15 * 60 * 1000;      // events move rarely; HA itself polls every 15m
+
+async function ha(path) {
+  const r = await fetch(`${SUPERVISOR}${path}`, {
+    headers: { Authorization: `Bearer ${HA_TOKEN}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!r.ok) throw new Error(`HA ${r.status}`);
+  return r.json();
+}
+
+app.get('/api/calendar/list', async (req, res) => {
+  if (!HA_TOKEN) return res.json({ available: false, calendars: [] });
+  try {
+    res.json({ available: true, calendars: await ha('/calendars') });
+  } catch (e) {
+    // A missing calendar component 404s here; that is "none configured",
+    // not a server fault the user should see as an error.
+    res.json({ available: false, calendars: [], reason: String(e.message || e) });
+  }
+});
+
+app.get('/api/calendar/events', async (req, res) => {
+  const { start, end, entities } = req.query;
+  if (!HA_TOKEN) return res.json({ available: false, events: [] });
+  if (!start || !end || !entities) return res.status(400).json({ error: 'start, end and entities required' });
+
+  const key = `${start}|${end}|${entities}`;
+  const hit = calCache.get(key);
+  if (hit && Date.now() - hit.at < CAL_TTL) return res.json({ available: true, cached: true, events: hit.data });
+
+  try {
+    const ids = String(entities).split(',').map(s => s.trim()).filter(Boolean).slice(0, 12);
+    const events = [];
+    for (const id of ids) {
+      if (!/^calendar\.[a-z0-9_]+$/i.test(id)) continue;   // never interpolate unvalidated input into the path
+      try {
+        const list = await ha(`/calendars/${id}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+        for (const e of Array.isArray(list) ? list : []) {
+          // Keep only what the cue needs — summary/location/times. Descriptions
+          // can be long and are none of this app's business.
+          events.push({
+            cal: id,
+            summary: e.summary || '',
+            location: e.location || '',
+            start: e.start?.dateTime || e.start?.date || null,
+            end: e.end?.dateTime || e.end?.date || null,
+            allDay: !e.start?.dateTime,
+          });
+        }
+      } catch { /* one bad calendar must not sink the rest */ }
+    }
+    calCache.set(key, { at: Date.now(), data: events });
+    res.json({ available: true, cached: false, events });
+  } catch (e) {
+    res.json({ available: false, events: [], reason: String(e.message || e) });
+  }
+});
+
 /* ─── Merchant lookup (OpenStreetMap) ───
    Answers "what kind of business is this" for a counterparty the user cannot
    place. This is the ONE route in the app that talks to the outside world, so

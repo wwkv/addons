@@ -2,6 +2,9 @@ node_modules/
 .DS_Store
 familiebudget/backend/data/
 familiebudget/frontend/dist/
+# Built desktop installers (.exe/.dmg). Large, and they belong on a GitHub
+# release, never in the repo.
+familiebudget/dist/
 familiebudget/backend/public/
 familiebudget/screenshots/
 

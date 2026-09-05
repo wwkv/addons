@@ -1,6 +1,6 @@
 {
   "name": "squirrel-desktop",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Squirrel – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,
@@ -25,17 +25,24 @@
       "!backend/data/**",
       "!backend/node_modules/**"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "wwkv",
+        "repo": "addons"
+      }
+    ],
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] }
       ],
-      "icon": "electron/assets/icon.ico"
+      "icon": "electron/assets/icon.png"
     },
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] }
       ],
-      "icon": "electron/assets/icon.icns",
+      "icon": "electron/assets/icon.png",
       "category": "public.app-category.finance"
     },
     "linux": {
@@ -54,6 +61,7 @@
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
+    "electron-updater": "^6.3.9",
     "express": "^4.21.0"
   },
   "devDependencies": {
