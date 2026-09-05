@@ -1,7 +1,7 @@
 {
   "name": "squirrel-desktop",
-  "version": "1.11.1",
-  "description": "Squirrel \u2013 persoonlijk budgetbeheer als desktop app",
+  "version": "1.11.2",
+  "description": "Squirrel – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,
   "repository": {
@@ -17,8 +17,9 @@
   "build": {
     "appId": "be.ward.familiebudget",
     "productName": "Squirrel",
-    "copyright": "Copyright \u00a9 2026",
+    "copyright": "Copyright © 2026",
     "asar": false,
+    "afterPack": "electron/afterPack.js",
     "files": [
       "electron/**/*",
       "backend/**/*",

@@ -151,6 +151,18 @@ function createWindow() {
    rejects any comment key you try to add to it.) */
 function checkForUpdates() {
   if (!app.isPackaged) return;
+
+  /* macOS is excluded on purpose. Squirrel.Mac verifies the code signature
+     before it will swap an app in place, and an ad-hoc signature (all we have
+     without a paid Developer ID) does not satisfy it. Leaving the updater on
+     would download ~100 MB on every release and then fail to install it, every
+     time, silently. Better to do nothing and say so in the README than to burn
+     someone's bandwidth on an update that can never apply. */
+  if (process.platform === 'darwin') {
+    log('auto-update overgeslagen op macOS (app is niet ondertekend met een Developer ID)');
+    return;
+  }
+
   try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = true;

@@ -1,10 +1,10 @@
-# Squirrel op Windows
+# Squirrel op Windows en macOS
 
 Squirrel draait normaal als Home Assistant add-on, maar hij werkt net zo goed
-als gewone Windows-app. Alles zit erin: de app, de database, de server. Je hebt
-geen Home Assistant nodig en er gaat niets naar het internet.
+als gewone app op Windows of macOS. Alles zit erin: de app, de database, de
+server. Je hebt geen Home Assistant nodig en er gaat niets naar het internet.
 
-## Installeren
+## Installeren op Windows
 
 1. Dubbelklik `Squirrel-Setup-<versie>.exe`.
 2. **Windows zegt "Windows heeft uw pc beveiligd".** Dat is te verwachten —
@@ -20,6 +20,43 @@ geen Home Assistant nodig en er gaat niets naar het internet.
 **De eerste start kan een halve minuut duren.** Windows scant een nieuwe,
 onondertekende app één keer helemaal. Daarna start hij in een seconde.
 
+## Installeren op een Mac
+
+Kies het juiste bestand:
+
+- **`Squirrel-<versie>-arm64.dmg`** voor een Mac met Apple Silicon (M1 t/m M4).
+- **`Squirrel-<versie>-x64.dmg`** voor een oudere Mac met Intel.
+
+Weet je het niet: appelmenu → *Over deze Mac*. Staat er "Apple M…", dan arm64.
+
+1. Open de `.dmg` en sleep **Squirrel** naar **Programma's**.
+2. **Start hem de eerste keer met rechtermuisklik → Openen** (niet met een
+   dubbelklik). Bevestig daarna met **Openen** in het venster dat verschijnt.
+
+   Dat moet omdat de app niet ondertekend is met een Apple Developer ID.
+   Dubbelklik je gewoon, dan weigert macOS zonder bruikbare knop. Via
+   rechtermuisklik → Openen krijg je die knop wél, en je hoeft dit maar één
+   keer te doen.
+
+   Lukt het zo niet, dan staat de knop in **Systeeminstellingen → Privacy en
+   beveiliging**, onderaan: *"Squirrel is geblokkeerd" → Toch openen*.
+
+Zegt macOS dat de app **beschadigd** is, dan is de download stukgelopen —
+download opnieuw. Een correct gedownloade Squirrel meldt "onbekende
+ontwikkelaar", nooit "beschadigd".
+
+### Updates op de Mac
+
+**De Mac-versie werkt zichzelf niet bij.** macOS wil een app alleen vervangen
+als die met een Apple Developer ID ondertekend is, en dat certificaat hebben we
+niet. De app doet daarom geen moeite: hij zou telkens 100 MB downloaden om die
+daarna te moeten weggooien.
+
+Nieuwe versie: download de nieuwe `.dmg` en sleep hem er weer overheen. Je
+gegevens staan los van de app en blijven gewoon staan.
+
+Op Windows werkt bijwerken wél automatisch.
+
 ## De eerste keer
 
 Je begint met een lege app en wordt door een korte setup geleid: welke
@@ -30,17 +67,26 @@ Daarna: **Importeer** rechtsboven, en kies de CSV die je bij je bank downloadt.
 
 ## Waar staan je gegevens
 
+**Windows:**
 ```
 %APPDATA%\Squirrel\data\budget.db
 ```
+Plak dat pad in de adresbalk van Verkenner om er te komen.
 
-Plak dat pad in de adresbalk van Verkenner om er te komen. Alles staat in dat
-ene bestand: transacties, categorieën, budgetten, spaarpotjes.
+**macOS:**
+```
+~/Library/Application Support/Squirrel/data/budget.db
+```
+In de Finder: *Ga → Ga naar map…* en plak het pad.
+
+Alles staat in dat ene bestand: transacties, categorieën, budgetten,
+spaarpotjes.
 
 - **Back-up**: kopieer `budget.db` ergens anders heen. Meer is het niet.
   De app maakt zelf ook dagelijks een kopie in `data\backups\`.
-- **Verhuizen naar een andere pc**: installeer Squirrel daar en zet je
-  `budget.db` op dezelfde plek terug, met de app afgesloten.
+- **Verhuizen naar een andere computer**: installeer Squirrel daar en zet je
+  `budget.db` op dezelfde plek terug, met de app afgesloten. Dat werkt ook
+  tussen Windows en Mac — het is hetzelfde bestandsformaat.
 - Of gebruik **Instellingen → Back-up** in de app zelf, dat exporteert één
   bestand dat je later weer kan inlezen.
 
@@ -49,9 +95,11 @@ synchronisatie.
 
 ## Updates
 
-De app kijkt bij het opstarten of er een nieuwe versie is, downloadt die op de
-achtergrond en installeert hem bij de volgende herstart. Je hoeft niets te doen.
-Werkt het internet even niet, dan slaat hij het stil over.
+**Op Windows** kijkt de app bij het opstarten of er een nieuwe versie is,
+downloadt die op de achtergrond en installeert hem bij de volgende herstart. Je
+hoeft niets te doen. Werkt het internet even niet, dan slaat hij het stil over.
+
+**Op macOS niet** — zie hierboven bij *Updates op de Mac*.
 
 ## Wat je niet ziet (en waarom)
 
@@ -71,7 +119,8 @@ kunnen daar gewoon niet werken:
 Er wordt bij elke start een logje weggeschreven:
 
 ```
-%APPDATA%\Squirrel\startup.log
+Windows:  %APPDATA%\Squirrel\startup.log
+macOS:    ~/Library/Application Support/Squirrel/startup.log
 ```
 
 Daar staat precies hoe ver hij kwam. Stuur dat door en het is meestal meteen
@@ -81,8 +130,8 @@ voren — dat hoort zo.
 ## Zelf bouwen
 
 De installers worden gebouwd door GitHub Actions
-(`.github/workflows/electron-build.yml`), op een echte Windows-machine, omdat
-`better-sqlite3` per platform gecompileerd moet worden.
+(`.github/workflows/electron-build.yml`), op een echte Windows- en macOS-machine,
+omdat `better-sqlite3` per platform gecompileerd moet worden.
 
 ```bash
 # lokaal, voor het platform waar je op zit

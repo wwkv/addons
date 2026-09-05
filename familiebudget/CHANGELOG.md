@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.11.2] - 2026-09-05
+
+### Desktop-app (macOS)
+- **De Mac-versie meldde zich als "beschadigd".** Dat is het ergste wat macOS
+  kan zeggen: het klinkt als een kapotte download en er is geen knop om het
+  alsnog te openen. De oorzaak was niet dat de app ongetekend is, maar dat de
+  handtekening die de linker achterliet niet klopte met de inhoud van het
+  pakket — `spctl` noemde het letterlijk *"code has no resources but signature
+  indicates they must be present"*. Dat is een geldigheidsfout, geen
+  vertrouwenskwestie.
+
+  De app wordt nu na het bouwen ad-hoc ondertekend (`electron/afterPack.js`).
+  Daarmee klopt de verzegeling, heet hij weer `be.ward.familiebudget` in plaats
+  van `Electron`, en zegt macOS het normale *"onbekende ontwikkelaar"* — met
+  rechtermuisklik → Openen kan je er wél doorheen. Dat is één keer klikken in
+  plaats van een doodlopende straat.
+- **Geen auto-update op de Mac, met opzet.** macOS vervangt een app alleen als
+  die met een Apple Developer ID ondertekend is. Zonder dat certificaat zou de
+  app bij elke nieuwe versie ~100 MB downloaden en die daarna moeten weggooien,
+  telkens opnieuw en zonder iets te zeggen. Hij probeert het nu niet meer en
+  zet één regel in het startlogje. Op Windows werkt bijwerken wél.
+- `README-desktop.md` beschrijft nu allebei de platformen: welke `.dmg` je
+  nodig hebt (Apple Silicon of Intel), hoe je er de eerste keer doorheen komt,
+  en waar je database staat op elk systeem.
+
 ## [1.11.1] - 2026-09-05
 
 ### Fixed
