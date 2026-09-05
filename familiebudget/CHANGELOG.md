@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.11.1] - 2026-09-05
+
+### Fixed
+- **De agenda-hints waren stuk, en niemand kon dat zien.** Bij het herschrijven
+  van `server.js` voor de KBO-opzoeking (commit f09309b) zijn
+  `/api/calendar/list` en `/api/calendar/events` per ongeluk verdwenen. De
+  frontend vangt een mislukte oproep netjes op met een lege lijst — precies wat
+  je wil als er écht geen agenda is, maar daardoor zag een ontbrekende route er
+  exact hetzelfde uit als een niet-ingestelde agenda. Beide routes staan er
+  weer, inclusief de controle die voorkomt dat een entiteitsnaam zomaar in het
+  Supervisor-pad terechtkomt.
+
+### Desktop-app (Windows)
+- **Er is voor het eerst écht een installer.** De Windows-build werkte al sinds
+  april, maar de upload erna niet: bij release 1.0.20 werd een werkende `.exe`
+  gebouwd en daarna weggegooid. Zowel 1.0.15 als 1.0.20 hebben nul bestanden.
+  Het artefact wordt nu als eerste bewaard en met `if: always()`, zodat een
+  mislukte publicatie nooit meer een geslaagde build vernietigt.
+- **De app werkt zichzelf bij.** Bij het opstarten wordt gekeken of er een
+  nieuwe versie is; die wordt op de achtergrond gedownload en bij de volgende
+  herstart geïnstalleerd. Mislukt de controle, dan gebeurt er stilletjes niets.
+- **Twee kopieën tegelijk kan niet meer misgaan.** Zonder slot probeerde de
+  tweede de poort te pakken, mislukte dat, en kreeg je een foutmelding. Nu
+  springt gewoon het bestaande venster naar voren.
+- **Vrije poort in plaats van vast 3001.** En belangrijker: de controle keek op
+  `127.0.0.1` terwijl de server op `0.0.0.0` luistert. Een bezette poort leek
+  daardoor vrij, waarna de app vrolijk verbond met wat er al draaide — en dus
+  díe gegevens toonde.
+- **Je gegevens staan nu in `%APPDATA%\Squirrel`**, niet in
+  `%APPDATA%\squirrel-desktop`. electron-builder neemt `productName` niet over
+  in het gepakte pakket, dus viel de naam terug op de technische projectnaam.
+- **Een echt eekhoorn-icoon op de app.** `win.icon` wees naar een `icon.ico` die
+  nooit bestaan heeft, dus alle builds tot nu toe droegen het standaard
+  Electron-logo.
+- **Een startlogje** in `%APPDATA%\Squirrel\startup.log`, met het pad ernaartoe
+  in de foutmelding. Een gepakte app heeft geen console: "hij start niet" was
+  daardoor niet te onderzoeken.
+- Installer heet nu `Squirrel-Setup-<versie>.exe` zonder spaties. Met spaties
+  had één bestand drie namen — op schijf, in `latest.yml`, en zoals GitHub het
+  opslaat — en liep de auto-update op een 404.
+- `README-desktop.md`: installeren, de SmartScreen-waarschuwing, waar je
+  database staat, en welke twee functies alleen onder Home Assistant bestaan.
+
 ## [1.11.0] - 2026-09-04
 
 ### Changed
