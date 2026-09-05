@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
-import { ChevronDown, ChevronRight, Sparkles, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles, AlertTriangle, Info } from "lucide-react";
 import { netBalanceColor } from '../utils/helpers.js';
 import { fmt0 } from '../utils/formatters.js';
 import MonthBarCell from '../components/MonthBarCell.jsx';
@@ -22,7 +22,7 @@ function rhythmMark(arr) {
   return { label: `${n}×`, title: `In ${n} van de 12 maanden` };
 }
 
-export default function BudgetTab({ cats, txs = [], mStats }) {
+export default function BudgetTab({ cats, txs = [], mStats, globalYear }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [incomeBudgets, setIncomeBudgets] = useState({});
   const [expenseBudgets, setExpenseBudgets] = useState({});
@@ -444,9 +444,17 @@ export default function BudgetTab({ cats, txs = [], mStats }) {
             <Sparkles size={12} />Opbouwen uit historiek
           </button>
         )}
+        {/* This selector is LOCAL to the budget table — you plan next year while
+            still looking at this year's figures everywhere else. But the Compare
+            tab reads budgets under the GLOBAL year in the header, so editing
+            2027 here and comparing there silently reports on 2026. Rather than
+            force the two together (which would break planning ahead), say which
+            year each one governs, and only speak up when they actually differ. */}
+        <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--muted)", fontWeight: 700 }}>Budget voor</span>
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
+          title="Welk jaar je hier bewerkt. De Vergelijk-tab gebruikt het jaar uit de kopbalk."
           style={{ padding: "4px 7px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--text)", fontSize: 10, fontWeight: 600 }}
         >
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -462,6 +470,16 @@ export default function BudgetTab({ cats, txs = [], mStats }) {
         <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--card)", border: "1px solid var(--danger)", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 11, color: "var(--text)" }}>
           <AlertTriangle size={14} style={{ color: "var(--danger)", flexShrink: 0 }} />
           Budget kon niet geladen worden. Er wordt niets opgeslagen tot dit lukt — herlaad de pagina.
+        </div>
+      )}
+
+      {globalYear && String(globalYear) !== selectedYear && (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 10.5, color: "var(--muted)", lineHeight: 1.45 }}>
+          <Info size={13} style={{ flexShrink: 0, opacity: 0.8 }} />
+          <span>
+            Je bewerkt hier het budget van <strong style={{ color: "var(--text)" }}>{selectedYear}</strong>, maar de rest van de app staat op{" "}
+            <strong style={{ color: "var(--text)" }}>{String(globalYear)}</strong>. Het tabblad Vergelijk gebruikt dat jaar uit de kopbalk — zet die ook op {selectedYear} om dit budget daar terug te zien.
+          </span>
         </div>
       )}
 

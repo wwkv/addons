@@ -3,6 +3,12 @@
 ## [1.11.3] - 2026-09-05
 
 ### Fixed
+- **Het budgettabblad heeft een eigen jaarkiezer, het tabblad Vergelijk gebruikt
+  het jaar uit de kopbalk.** Dat is met opzet — je plant volgend jaar terwijl je
+  de rest van de app op dit jaar laat staan — maar niets zei dat. Wie het budget
+  van 2027 invulde en dan ging vergelijken, kreeg zwijgend 2026 te zien. De
+  kiezer heet nu "Budget voor", en zodra de twee jaren verschillen staat er één
+  regel uitleg boven de tabel.
 - **"Nieuwe categorie" deed niets in de desktop-app.** Electron heeft geen
   `window.prompt()` — Chromium ondersteunt het niet in een ingebedde app. De
   knop vroeg om een naam, kreeg niets terug, en stopte er stilzwijgend mee:
