@@ -540,14 +540,34 @@
 .rank-row {
   display: grid;
   grid-template-columns: minmax(0, 176px) minmax(0, 1fr) 84px 11px;
+  grid-template-areas: "name bar amount chev";
   gap: 10px;
   align-items: center;
   padding: 7px 0;
   font-size: 12px;
 }
+/* With the "vs. usual" column present. A fixed 44px rather than auto: most
+   rows have no delta to show (under 10% is suppressed), and an auto column
+   would let the amounts shift left and right as you change month. */
+.rank-row--delta {
+  grid-template-columns: minmax(0, 176px) minmax(0, 1fr) 84px 44px 11px;
+  grid-template-areas: "name bar amount delta chev";
+}
 .rank-row > * { min-width: 0; }
-.rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rank-amount { text-align: right; font-size: 11.5px; }
+.rank-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar { grid-area: bar; }
+.rank-amount { grid-area: amount; text-align: right; font-size: 11.5px; }
+.rank-chev { grid-area: chev; }
+/* Muted, never red/green: those mean sign everywhere else in this app, and
+   spending more than usual on a category is not a loss. */
+.rank-delta {
+  grid-area: delta;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: 0.75;
+  white-space: nowrap;
+}
 
 /* ── Period strip ──
    One horizontally-scrolling row rather than a wrapping block: 12 months
@@ -707,15 +727,17 @@
   }
   .kpi-grid > :nth-child(3) { grid-column: 1 / -1; }
 
-  .rank-row {
+  /* Areas, not :nth-child — the row gained a fifth cell and positional
+     selectors had silently pointed at the wrong ones. */
+  .rank-row,
+  .rank-row--delta {
     grid-template-columns: minmax(0, 1fr) 78px 11px;
     grid-template-areas: "name amount chev" "bar bar bar";
     gap: 3px 8px;
   }
-  .rank-name { grid-area: name; }
-  .rank-row > :nth-child(2) { grid-area: bar; }
-  .rank-amount { grid-area: amount; }
-  .rank-row > :nth-child(4) { grid-area: chev; }
+  /* No room for it beside a 78px amount on a phone; the tooltip still has it. */
+  .rank-row--delta { grid-template-columns: minmax(0, 1fr) 78px 11px; }
+  .rank-delta { display: none; }
 }
 
 /* ── Responsive ── */

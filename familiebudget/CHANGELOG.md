@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.11.5] - 2026-09-06
+
+### Added
+- **De uitgavenlijst zegt nu ook of een bedrag normaal is.** Een ranglijst
+  vertelt je hoe gróót een post is, niet of hij ongewoon is: €1.380 aan
+  Kinderen zegt weinig als je niet weet dat het er meestal €430 zijn. Zodra je
+  op een maand (of een paar maanden) staat, komt er rechts van het bedrag een
+  pijl met een percentage — afgezet tegen de rest van hetzelfde jaar, per maand
+  herrekend zodat één maand eerlijk tegen zeven andere kan worden gehouden.
+  De tooltip geeft beide bedragen.
+
+  Op "Heel jaar" staat er niets, en dat is met opzet: de lijst ís dan het hele
+  jaar, dus er is geen rest om tegen af te zetten. Verschillen onder de 10%
+  blijven ook leeg — dat is ruis op deze schaal, en een kolom vol "+3%" leer je
+  binnen een week negeren.
+
+  De pijl is bewust grijs. Rood en groen betekenen in deze app een teken — geld
+  erin of eruit — en meer uitgeven aan Kinderen in augustus is geen verlies.
+
+### Fixed
+- **De uitgavenregels konden op een telefoon door elkaar schuiven.** De
+  mobiele opmaak wees de cellen aan op positie ("de tweede", "de vierde") in
+  plaats van op naam. Dat klopte zolang een regel precies vier cellen had; de
+  kolom hierboven maakt er vijf van, en dan wijst "de vierde" iets anders aan.
+  Nu staan de namen in de opmaak zelf, dus een extra cel kan de rest niet meer
+  verschuiven.
+
 ## [1.11.4] - 2026-09-06
 
 ### Changed

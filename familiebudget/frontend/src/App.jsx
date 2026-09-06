@@ -16,6 +16,7 @@ import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
+import { resolveDataset, compareDatasets, DATASET_KINDS } from './utils/comparison.js';
 
 /* Components */
 import ContextMenu from './components/ContextMenu.jsx';
@@ -796,6 +797,31 @@ export default function App() {
   }, [expanded, cats, year, months]);
 
   const totalExp = cats.filter(c => c.type !== "inkomsten" && catStats[c.id]).reduce((s, c) => s + catStats[c.id].total, 0);
+  /* Is this period normal for this category?
+
+     Answered with the comparison engine the Vergelijk tab already uses, not a
+     second one: the selected months held against the REST of the same year,
+     both normalised per month so August alone can be measured against the
+     other seven fairly. `comparison.js` divides by months-WITH-DATA rather
+     than calendar months, so a half-imported year does not read as a
+     collapse in spending.
+
+     Only meaningful when the page is scoped to part of a year. With no month
+     selected the ranked rows already ARE the whole year, "rest van het jaar"
+     resolves to the empty set, and every category would read as brand new. */
+  const catDelta = useMemo(() => {
+    if (!months.length || months.length >= 12) return null;
+    const ctx = { expanded, cats, isExcluded: t => isSubExcluded(cats, t.categoryId, t.subCategoryId) };
+    const base = resolveDataset({ kind: DATASET_KINDS.PERIOD_EXCEPT, year, months }, ctx);
+    if (base.total <= 0) return null;
+    const cur = resolveDataset({ kind: DATASET_KINDS.PERIOD, year, months }, ctx);
+    const cmp = compareDatasets(base, cur, { perMonth: true });
+    if (!cmp) return null;
+    const byKey = {};
+    for (const r of cmp.rows) byKey[r.key] = r;
+    return { byKey, label: base.label };
+  }, [expanded, cats, year, months]);
+
   const uncatN = useMemo(() => txs.filter(t => t.date.startsWith(year) && !t.categoryId).length, [txs, year]);
 
   /* The savings waterfall — buffer, pots, and what's left to assign. Feeds the
@@ -1210,7 +1236,7 @@ export default function App() {
         {view === "dashboard" && (
           <DashboardView
             txs={txs} expanded={expanded} year={year} months={months} cats={cats}
-            catStats={catStats} totalExp={totalExp} mStats={mStats}
+            catStats={catStats} totalExp={totalExp} mStats={mStats} catDelta={catDelta}
             fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
             setSearch={setSearch} commitments={commitments} savingsSummary={savingsSummary} bufferMultiplier={settings.bufferMultiplier || 5}

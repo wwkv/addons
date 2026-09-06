@@ -23,7 +23,7 @@ import DashSection from './DashSection.jsx';
  * extra pixels. Splitting income to force ribbons would assert a
  * source→destination attribution the data does not contain.
  */
-export default function SpendingBreakdown({ inc, exp, catStats, cats, uncategorised, savedNet = 0, onPickCategory, onShowUncategorised }) {
+export default function SpendingBreakdown({ inc, exp, catStats, cats, uncategorised, savedNet = 0, catDelta, onPickCategory, onShowUncategorised }) {
   if (inc <= 0 && exp <= 0) return null;
 
   const spent = cats
@@ -108,6 +108,31 @@ export default function SpendingBreakdown({ inc, exp, catStats, cats, uncategori
     opacity: s.faded ? 0.45 : 1,
   });
 
+  /* Per-row answer to "is this a lot?" — the ranked amount says how big, this
+     says how big COMPARED TO USUAL. Null whenever the page shows a whole year
+     (App.jsx explains why there is no baseline then), so the column simply
+     collapses rather than showing twelve blanks.
+
+     Deliberately not coloured. Red and green mean sign — money in, money out —
+     everywhere else in this app, and spending more on Kinderen than usual is
+     not a loss. So: an arrow, a percentage, muted like the amount beside it.
+
+     Under 10% is noise at this scale — one extra tank of fuel moves a category
+     by that much — and a column of "+3%" trains you to stop reading it. */
+  const deltaFor = (r) => {
+    if (!catDelta) return null;
+    if (r.key === "_other") return null;                 // a residual bucket, not a category
+    const d = catDelta.byKey[r.unknown ? "_uncat" : r.key];
+    if (!d) return null;
+    if (d.pct === null) return { text: "nieuw", title: `Niets uitgegeven in ${catDelta.label.toLowerCase()}` };
+    if (Math.abs(d.pct) < 10) return null;
+    const up = d.pct > 0;
+    return {
+      text: `${up ? "\u2191" : "\u2193"}${Math.abs(Math.round(d.pct))}%`,
+      title: `${fmt(d.b)} per maand nu, tegenover ${fmt(d.a)} in ${catDelta.label.toLowerCase()}`,
+    };
+  };
+
   const clickRow = (r) => {
     if (r.unknown) onShowUncategorised && onShowUncategorised();
     else if (catStats[r.key]) onPickCategory && onPickCategory(r.key);
@@ -173,19 +198,23 @@ export default function SpendingBreakdown({ inc, exp, catStats, cats, uncategori
             <div
               key={r.key}
               onClick={() => clickRow(r)}
-              className="rank-row"
+              className={`rank-row${catDelta ? " rank-row--delta" : ""}`}
               style={{ cursor: clickable(r) ? "pointer" : "default" }}
               title={r.hint || `${r.name} · ${fmt(r.value)}`}
             >
               <div className="rank-name" style={{ color: "var(--text)" }}>{r.name}</div>
-              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
+              <div className="rank-bar" style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
                 <div
                   className={r.unknown ? "stack-seg--unknown" : undefined}
                   style={{ width: `${Math.max(2, (r.value / rankMax) * 100)}%`, height: "100%", borderRadius: 4, background: r.unknown ? undefined : r.color }}
                 />
               </div>
               <div className="rank-amount" style={{ fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>{fmt(-r.value)}</div>
-              <ChevronRight size={11} style={{ opacity: clickable(r) ? 0.3 : 0, flexShrink: 0 }} />
+              {catDelta && (() => {
+                const d = deltaFor(r);
+                return <div className="rank-delta" title={d ? d.title : undefined}>{d ? d.text : ""}</div>;
+              })()}
+              <ChevronRight className="rank-chev" size={11} style={{ opacity: clickable(r) ? 0.3 : 0, flexShrink: 0 }} />
             </div>
           ))}
         </div>

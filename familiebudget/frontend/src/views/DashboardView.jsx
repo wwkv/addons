@@ -9,7 +9,7 @@ import CommittedCosts from '../components/CommittedCosts.jsx';
 import GoalsCard from '../components/GoalsCard.jsx';
 import SpendingBreakdown from '../components/SpendingBreakdown.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary, bufferMultiplier }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, catDelta, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary, bufferMultiplier }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -108,6 +108,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
       </div>
 
       <SpendingBreakdown
+        catDelta={catDelta}
         inc={inc} exp={exp} catStats={catStats} cats={cats}
         uncategorised={cov.unknown} savedNet={savedNet}
         onPickCategory={setCatDetail} onShowUncategorised={showUncategorised}
