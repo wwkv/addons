@@ -1565,6 +1565,21 @@ export default function App() {
 
               </div>
 
+              {/* Which build is actually running?
+
+                  Home Assistant gives no confirmation that an add-on update
+                  was picked up — if its repository cache is stale it simply
+                  keeps serving the old build, with the new version number
+                  showing in the store. From inside the app there was no way
+                  to tell the two apart. Sits under the tab content rather
+                  than inside the Data tab, so it is one click from anywhere
+                  in Settings. */}
+              <div style={{ maxWidth: 520, marginTop: 24, paddingTop: 14, borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--muted)" }}>
+                <Squirrel size={13} style={{ opacity: 0.55, flexShrink: 0 }} />
+                <span>Squirrel</span>
+                <span style={{ fontFamily: "var(--font-mono)", userSelect: "text" }}>{__APP_VERSION__ ? `v${__APP_VERSION__}` : "versie onbekend"}</span>
+              </div>
+
             </div>
           </div>
         )}

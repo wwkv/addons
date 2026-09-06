@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.11.6] - 2026-09-06
+
+### Added
+- **Onderaan Instellingen staat nu welke versie je draait.** Home Assistant
+  bevestigt na een update niet dat de nieuwe versie ook echt geladen is — als
+  de repository-cache verouderd is blijft het gewoon de oude build serveren,
+  terwijl de winkel het nieuwe nummer toont. Van binnenuit was er geen enkele
+  manier om die twee uit elkaar te houden. Nu wel. Het staat onder de tabbladen
+  in plaats van ín het tabblad Data, dus je vindt het vanaf elke plek in
+  Instellingen.
+
 ## [1.11.5] - 2026-09-06
 
 ### Added

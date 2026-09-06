@@ -15,6 +15,12 @@ WORKDIR /app
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install --omit=dev
 
+# The add-on manifest, for the version number Settings displays. Must land
+# BEFORE the frontend build: vite.config.js reads ../package.json while
+# resolving its config, so without this the build fails in the image while
+# still succeeding on a dev machine, where the file is simply there.
+COPY package.json ./
+
 # Frontend dependencies + build
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
