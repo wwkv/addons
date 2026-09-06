@@ -1,6 +1,6 @@
 {
   "name": "squirrel-desktop",
-  "version": "1.11.3",
+  "version": "1.11.4",
   "description": "Squirrel – persoonlijk budgetbeheer als desktop app",
   "main": "electron/main.js",
   "private": true,

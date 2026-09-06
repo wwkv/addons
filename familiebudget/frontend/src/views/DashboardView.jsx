@@ -3,14 +3,13 @@ import { fmt, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
 import MonthSelector from '../components/MonthSelector.jsx';
 import NetTrendChart from '../components/NetTrendChart.jsx';
-import DashSection from '../components/DashSection.jsx';
 import { periodTotals, coverage } from '../utils/totals.js';
-import CoverageCard, { CoverageNote } from '../components/CoverageCard.jsx';
+import CoverageCard from '../components/CoverageCard.jsx';
 import CommittedCosts from '../components/CommittedCosts.jsx';
 import GoalsCard from '../components/GoalsCard.jsx';
-import FlowBars from '../components/FlowBars.jsx';
+import SpendingBreakdown from '../components/SpendingBreakdown.jsx';
 
-export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, uncatN, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary, bufferMultiplier }) {
+export default function DashboardView({ txs, expanded, year, months, cats, catStats, totalExp, mStats, fRef, setFCats, setView, setMonths, setCatDetail, setSearch, commitments, savingsSummary, bufferMultiplier }) {
   const monthLabel = months.length === 1 ? mN(months[0]) : months.length > 1 ? `${months.length} maanden` : null;
 
   if (txs.length === 0) return (
@@ -58,13 +57,6 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
       if (prevNet !== 0) trend = { up: curNet >= prevNet, pct: Math.round(Math.abs((curNet - prevNet) / Math.abs(prevNet)) * 100) };
     }
   }
-
-  /* ── Ranked expense list ── */
-  const ranked = cats
-    .filter(c => c.type !== "inkomsten" && catStats[c.id] && catStats[c.id].total > 0)
-    .map(c => ({ cat: c, total: catStats[c.id].total }))
-    .sort((a, b) => b.total - a.total);
-  const rankMax = ranked.length ? ranked[0].total : 1;
 
   return (
     <>
@@ -115,7 +107,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         </div>
       </div>
 
-      <FlowBars
+      <SpendingBreakdown
         inc={inc} exp={exp} catStats={catStats} cats={cats}
         uncategorised={cov.unknown} savedNet={savedNet}
         onPickCategory={setCatDetail} onShowUncategorised={showUncategorised}
@@ -133,22 +125,6 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
         />
         <GoalsCard savingsSummary={savingsSummary} onOpen={() => setView("savings")} />
       </div>
-
-      <DashSection title="Grootste uitgaven" sub={<CoverageNote coverage={cov} />}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {ranked.map(({ cat, total }) => (
-            <div key={cat.id} onClick={() => setCatDetail(cat.id)} className="rank-row" style={{ cursor: "pointer" }}>
-              <div className="rank-name" style={{ color: "var(--text)" }} title={cat.name}>{cat.name}</div>
-              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg)", overflow: "hidden" }}>
-                <div style={{ width: `${Math.max(2, (total / rankMax) * 100)}%`, height: "100%", borderRadius: 4, background: cat.color }} />
-              </div>
-              <div className="rank-amount" style={{ fontFamily: "'DM Mono',monospace", color: "var(--muted)" }}>{fmt(-total)}</div>
-              <ChevronRight size={11} style={{ opacity: 0.3, flexShrink: 0 }} />
-            </div>
-          ))}
-          {ranked.length === 0 && <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 12 }}>Geen uitgaven in deze periode</div>}
-        </div>
-      </DashSection>
 
       <CoverageCard coverage={cov} onShowUncategorised={showUncategorised} />
     </>

@@ -1211,7 +1211,7 @@ export default function App() {
           <DashboardView
             txs={txs} expanded={expanded} year={year} months={months} cats={cats}
             catStats={catStats} totalExp={totalExp} mStats={mStats}
-            uncatN={uncatN} fRef={fRef}
+            fRef={fRef}
             setFCats={setFCats} setView={setView} setMonths={setMonths} setCatDetail={setCatDetail}
             setSearch={setSearch} commitments={commitments} savingsSummary={savingsSummary} bufferMultiplier={settings.bufferMultiplier || 5}
           />

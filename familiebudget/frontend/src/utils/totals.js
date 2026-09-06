@@ -52,27 +52,3 @@ export function coverage(catStats, totalExp) {
     pct: total > 0 ? (known / total) * 100 : null,
   };
 }
-
-/**
- * Spending split by the two subcategory tags.
- *
- * Three buckets, not a 2×2: `normalizeSub` derives both axes from one seed
- * `label`, so "vast AND luxe" is unreachable in default data and a quadrant
- * would show a permanently empty cell that looks like a bug.
- */
-export function byTypeNecessity(expanded, cats, year, months) {
-  const scoped = scopeTo(expanded, year, months);
-  const out = { vastNodig: 0, variabelNodig: 0, luxe: 0, unknown: 0 };
-  for (const t of scoped) {
-    if (!isSpendingTx(cats, t)) continue;
-    const amt = Math.abs(t.amount);
-    const cat = cats.find(c => c.id === t.categoryId);
-    const sub = cat ? (cat.subs || []).find(s => s.id === t.subCategoryId) : null;
-    if (!cat || !sub) { out.unknown += amt; continue; }
-    if ((sub.necessity || "nodig") === "luxe") out.luxe += amt;
-    else if ((sub.type || "variabel") === "vast") out.vastNodig += amt;
-    else out.variabelNodig += amt;
-  }
-  const known = out.vastNodig + out.variabelNodig + out.luxe;
-  return { ...out, known, total: known + out.unknown };
-}

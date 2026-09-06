@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.11.4] - 2026-09-06
+
+### Changed
+- **"Waar ging je geld heen" en "Grootste uitgaven" zijn één kaart geworden.**
+  Ze stonden een half scherm uit elkaar en vertelden hetzelfde verhaal twee
+  keer: de legende onder de balken was de ranglijst, alleen dan zonder
+  rangschikking. Dezelfde namen, dezelfde bedragen, dezelfde kleuren — en de
+  ranglijst kon je bovendien aanklikken. De legende is dus verdwenen en de
+  ranglijst staat nu direct onder de balken, in dezelfde kaart.
+
+  De balken bleven omdat ze iets doen wat een lijst niet kan: ze staan allebei
+  op dezelfde schaal, dus een maand waarin je meer uitgaf dan er binnenkwam
+  tekent zichtbaar langer aan de onderkant. Dat is een vraag over in-versus-uit
+  die je uit een ranglijst nooit kan aflezen.
+
+- **De ranglijst laat nu al je uitgaven zien, niet alleen de ingedeelde.**
+  "Nog niet ingedeeld" staat er als eigen regel tussen, op zijn plek in de
+  rangschikking — bij een lage dekkingsgraad is dat vaak een van de grootste
+  posten, en die zag je eerder alleen als voetnoot. Er is ook een regel
+  "Overig" voor uitgaven die onder een inkomsten-categorie of een verwijderde
+  categorie staan. De regels tellen daardoor precies op tot het bedrag dat
+  bovenaan bij Uitgaven staat.
+
 ## [1.11.3] - 2026-09-05
 
 ### Fixed
