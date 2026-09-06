@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.7] - 2026-09-06
+
+### Fixed
+- **"Bezoek de Squirrel-pagina voor meer info" gaf een 404.** De link wees naar
+  `github.com/wwkv/addons/familiebudget`, en dat pad bestaat niet: GitHub heeft
+  geen route van repository rechtstreeks naar een map, daar hoort
+  `/tree/<branch>/` tussen. Nu komt de link uit bij de map zelf.
+
 ## [1.11.6] - 2026-09-06
 
 ### Added
