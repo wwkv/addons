@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.12.0] - 2026-10-03
+
+### Changed
+- **Patronen kennen nu één winkel in plaats van tien spellingen.** De bank
+  levert dezelfde winkel elke keer anders aan: `COLRUYT 1234     HALLE`,
+  `COLRUYT 0567     NINOVE`, `Colruyt`, `ZETTLE_*BROODJESZAAK DEN HOEK`. De
+  patronendatabank nam die naam tot nu toe rúw over — afgekapt op 30 tekens,
+  zonder opschoning — en zag dus drie onbekenden waar jij één winkel ziet.
+
+  Daardoor kon de databank drie dingen niet die je wél van haar verwacht: ze
+  kon spellingen niet samenvoegen, ze kon per winkel nooit genoeg bewijs
+  verzamelen om haar eigen drempel te halen (twee keer twee is nooit vier), en
+  ze kon een nieuw filiaal van een winkel die ze al kende niet herkennen.
+
+  Alle patronen gaan nu door dezelfde opschoning die de app elders al jaren
+  gebruikt voor vaste kosten en spaaranalyse — betaalterminal-voorvoegsels,
+  filiaalnummers, rechtsvormen en aangeplakte gemeentenamen eruit. Je bestaande
+  patronen worden één keer automatisch omgezet; spellingen van dezelfde winkel
+  smelten daarbij samen en hun tellers worden opgeteld. Spreken twee patronen
+  elkaar tegen, dan wint het patroon met de meeste transacties achter zich.
+
+### Fixed
+- **Betalingen via Zettle bleven een aparte winkel.** De opschoning kende
+  `ZETTLE *NAAM` maar niet `ZETTLE_*NAAM` met een liggend streepje, wat de
+  vorm is die effectief op het rekeninguittreksel staat. Dezelfde broodjeszaak
+  stond daardoor twee keer in je lijst, afhankelijk van hoe er betaald werd.
+
 ## [1.11.8] - 2026-10-03
 
 ### Fixed

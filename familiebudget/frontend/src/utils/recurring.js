@@ -41,8 +41,8 @@ export function detectCommitments(txs, cats, { year, notRecurring = [] } = {}) {
   // Group every outgoing payment by cleaned merchant key. parseCounterparty
   // strips PSP prefixes, store numbers and padded towns, which is what
   // collapses "BOLT ENERGIE ANTWERPEN" and "Bolt Energie" into one payee.
-  // (The learned-rules map keys off a raw slice(0,30) instead — reusing that
-  // here would split the same merchant across two keys.)
+  // (The learned-rules map keyed off a raw slice(0,30) until 1.12.0, which
+  // split the same merchant across two keys; it now shares merchantKey().)
   const groups = new Map();
   for (const t of txs) {
     if (t.amount >= 0) continue;

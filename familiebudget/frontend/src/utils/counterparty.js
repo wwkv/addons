@@ -25,7 +25,7 @@
 /* Payment-terminal and PSP prefixes. Whitespace around the star varies
    ("CCV*LINTS", "SumUp  *Snackbar", "Mollie *KOFFIELAND"), so this has to run
    before whitespace collapsing or the merchant name is what gets thrown away. */
-const PSP_PREFIX = /^(CCV|BCK|NYA|PAY|INT|ZTL|IZ|SUMUP|SumUp|MOLLIE|Mollie|ZETTLE|STRIPE|ADYEN|PAYCONIQ|PAYPAL)\s*\*\s*/i;
+const PSP_PREFIX = /^(CCV|BCK|NYA|PAY|INT|ZTL|IZ|SUMUP|SumUp|MOLLIE|Mollie|ZETTLE|STRIPE|ADYEN|PAYCONIQ|PAYPAL)[\s_-]*\*\s*/i;
 
 /* A bare "SP " prefix is the same idea without the star — the bank writes
    "SP IN DEN OLIFANT BV", "SP BRAUZZ. BV", "SP FRNCH POP-UP". Left in place it
@@ -63,6 +63,30 @@ const DMY = /\b(\d{2})-(\d{2})-(\d{4})\b/;
 
 const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 const DAYS_SHORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+
+/**
+ * The canonical identity of a merchant — the key everything should group by.
+ *
+ * One merchant arrives under many spellings: "COLRUYT 1234      HALLE",
+ * "COLRUYT 0567 NINOVE", "Colruyt". parseCounterparty already strips the
+ * parts that vary (payment-processor prefixes, branch numbers, padded towns,
+ * legal suffixes), so its `key` is the stable core — the thing a human would
+ * call "the shop".
+ *
+ * Savings, recurring-cost detection and rhythm analysis have always grouped on
+ * this. The learned-pattern map did not: it keyed on
+ * `counterparty.trim().toLowerCase().slice(0, 30)`, a raw truncation, so every
+ * branch of a chain became its own unrelated pattern. That is why the pattern
+ * database could not group aliases, could not pool enough evidence to pass its
+ * own threshold, and could not recognise a new branch of a shop it already
+ * knew. This is now the single definition, used by all of them.
+ */
+export function merchantKey(raw) {
+  const k = parseCounterparty(raw).key;
+  // Never return "" — an empty key would collide every unnamed counterparty
+  // into one pattern and auto-categorise them as each other.
+  return k || String(raw || "").trim().toLowerCase();
+}
 
 /**
  * Split a raw counterparty into its useful parts.

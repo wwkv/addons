@@ -6,7 +6,8 @@ import { List, Clock, X, ChevronDown, ChevronUp, ChevronRight, Settings, Bot, Br
 import { DEFAULT_CATEGORIES, CALENDAR_MONTH_KEYS } from './utils/constants.js';
 import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/rules.js';
 import { BRANDS, TRADES } from './utils/merchants.js';
-import { parseCounterparty, parseEvidence } from './utils/counterparty.js';
+import { parseCounterparty, parseEvidence, merchantKey } from './utils/counterparty.js';
+import { migratePatternKeys } from './utils/patternKeys.js';
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { knownCards } from './utils/cards.js';
@@ -141,8 +142,22 @@ export default function App() {
             const loadedCats = normalizeCats(p.cats);
             setCats(seedSavingsExclusion ? applyDefaultSavingsExclusion(loadedCats) : loadedCats);
           }
-          if (p.rules) setRules(p.rules);
-          if (p.pending) setPending(p.pending);
+          /* Pattern keys moved from a raw slice(0,30) to merchantKey(). Rekey
+             once, or every pattern the user has taught the app stops matching
+             — silently, because an unmatched rule is indistinguishable from a
+             rule that was never there. Flagged in settings so it cannot run
+             twice and re-collapse keys that have since diverged again. */
+          if (p.settings?.patternKeysCanonical === true) {
+            if (p.rules) setRules(p.rules);
+            if (p.pending) setPending(p.pending);
+          } else {
+            const m = migratePatternKeys({ rules: p.rules || {}, pending: p.pending || {}, txs: p.txs || [] });
+            setRules(m.rules);
+            setPending(m.pending);
+            if (m.stats.rulesBefore !== m.stats.rulesAfter || m.stats.pendingBefore !== m.stats.pendingAfter) {
+              console.log('[patronen] samengevoegd:', m.stats);
+            }
+          }
           if (p.blacklist) setBlacklist(p.blacklist);
           if (p.savings) setSavings(normalizeSavings(p.savings));
         }
@@ -151,7 +166,7 @@ export default function App() {
         // records that seeding is done — without it the flag was never
         // written on a new install and the next load re-seeded over the
         // user's first edit.
-        setSettings(s => ({ ...s, ...(p?.settings || {}), savingsExclusionApplied: true }));
+        setSettings(s => ({ ...s, ...(p?.settings || {}), savingsExclusionApplied: true, patternKeysCanonical: true }));
         setLoaded(true);
       } catch (e) {
         // Deliberately leave `loaded` false: that is what gates the debounced
@@ -439,7 +454,7 @@ export default function App() {
 
   const applyRuleToMatching = useCallback((patternKey, catId, subId) => {
     setTxs(prev => prev.map(t => {
-      const key = t.counterparty.trim().toLowerCase().slice(0, 30);
+      const key = merchantKey(t.counterparty);
       if (key === patternKey && !t.categoryId && !(t.splits?.length > 1)) return { ...t, categoryId: catId, subCategoryId: subId };
       return t;
     }));
@@ -453,7 +468,7 @@ export default function App() {
     const person = isPerson(tx.counterparty);
     const multi = MULTI.some(p => p.test(cp));
     if (multi && !force) return; // Don't auto-learn multi-vendors
-    const k = tx.counterparty.trim().toLowerCase().slice(0, 30);
+    const k = merchantKey(tx.counterparty);
     if (k.length <= 2) return;
     const needed = person ? personThreshold : patThreshold;
 
@@ -609,10 +624,10 @@ export default function App() {
       if (!prev) return prev;
       const tx = prev.find(t => t.id === txId);
       if (!tx) return prev;
-      const cpK = tx.counterparty.trim().toLowerCase().slice(0, 30);
+      const cpK = merchantKey(tx.counterparty);
       return prev.map(t => {
         if (t.id === txId) return { ...t, categoryId: catId, subCategoryId: subId, _v: "manual" };
-        if (!t.categoryId && !t._d && t.counterparty.trim().toLowerCase().slice(0, 30) === cpK) return { ...t, categoryId: catId, subCategoryId: subId, _v: "auto_sibling" };
+        if (!t.categoryId && !t._d && merchantKey(t.counterparty) === cpK) return { ...t, categoryId: catId, subCategoryId: subId, _v: "auto_sibling" };
         return t;
       });
     });
@@ -669,7 +684,7 @@ export default function App() {
     const selected = txs.filter(t => targetIds.includes(t.id));
     const byKey = {};
     for (const tx of selected) {
-      const k = tx.counterparty.trim().toLowerCase().slice(0, 30);
+      const k = merchantKey(tx.counterparty);
       if (k.length <= 2) continue;
       if (!byKey[k]) byKey[k] = { tx, count: 0 };
       byKey[k].count++;
@@ -1026,7 +1041,7 @@ export default function App() {
               const cp = contextMenu.tx.counterparty.trim();
               if (!blacklist.some(b => b.trim().toLowerCase() === cp.toLowerCase())) {
                 setBlacklist(p => [...p, cp]);
-                const k = cp.toLowerCase().slice(0, 30);
+                const k = merchantKey(cp);
                 setRules(r => { const n = { ...r }; delete n[k]; return n; });
                 setPending(p => { const n = { ...p }; delete n[k]; return n; });
                 setToast(`"${cp}" aan blacklist toegevoegd`);
