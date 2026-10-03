@@ -21,7 +21,7 @@ import { merchantKey } from './counterparty.js';
    decision, and the rule backed by more transactions wins; ties keep whichever
    was seen first, so the result does not depend on object key order.
 */
-export function migratePatternKeys({ rules, pending, txs }) {
+export function migratePatternKeys({ rules, pending, txs, patThreshold = 3, personThreshold = 6 }) {
   const oldToNew = new Map();
   const weight = new Map();            // old key -> transactions carrying it
   for (const t of txs || []) {
@@ -55,15 +55,38 @@ export function migratePatternKeys({ rules, pending, txs }) {
   /* Pending counts SUM. Two spellings each seen twice are one merchant seen
      four times — which is the whole reason this merchant never reached the
      auto-categorise threshold before. */
-  const nextPending = {};
+  const merged = {};
   for (const [oldKey, entry] of Object.entries(pending || {})) {
     if (!entry) continue;
     const k = newKeyFor(oldKey);
-    const sitting = nextPending[k];
-    if (!sitting) { nextPending[k] = { ...entry }; continue; }
+    const sitting = merged[k];
+    if (!sitting) { merged[k] = { ...entry }; continue; }
     const a = Number(sitting.count) || 0;
     const b = Number(entry.count) || 0;
-    nextPending[k] = { ...(b > a ? entry : sitting), count: a + b };
+    merged[k] = { ...(b > a ? entry : sitting), count: a + b };
+  }
+
+  /* …and summing them has to be allowed to finish the job. A merchant whose
+     spellings now add up to the threshold has met it — that is the entire
+     point of merging the counts, and leaving it in "In afwachting" with 6/3
+     would be the old bug wearing a new number. Nothing else promotes a
+     pending entry: learnRule only runs when you categorise something, so
+     without this the entry would wait for a transaction that may not come
+     for a month.
+
+     A rule already present for the same merchant wins; it is a decision the
+     user has already made, and a pending count must not overwrite it. */
+  const nextPending = {};
+  const promoted = [];
+  for (const [k, entry] of Object.entries(merged)) {
+    const needed = entry.person ? personThreshold : patThreshold;
+    const count = Number(entry.count) || 0;
+    if (count >= needed && entry.catId && entry.subId && !nextRules[k]) {
+      nextRules[k] = { catId: entry.catId, subId: entry.subId };
+      promoted.push({ key: k, count, needed });
+    } else {
+      nextPending[k] = entry;
+    }
   }
 
   return {
@@ -75,6 +98,7 @@ export function migratePatternKeys({ rules, pending, txs }) {
       pendingBefore: Object.keys(pending || {}).length,
       pendingAfter: Object.keys(nextPending).length,
       collisions,
+      promoted,
     },
   };
 }

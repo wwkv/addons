@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.13.2] - 2026-10-03
+
+### Fixed
+- **Winkels als Colruyt bleven hangen in "In afwachting" in plaats van een
+  patroon te worden.** De samenvoeging van 1.12.0 telde de tellers van alle
+  schrijfwijzen bij elkaar op — twee keer twee werd eindelijk vier — maar deed
+  er vervolgens niets mee. Een winkel kon zo op 6/3 blijven staan: ruim over de
+  drempel, en toch geen patroon. Dat moest wachten tot je toevallig nog eens
+  een transactie van die winkel indeelde, want dát is het enige moment waarop
+  de app een wachtende teller tegen de drempel houdt.
+
+  Precies de winkels waar je het vaakst komt werden hierdoor getroffen: die
+  hebben de meeste schrijfwijzen, dus bij hen viel het samentellen het meest
+  op — en bij hen bleef het dus ook het langst liggen.
+
+  De samenvoeging maakt er nu meteen een patroon van zodra de opgetelde teller
+  de drempel haalt. Een patroon dat je zelf al ingesteld had blijft staan: dat
+  is een keuze die jij gemaakt hebt, en een wachtende teller mag die niet
+  overschrijven.
+
+  Had je 1.12.0 of later al gedraaid, dan is de omzetting toen al gebeurd en
+  zou deze aanvulling je niet meer bereiken. De omzetting houdt daarom nu bij
+  wélke versie gedraaid heeft in plaats van alleen dát ze gedraaid heeft, en
+  loopt bij jou dus nog één keer om het af te maken. Opnieuw draaien kan geen
+  kwaad: de winkelnaam van een al omgezette sleutel verandert niet meer.
+
 ## [1.13.1] - 2026-10-03
 
 ### Fixed

@@ -9,6 +9,11 @@ import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence, merchantKey } from './utils/counterparty.js';
 import { migratePatternKeys } from './utils/patternKeys.js';
 import { buildPredictor } from './utils/predict.js';
+
+/* Bump when migratePatternKeys gains a step existing installs must also get.
+   v1: raw slice(0,30) keys → merchantKey.
+   v2: promote merged pending entries that now meet their threshold. */
+const PATTERN_KEY_VERSION = 2;
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { knownCards } from './utils/cards.js';
@@ -142,19 +147,31 @@ export default function App() {
             const loadedCats = normalizeCats(p.cats);
             setCats(seedSavingsExclusion ? applyDefaultSavingsExclusion(loadedCats) : loadedCats);
           }
-          /* Pattern keys moved from a raw slice(0,30) to merchantKey(). Rekey
-             once, or every pattern the user has taught the app stops matching
-             — silently, because an unmatched rule is indistinguishable from a
-             rule that was never there. Flagged in settings so it cannot run
-             twice and re-collapse keys that have since diverged again. */
-          if (p.settings?.patternKeysCanonical === true) {
+          /* Pattern keys moved from a raw slice(0,30) to merchantKey(). Rekey,
+             or every pattern the user has taught the app stops matching —
+             silently, because an unmatched rule is indistinguishable from a
+             rule that was never there.
+
+             VERSIONED, not a boolean. Version 1 merged the keys but left a
+             merged pending entry sitting at 6/3: summing the counts is only
+             half the job, and nothing else promotes a pending entry — learnRule
+             runs when you categorise something, which might not happen for a
+             month. Users who already ran v1 need v2 to finish it, so the gate
+             has to be able to say "ran, but an older version". Re-running is
+             safe: merchantKey is idempotent, so re-keying already-canonical
+             rules is a no-op. */
+          if (Number(p.settings?.patternKeysVersion || 0) >= PATTERN_KEY_VERSION) {
             if (p.rules) setRules(p.rules);
             if (p.pending) setPending(p.pending);
           } else {
-            const m = migratePatternKeys({ rules: p.rules || {}, pending: p.pending || {}, txs: p.txs || [] });
+            const m = migratePatternKeys({
+              rules: p.rules || {}, pending: p.pending || {}, txs: p.txs || [],
+              patThreshold: p.settings?.patternThreshold || 3,
+              personThreshold: p.settings?.personThreshold || 6,
+            });
             setRules(m.rules);
             setPending(m.pending);
-            if (m.stats.rulesBefore !== m.stats.rulesAfter || m.stats.pendingBefore !== m.stats.pendingAfter) {
+            if (m.stats.rulesBefore !== m.stats.rulesAfter || m.stats.promoted.length) {
               console.log('[patronen] samengevoegd:', m.stats);
             }
           }
@@ -166,7 +183,7 @@ export default function App() {
         // records that seeding is done — without it the flag was never
         // written on a new install and the next load re-seeded over the
         // user's first edit.
-        setSettings(s => ({ ...s, ...(p?.settings || {}), savingsExclusionApplied: true, patternKeysCanonical: true }));
+        setSettings(s => ({ ...s, ...(p?.settings || {}), savingsExclusionApplied: true, patternKeysVersion: PATTERN_KEY_VERSION }));
         setLoaded(true);
       } catch (e) {
         // Deliberately leave `loaded` false: that is what gates the debounced
