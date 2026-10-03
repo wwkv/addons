@@ -21,6 +21,30 @@ export function isSpendingTx(cats, t) {
   return t.amount < 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId);
 }
 
+/* Money coming BACK into a spending category: a colleague's half of the
+   lunch, a refunded order, a returned deposit. Nothing was earned, so
+   treating it as income got the ledger wrong twice at once — income rose by
+   the repayment AND the lunch still showed its full gross cost, when the
+   household had only ever been out the difference. Netting it against its own
+   category makes both sides right.
+
+   An UNCATEGORISED positive stays income. With no category there is nothing
+   to net against, and guessing would quietly move salary out of income —
+   which is how most positives with no category arrive. */
+export function isRepayment(cats, t) {
+  if (!(t.amount > 0)) return false;
+  if (isSubExcluded(cats, t.categoryId, t.subCategoryId)) return false;
+  const c = (cats || []).find(x => x.id === t.categoryId);
+  return !!c && c.type !== "inkomsten";
+}
+
+/* Signed contribution to spending: positive for an expense, negative for a
+   repayment, zero for anything that is not spending at all. Callers sum this
+   rather than Math.abs(), which is what let the two directions cancel. */
+export function spendingAmount(cats, t) {
+  return (isSpendingTx(cats, t) || isRepayment(cats, t)) ? -t.amount : 0;
+}
+
 /* Money moved to savings or investments has not been spent — it is still
    yours, just somewhere else — so transfer subcategories start out on the
    exclusion list. This is a DEFAULT, not a rule: it writes the same

@@ -2,6 +2,7 @@ import { useMemo, useEffect } from "react";
 import { X } from "lucide-react";
 import { fmt, fD, mN } from '../utils/formatters.js';
 import { CALENDAR_MONTH_KEYS } from '../utils/constants.js';
+import { spendingAmount, netBalanceColor } from '../utils/helpers.js';
 import Pie from '../components/Pie.jsx';
 
 export default function CatDetailModal({ catId, cats, catStats, totalExp, expanded, year, months, onClose }) {
@@ -18,7 +19,10 @@ export default function CatDetailModal({ catId, cats, catStats, totalExp, expand
   // Excluded subs are absent from `stat`, so listing their transactions here
   // made the table sum higher than the total and the pie above it.
   const excludedSubs = new Set((cat.subs || []).filter(s => s.excluded).map(s => s.id));
-  let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && t.amount < 0 && !excludedSubs.has(t.subCategoryId));
+  /* Repayments belong in this list. Filtering `t.amount < 0` hid them, so the
+     rows could not be reconciled with the total above: the lunch appeared at
+     its gross cost with no sign of the half that came back. */
+  let catTxs = expanded.filter(t => t.date.startsWith(year) && t.categoryId === cat.id && spendingAmount(cats, t) !== 0 && !excludedSubs.has(t.subCategoryId));
   if (months.length) catTxs = catTxs.filter(t => months.includes(t.date.slice(5, 7)));
   catTxs.sort((a, b) => b.date.localeCompare(a.date));
   return (
@@ -41,7 +45,7 @@ export default function CatDetailModal({ catId, cats, catStats, totalExp, expand
               const sub = cat.subs.find(s => s.id === tx.subCategoryId);
               return (<tr key={i} style={{ borderBottom: "1px solid var(--bg)" }}>
                 <td style={{ padding: "3px 5px", fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--text)" }}>{fD(tx.date)}</td>
-                <td style={{ padding: "3px 5px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 9, color: "var(--red)" }}>{fmt(tx.amount)}</td>
+                <td style={{ padding: "3px 5px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 9, color: netBalanceColor(tx.amount) }}>{fmt(tx.amount)}</td>
                 <td style={{ padding: "3px 5px", color: "var(--text)" }}>{tx.counterparty}</td>
                 <td style={{ padding: "3px 5px", fontSize: 9, opacity: 0.5, color: "var(--text)" }}>{sub ? sub.name : ""}</td>
               </tr>);

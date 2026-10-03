@@ -21,7 +21,7 @@ export default function DashboardView({ txs, expanded, year, months, cats, catSt
     </div>
   );
 
-  /* Headline totals. Complete — isSpendingTx has no category test, so these
+  /* Headline totals. Complete — spendingAmount has no category test, so these
      include uncategorised money. See utils/totals.js. */
   const { inc, exp, net, spaarquote, monthsWithData } = periodTotals(expanded, cats, year, months);
   /* The monthly baseline is a whole-year average (the buffer is a yearly

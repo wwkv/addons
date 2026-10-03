@@ -12,10 +12,10 @@ const TYPE_META = {
 const iconBtn = { padding: "3px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", display: "inline-flex", alignItems: "center" };
 const dangerBtn = { ...iconBtn, border: "1px solid var(--danger)", color: "var(--danger)" };
 
-export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetail }) {
-  /* window.prompt() does not exist in Electron, so every one of these was a
-     dead button in the desktop app — silently, with no error. */
-  const { ask, promptEl } = useTextPrompt();
+export default function CategoriesView({ cats, txs, setCats, setTxs, setRules, setCatDetail }) {
+  /* window.prompt() does not exist in Electron, and window.confirm() can hang
+     the page behind a dialog the browser never shows — see TextPrompt.jsx. */
+  const { ask, confirm, promptEl } = useTextPrompt();
 
   const renameCat = async (cat) => {
     const n = await ask({ title: "Categorie hernoemen", label: "Naam", defaultValue: cat.name });
@@ -27,12 +27,12 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
     setCats(p => p.map(c => c.id === cat.id ? { ...c, archived: !c.archived } : c));
   };
 
-  const deleteCat = (cat) => {
+  const deleteCat = async (cat) => {
     const txCount = txs.filter(t => t.categoryId === cat.id).length;
     const msg = txCount > 0
-      ? `Categorie "${cat.name}" verwijderen? ${txCount} transactie(s) worden ongecategoriseerd.`
-      : `Categorie "${cat.name}" verwijderen?`;
-    if (!window.confirm(msg)) return;
+      ? `${txCount} transactie(s) worden ongecategoriseerd.`
+      : "Deze categorie heeft geen transacties.";
+    if (!await confirm({ title: `Categorie "${cat.name}" verwijderen?`, message: msg, confirmLabel: "Verwijderen", danger: true })) return;
     setTxs(p => p.map(t => t.categoryId === cat.id ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t));
     setCats(p => p.filter(c => c.id !== cat.id));
   };
@@ -47,12 +47,49 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
     setCats(p => p.map(c => c.id === cat.id ? { ...c, subs: c.subs.map(s => s.id === sub.id ? { ...s, archived: !s.archived } : s) } : c));
   };
 
-  const deleteSub = (cat, sub) => {
+  /* Move a subcategory to another category.
+
+     A subcategory id is referenced from four places, and leaving any of them
+     behind files transactions under a category that no longer owns them:
+       - tx.categoryId        (the pair is stored, not derived)
+       - tx.splits[].categoryId
+       - rules[pattern].catId (so re-analysing does not undo the move)
+     The subcategory keeps its own id, so budgets — keyed per subcategory —
+     follow it across without being re-entered. */
+  const moveSub = (fromCat, sub, toCatId) => {
+    if (!toCatId || toCatId === fromCat.id) return;
+    setCats(p => p.map(c => {
+      if (c.id === fromCat.id) return { ...c, subs: c.subs.filter(s => s.id !== sub.id) };
+      if (c.id === toCatId) return { ...c, subs: [...(c.subs || []), sub] };
+      return c;
+    }));
+    setTxs(p => p.map(t => {
+      const hit = t.subCategoryId === sub.id;
+      const splits = t.splits && t.splits.some(x => x.subCategoryId === sub.id)
+        ? t.splits.map(x => x.subCategoryId === sub.id ? { ...x, categoryId: toCatId } : x)
+        : t.splits;
+      if (!hit && splits === t.splits) return t;
+      return { ...t, ...(hit ? { categoryId: toCatId } : {}), splits };
+    }));
+    if (setRules) {
+      setRules(p => {
+        let touched = false;
+        const next = {};
+        for (const [pat, r] of Object.entries(p || {})) {
+          if (r && r.subId === sub.id && r.catId !== toCatId) { next[pat] = { ...r, catId: toCatId }; touched = true; }
+          else next[pat] = r;
+        }
+        return touched ? next : p;
+      });
+    }
+  };
+
+  const deleteSub = async (cat, sub) => {
     const txCount = txs.filter(t => t.subCategoryId === sub.id).length;
     const msg = txCount > 0
-      ? `Subcategorie "${sub.name}" verwijderen? ${txCount} transactie(s) worden ongecategoriseerd.`
-      : `Subcategorie "${sub.name}" verwijderen?`;
-    if (!window.confirm(msg)) return;
+      ? `${txCount} transactie(s) worden ongecategoriseerd.`
+      : "Deze subcategorie heeft geen transacties.";
+    if (!await confirm({ title: `Subcategorie "${sub.name}" verwijderen?`, message: msg, confirmLabel: "Verwijderen", danger: true })) return;
     setTxs(p => p.map(t => t.subCategoryId === sub.id ? { ...t, categoryId: null, subCategoryId: null, splits: null } : t));
     setCats(p => p.map(c => c.id === cat.id ? { ...c, subs: c.subs.filter(s => s.id !== sub.id) } : c));
   };
@@ -115,6 +152,23 @@ export default function CategoriesView({ cats, txs, setCats, setTxs, setCatDetai
                           </select>
                           <span style={{ fontSize: 8, opacity: 0.4, fontFamily: "'DM Mono',monospace" }}>{txCount}</span>
                           {!isSystemCat && <>
+                            {/* A menu rather than a picker modal: moving is a
+                                one-click answer to "this belongs elsewhere",
+                                and the value resets so it never reads as
+                                state. Same type only — dragging an expense
+                                subcategory into Inkomsten would flip the sign
+                                of its transactions' meaning. */}
+                            <select
+                              value=""
+                              onChange={e => { const to = e.target.value; e.target.value = ""; moveSub(cat, sub, to); }}
+                              title="Verplaats naar andere categorie"
+                              style={{ fontSize: 8, padding: "1px 3px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--muted)", cursor: "pointer", maxWidth: 58 }}
+                            >
+                              <option value="">→ …</option>
+                              {cats.filter(c => c.id !== cat.id && c.type === cat.type && !c.archived).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
                             <button onClick={() => renameSub(cat, sub)} title="Hernoemen" style={{ ...iconBtn, padding: "2px 5px" }}><Pencil size={9} /></button>
                             <button onClick={() => archiveSub(cat, sub)} title={sub.archived ? "Herstellen" : "Archiveren"} style={{ ...iconBtn, padding: "2px 5px" }}>{sub.archived ? <ArchiveRestore size={9} /> : <Archive size={9} />}</button>
                             <button onClick={() => deleteSub(cat, sub)} title="Verwijderen" style={{ ...dangerBtn, padding: "2px 5px" }}><Trash2 size={9} /></button>

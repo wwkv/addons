@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.11.8] - 2026-10-03
+
+### Fixed
+- **Terugbetalingen werden dubbel verkeerd geboekt.** Betaal je de lunch voor
+  jou en een collega (€60) en stort hij zijn helft terug (€30), dan stond die
+  €30 als *inkomsten* geboekt én bleef de lunch op €60 staan. Twee fouten in
+  tegengestelde richting: je inkomen leek €30 hoger en je uitgaven €30 hoger,
+  terwijl er in werkelijkheid maar €30 het huis uit ging.
+
+  Een positief bedrag in een uitgavencategorie is nu geld dat terugkomt — een
+  terugbetaling, een retour, een teruggestorte waarborg — en gaat af van de
+  categorie waar het vandaan kwam. Niet van je inkomen: er is niets verdiend.
+  Dat werkt door in de taartdiagram en het detailoverzicht per categorie, in
+  de ranglijst op het dashboard, en in de KPI's bovenaan. In het
+  detailoverzicht staan beide transacties nu ook in de lijst, met de
+  terugbetaling in het groen, zodat de regels optellen tot het totaal erboven.
+
+  Een positief bedrag *zonder* categorie blijft inkomsten. Daar is niets om
+  tegen af te zetten, en gokken zou stilletjes loon uit je inkomen halen.
+
+- **Een subcategorie toevoegen en dan verwijderen maakte de app onbruikbaar.**
+  Het bevestigingsvenster bij verwijderen was `window.confirm()` — een venster
+  van de browser zelf, niet van de app. Onder Home Assistant draait Squirrel
+  in een ingress-iframe, en daar toont de browser zo'n venster soms helemaal
+  niet. De pagina wacht dan op een antwoord op een vraag die nergens staat:
+  alles ziet er normaal uit en niets reageert nog, tekstvakken incluis.
+
+  Dit is dezelfde fout als met `window.prompt()` in 1.11.3, maar die ronde
+  heeft alleen de prompts opgeruimd. Alle acht bevestigingsvensters gaan nu
+  door hetzelfde venster van de app — ook die bij het verwijderen en
+  samenvoegen van transacties, het verwijderen van een spaarpotje, en het
+  terugzetten van een backup.
+
+### Added
+- **Een subcategorie kan nu naar een andere categorie verhuizen.** Rechts van
+  de naam staat een kiezer: kies de nieuwe categorie en de subcategorie
+  verhuist, met al haar transacties, haar aandeel in gesplitste transacties,
+  en de patronen die naar haar verwijzen. Haar budget verhuist ook mee, omdat
+  budgetten per subcategorie bewaard worden. Alleen categorieën van hetzelfde
+  type worden aangeboden — een uitgavenpost in Inkomsten schuiven zou het
+  teken van haar transacties van betekenis doen veranderen.
+
 ## [1.11.7] - 2026-09-06
 
 ### Fixed

@@ -3,6 +3,7 @@ import { Settings, Check, ChevronLeft, ChevronRight, Plus, Minus, X } from "luci
 import { fmt } from '../utils/formatters.js';
 import NumberInput from '../components/NumberInput.jsx';
 import { ASSIGN_BLOCK } from '../utils/savings.js';
+import { useTextPrompt } from '../components/TextPrompt.jsx';
 
 const POT_COLORS = ["var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)"];
 
@@ -12,6 +13,8 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
   const [isAdding, setIsAdding] = useState(false);
   const [isAssignMode, setIsAssignMode] = useState(false);
   const [draftPot, setDraftPot] = useState({ name: "Nieuw Doel", target: 1000, saved: 0 });
+  // Native confirm() can hang the page in an ingress iframe — TextPrompt.jsx.
+  const { confirm, promptEl } = useTextPrompt();
 
   const blocksAvailable = Math.floor((unassignedSavings || 0) / 250);
   const remainder = (unassignedSavings || 0) % 250;
@@ -42,6 +45,7 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
 
   return (
     <div>
+      {promptEl}
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Sparen</h1>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "9px 14px", marginBottom: 14, border: "1px solid var(--border)", borderRadius: 11, background: "var(--card)", fontSize: 11, color: "var(--text)" }}>
@@ -127,7 +131,7 @@ export default function SavingsTab({ txs, savings, setSavings, year, savingsSumm
                 <NumberInput value={pot.saved} onChange={v => updatePot(pot.id, { saved: v })} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} placeholder="Opgespaard" title="Manueel toegewezen bedrag" />
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                   <button onClick={() => setEditingPotId(null)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}><Check size={11} />Klaar</button>
-                  <button onClick={() => { if (!window.confirm("Weet je zeker dat je dit potje wilt verwijderen?")) return; removePot(pot.id); setEditingPotId(null); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11 }}>Verwijderen</button>
+                  <button onClick={async () => { if (!await confirm({ title: "Potje verwijderen?", message: "Het spaardoel en zijn instellingen worden verwijderd.", confirmLabel: "Verwijderen", danger: true })) return; removePot(pot.id); setEditingPotId(null); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 11 }}>Verwijderen</button>
                 </div>
               </div>
             );

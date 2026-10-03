@@ -1,4 +1,4 @@
-import { isSubExcluded, isSpendingTx } from './helpers.js';
+import { isSubExcluded, isRepayment, spendingAmount } from './helpers.js';
 
 /*
  * Period aggregates for the dashboard. Lifted out of DashboardView so the
@@ -14,18 +14,18 @@ export function scopeTo(expanded, year, months) {
 }
 
 /**
- * Headline totals. These are COMPLETE — `isSpendingTx` has no category test,
- * so uncategorised money is counted here. Do not attach a coverage warning to
- * anything this returns; see `coverage()` for what is actually partial.
+ * Headline totals. These are COMPLETE — `spendingAmount` has no category
+ * test, so uncategorised money is counted here. Do not attach a coverage
+ * warning to anything this returns; see `coverage()` for what is partial.
  */
 export function periodTotals(expanded, cats, year, months) {
   const scoped = scopeTo(expanded, year, months);
   const inc = scoped
-    .filter(t => t.amount > 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId))
+    // Repayments are not income — see isRepayment. They are netted off the
+    // category they came back to, below.
+    .filter(t => t.amount > 0 && !isRepayment(cats, t) && !isSubExcluded(cats, t.categoryId, t.subCategoryId))
     .reduce((a, t) => a + t.amount, 0);
-  const exp = scoped
-    .filter(t => isSpendingTx(cats, t))
-    .reduce((a, t) => a + Math.abs(t.amount), 0);
+  const exp = scoped.reduce((a, t) => a + spendingAmount(cats, t), 0);
   const net = inc - exp;
   // Same rule as comparison.js, so per-month figures agree across the app.
   const monthsWithData = new Set(scoped.map(t => t.date.slice(5, 7))).size;

@@ -14,12 +14,13 @@ import { describeHit } from './utils/osmCategories.js';
 import { describeNace } from './utils/naceCategories.js';
 import { detectCommitments } from './utils/recurring.js';
 import { fmt, fD, mN, isPerson } from './utils/formatters.js';
-import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isSpendingTx, applyDefaultSavingsExclusion } from './utils/helpers.js';
+import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isRepayment, spendingAmount, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
 import { resolveDataset, compareDatasets, DATASET_KINDS } from './utils/comparison.js';
 
 /* Components */
 import ContextMenu from './components/ContextMenu.jsx';
+import { useTextPrompt } from './components/TextPrompt.jsx';
 import CatGrid from './components/CatGrid.jsx';
 import CatPicker from './components/CatPicker.jsx';
 
@@ -49,6 +50,11 @@ export default function App() {
   const [preview, setPreview] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [months, setMonths] = useState([]);
+
+  /* Native confirm() blocks the page behind a dialog that an ingress iframe
+     may never render — see TextPrompt.jsx. Every confirmation in this file
+     goes through the in-app one instead. */
+  const { confirm: confirmDialog, promptEl } = useTextPrompt();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [fCats, setFCats] = useState([]);
@@ -481,12 +487,17 @@ export default function App() {
     }
   }, [patThreshold, personThreshold, blacklist, applyRuleToMatching, pending]);
 
-  const handleSmartImport = (event) => {
+  const handleSmartImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     const isJSON = file.name.toLowerCase().endsWith(".json");
     if (isJSON) {
-      if (!window.confirm("Je staat op het punt een backup te herstellen. Dit overschrijft AL je huidige data: transacties, categorieën, patronen, geblokkeerde tegenpartijen, spaarpotjes, budgetten en instellingen.\n\nEr wordt eerst automatisch een veiligheidskopie gemaakt. Weet je het zeker?")) {
+      if (!await confirmDialog({
+        title: "Backup herstellen?",
+        message: "Dit overschrijft AL je huidige data: transacties, categorieën, patronen, geblokkeerde tegenpartijen, spaarpotjes, budgetten en instellingen.\n\nEr wordt eerst automatisch een veiligheidskopie gemaakt.",
+        confirmLabel: "Herstellen",
+        danger: true,
+      })) {
         event.target.value = null;
         return;
       }
@@ -755,8 +766,10 @@ export default function App() {
       const mt = yt.filter(t => t.date.slice(5, 7) === k);
       const notExcl = t => !isSubExcluded(cats, t.categoryId, t.subCategoryId);
       s[k] = {
-        inc: mt.filter(t => t.amount > 0 && notExcl(t)).reduce((a, t) => a + t.amount, 0),
-        exp: mt.filter(t => isSpendingTx(cats, t)).reduce((a, t) => a + Math.abs(t.amount), 0),
+        // A repayment is not income, and it reduces its own category's
+        // spending rather than adding to the other side. See isRepayment.
+        inc: mt.filter(t => t.amount > 0 && notExcl(t) && !isRepayment(cats, t)).reduce((a, t) => a + t.amount, 0),
+        exp: mt.reduce((a, t) => a + spendingAmount(cats, t), 0),
         cnt: mt.length,
       };
     }
@@ -788,11 +801,18 @@ export default function App() {
   }, [rules, cats, patternSearch, rulesSort]);
 
   const catStats = useMemo(() => {
-    let et = expanded.filter(t => t.date.startsWith(year) && t.amount < 0 && !isSubExcluded(cats, t.categoryId, t.subCategoryId));
+    /* Signed, so a repayment cancels the expense it came back from instead of
+       being dropped. Previously this filtered `t.amount < 0`, which left a
+       lunch split with a colleague showing its full gross cost here while the
+       repayment turned up as income — wrong in both places at once. */
+    let et = expanded.filter(t => t.date.startsWith(year) && spendingAmount(cats, t) !== 0);
     if (months.length) et = et.filter(t => months.includes(t.date.slice(5, 7)));
+    const sum = (arr) => arr.reduce((a, t) => a + spendingAmount(cats, t), 0);
     const s = {};
-    for (const c of cats) { if (c.type === "inkomsten") continue; const ct = et.filter(t => t.categoryId === c.id); const tot = ct.reduce((a, t) => a + Math.abs(t.amount), 0); const subs = {}; for (const sub of c.subs) subs[sub.id] = ct.filter(t => t.subCategoryId === sub.id).reduce((a, t) => a + Math.abs(t.amount), 0); s[c.id] = { total: tot, subs, count: ct.length }; }
-    s._uncat = { total: et.filter(t => !t.categoryId).reduce((a, t) => a + Math.abs(t.amount), 0), count: et.filter(t => !t.categoryId).length };
+    for (const c of cats) { if (c.type === "inkomsten") continue; const ct = et.filter(t => t.categoryId === c.id); const subs = {}; for (const sub of c.subs) subs[sub.id] = sum(ct.filter(t => t.subCategoryId === sub.id)); s[c.id] = { total: sum(ct), subs, count: ct.length }; }
+    /* Uncategorised positives are never repayments (isRepayment needs a
+       category), so this stays a pure outflow bucket. */
+    s._uncat = { total: sum(et.filter(t => !t.categoryId)), count: et.filter(t => !t.categoryId).length };
     return s;
   }, [expanded, cats, year, months]);
 
@@ -1013,16 +1033,16 @@ export default function App() {
                 setTimeout(() => setToast(null), 2500);
               }
             } },
-            { label: "Verwijder transactie" + (sel.size > 1 ? "s" : ""), icon: <Trash2 size={12} />, onClick: () => {
-              if (!window.confirm("Weet je zeker dat je deze transactie(s) wilt verwijderen?")) return;
+            { label: "Verwijder transactie" + (sel.size > 1 ? "s" : ""), icon: <Trash2 size={12} />, onClick: async () => {
+              if (!await confirmDialog({ title: "Transactie(s) verwijderen?", message: "Dit kan niet ongedaan gemaakt worden.", confirmLabel: "Verwijderen", danger: true })) return;
               const targetIds = sel.size > 0 ? sel : new Set([contextMenu.tx.id]);
               setTxs(p => p.filter(t => !targetIds.has(t.id)));
               setSel(new Set());
               setContextMenu(null);
             } },
             ...(sel.size > 1 && sel.has(contextMenu.tx.id) ? [
-              { label: "Samenvoegen (Bedragen optellen)", icon: <Link2 size={12} />, onClick: () => {
-                if (!window.confirm("Weet je zeker dat je deze wilt samenvoegen (bedragen optellen)?")) return;
+              { label: "Samenvoegen (Bedragen optellen)", icon: <Link2 size={12} />, onClick: async () => {
+                if (!await confirmDialog({ title: "Samenvoegen?", message: "De bedragen worden opgeteld tot één transactie.", confirmLabel: "Samenvoegen" })) return;
                 const primaryId = contextMenu.tx.id;
                 setTxs(p => {
                   const totalAmount = Array.from(sel).reduce((sum, id) => {
@@ -1037,8 +1057,8 @@ export default function App() {
                 setSel(new Set());
                 setContextMenu(null);
               } },
-              { label: "Samenvoegen (Behoud dit bedrag)", icon: <Link2 size={12} />, onClick: () => {
-                if (!window.confirm("Weet je zeker dat je deze wilt samenvoegen (enkel dit bedrag behouden)?")) return;
+              { label: "Samenvoegen (Behoud dit bedrag)", icon: <Link2 size={12} />, onClick: async () => {
+                if (!await confirmDialog({ title: "Samenvoegen?", message: "Enkel het bedrag van deze transactie blijft behouden.", confirmLabel: "Samenvoegen" })) return;
                 const primaryId = contextMenu.tx.id;
                 setTxs(p => p.filter(t => t.id === primaryId || !sel.has(t.id)));
                 setSel(new Set());
@@ -1062,6 +1082,7 @@ export default function App() {
         onClose={() => setTinderMode(false)}
         onGoToSavings={() => { setTinderMode(false); setView("savings"); }}
       />}
+      {promptEl}
       {splitTx && <SplitModal tx={splitTx} cats={cats} onSave={splits => { setTxs(p => p.map(t => t.id === splitTx.id ? { ...t, splits, categoryId: splits[0].categoryId, subCategoryId: splits[0].subCategoryId } : t)); setSplitTx(null); }} onClose={() => setSplitTx(null)} />}
       {/* AskAI disabled {askTx && <AskAI tx={askTx} cats={cats} onAccept={(c, s) => { assign(askTx.id, c, s, false); setAskTx(null); }} onClose={() => setAskTx(null)} />} */}
       {catDetail && <CatDetailModal catId={catDetail} cats={cats} catStats={catStats} totalExp={totalExp} expanded={expanded} year={year} months={months} onClose={() => setCatDetail(null)} />}
@@ -1276,7 +1297,7 @@ export default function App() {
 
         {/* ═══ CATEGORIES ═══ */}
         {view === "categories" && (
-          <CategoriesView cats={cats} txs={txs} setCats={setCats} setTxs={setTxs} setCatDetail={setCatDetail} />
+          <CategoriesView cats={cats} txs={txs} setCats={setCats} setTxs={setTxs} setRules={setRules} setCatDetail={setCatDetail} />
         )}
 
         {/* ═══ PATTERNS ═══ */}
