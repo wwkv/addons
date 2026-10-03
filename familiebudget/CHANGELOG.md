@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.13.1] - 2026-10-03
+
+### Fixed
+- **Een patroon van drie letters deelde half je rekening in.** Het herkennen
+  van een geleerd patroon was een kale `includes()`: stond de tekst érgens in
+  de naam van de tegenpartij, dan telde dat als een match. Midden in een woord
+  dus ook. Het patroon `"els"` greep daardoor "SN**ELS** NATALIE", "Another
+  Lab**els** Belgium" én Els Lievens — een echt persoon — en zette ze alle
+  drie op Lunch op het werk. `"dr"` eiste "ZaraHome.com MA**DR**ID" en "FB
+  HOOF**DR**EKENING" op voor Dokter & Ziekenhuis.
+
+  Drie dingen klopten er niet aan, en alle drie zijn ze aangepakt:
+
+  **Een fragment moet nu op een woordgrens vallen.** Midden in een woord
+  bewijst het niets.
+
+  **Patronen korter dan vier tekens doen niet meer mee als fragment.** Onder
+  die lengte is er geen enkele plek waar het stukje nog iets zegt. Zo'n
+  patroon gaat niet verloren: het matcht nog gewoon zijn eigen winkel, maar
+  dan op de volledige naam.
+
+  **De specifiekste wint, niet de oudste.** De volgorde was die waarin je ze
+  geleerd had, dus een patroon van twee tekens kon er een van twintig
+  aftroeven. Nu gaat de langste voor, en een winkel die exact overeenkomt gaat
+  boven alles.
+
+  Heranalyseer je transacties na deze update: varianten als
+  `COLRUYT 1234 HALLE` worden nu via de winkelnaam herkend, en de verkeerde
+  indelingen van hierboven verdwijnen.
+
+- **"Nieuw patroon" accepteert geen tekst van minder dan vier tekens meer.**
+  Het veld vraagt om tekst die in de tegenpartij voorkomt, en nodigde zo
+  precies uit tot `"els"`. Zo'n patroon zou nu toch nooit meer vuren, dus het
+  aanmaken ervan zou alleen een regel opleveren die stilletjes niets doet.
+
 ## [1.13.0] - 2026-10-03
 
 ### Added

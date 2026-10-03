@@ -31,7 +31,21 @@ export default function PatternsView({
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text)", margin: "0 0 16px" }}>Patronen</h1>
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={async () => { const t = await ask({ title: "Nieuw patroon", label: "Tekst die in de tegenpartij voorkomt", placeholder: "bv. colruyt" }); if (t) setManualPattern(t.toLowerCase()); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><Plus size={10} />Handmatig</button>
+          <button onClick={async () => {
+            const t = await ask({ title: "Nieuw patroon", label: "Tekst die in de tegenpartij voorkomt (minstens 4 tekens)", placeholder: "bv. colruyt" });
+            if (!t) return;
+            /* Under four characters a fragment is not evidence of anything —
+               "els" matched SNELS, Another Labels and a person called Els
+               Lievens. The matcher ignores such patterns, so accepting one
+               here would only create a rule that silently never fires. */
+            const v = t.trim().toLowerCase();
+            if (v.length < 4) {
+              setToast(`"${v}" is te kort — een patroon van minder dan 4 tekens komt overal in voor`);
+              setTimeout(() => setToast(null), 4000);
+              return;
+            }
+            setManualPattern(v);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><Plus size={10} />Handmatig</button>
           <button onClick={async () => { if (await confirm({ title: "Alle patronen wissen?", message: "Alles wat de app over je winkels geleerd heeft gaat verloren.", confirmLabel: "Wis alles", danger: true })) setRules({}); }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 10 }}>Wis alles</button>
         </div>
       </div>

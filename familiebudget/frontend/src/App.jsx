@@ -257,16 +257,51 @@ export default function App() {
     setView("dashboard");
   };
 
+  /* Rule patterns as compiled word-boundary matchers, longest first.
+     Compiled once per rules change rather than per transaction: a reanalyse
+     sweep is thousands of transactions times hundreds of rules. */
+  const ruleMatchers = useMemo(() => Object.entries(rules)
+    .filter(([p]) => p && p.length >= 4)
+    .sort((a, b) => b[0].length - a[0].length)
+    .map(([p, r]) => ({
+      p, r,
+      re: new RegExp(`\\b${p.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
+    })), [rules]);
+
   const autoCat = useCallback((tx) => {
     if (blacklist.some(b => b.trim().toLowerCase() === tx.counterparty.trim().toLowerCase())) return null;
     const cpText = tx.counterparty.toLowerCase().trim();
     const descText = (tx.description || "").toLowerCase();
     const allText = `${cpText} ${descText}`;
 
-    // 1. Learned rules: STRICTER check (only match counterparty to prevent false positives in descriptions)
-    for (const [p, r] of Object.entries(rules)) {
-      if (cpText.includes(p.toLowerCase())) {
-        return { categoryId: r.catId, subCategoryId: r.subId, confidence: "learned", reason: `Eerder zo gecategoriseerd — "${p}"` };
+    /* 1. Learned rules.
+
+       Two ways to match, in order of how much they prove.
+
+       First the merchant itself: the rule key IS a canonical merchant key, so
+       an equal key is the same shop and nothing beats it.
+
+       Then a pattern occurring as a WHOLE WORD. This used to be a bare
+       `cpText.includes(p)`, which is how "els" came to categorise "SNELS
+       NATALIE", "Another Labels Belgium" and a person actually called Els
+       Lievens, and how "dr" claimed "ZaraHome.com MADRID" and "FB
+       HOOFDREKENING". A fragment that lands mid-word proves nothing.
+
+       Short patterns are excluded from fragment matching altogether. Under
+       four characters there is no length at which a fragment is evidence —
+       and such a rule is not lost, it still matches its own merchant exactly
+       through the key check above.
+
+       Longest first, because object insertion order is not specificity: a
+       three-character rule must never outrank a twenty-character one just
+       for having been learned earlier. */
+    const direct = rules[merchantKey(tx.counterparty)];
+    if (direct) {
+      return { categoryId: direct.catId, subCategoryId: direct.subId, confidence: "learned", reason: `Eerder zo gecategoriseerd — "${merchantKey(tx.counterparty)}"` };
+    }
+    for (const m of ruleMatchers) {
+      if (m.re.test(cpText)) {
+        return { categoryId: m.r.catId, subCategoryId: m.r.subId, confidence: "learned", reason: `Eerder zo gecategoriseerd — "${m.p}"` };
       }
     }
 
@@ -348,7 +383,7 @@ export default function App() {
     if (isPerson(tx.counterparty)) return { flag: "person" };
 
     return null;
-  }, [rules, settings.autoLevel, blacklist]);
+  }, [rules, ruleMatchers, settings.autoLevel, blacklist]);
 
   /* Chunked autoCat sweep over uncategorised transactions. Only computes and
      returns candidates — never writes. Shared by the automatic trigger below
