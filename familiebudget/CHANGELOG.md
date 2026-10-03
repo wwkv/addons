@@ -1,5 +1,52 @@
 # Changelog
 
+## [1.13.0] - 2026-10-03
+
+### Added
+- **De "?"-knop vraagt nu éérst aan je eigen patronen wat dit is.** Het
+  handelsregister weet welke activiteit een bedrijf heeft aangegeven; het weet
+  niet waar jíj iets onder zet, en voor een eenmanszaak weet het meestal
+  niets. Je eigen gesorteerde transacties weten beide, kosten niets, en worden
+  beter elke keer dat je iets indeelt. Dus komen die bovenaan te staan.
+
+  Twee soorten antwoord, met de reden erbij. **Vergelijkbare naam:** "COLRUYTT
+  9999" lijkt op "colruyt", die je op Supermarkt zet — dat vangt tikfouten,
+  afkappingen en spellingen die niet automatisch samenvielen. **Eerder geleerd
+  woord:** "SLAGERIJ VAN DEN BERGHE" heb je nooit eerder gezien, maar
+  "slagerij" ging al drie keer naar Bakker & Kleinhandel. Dat tweede soort is
+  het interessantste, want geen merkenlijst — hoe lang ook — bereikt ooit een
+  eenmanszaak om de hoek.
+
+  Een woord spreekt alleen als het ergens naar wijst: minstens twee keer
+  gezien, en minstens driekwart van die keren naar dezelfde categorie.
+  Overboekingen tussen personen blijven buiten beschouwing; een categorie
+  gokken voor de naam van een vriend is precies het soort zelfverzekerde
+  onzin waardoor je de rest niet meer vertrouwt.
+
+  Alles gebeurt op je eigen toestel. Geen enkel verzoek verlaat de app
+  hiervoor, dus er is ook niets om aan of uit te zetten.
+
+### Fixed
+- **Het handelsregister gooide juist de winkels weg waar je komt.** De index
+  liet elke naam vallen die bij meer dan één activiteit hoorde. Dat klinkt
+  voorzichtig, maar een keten heeft één inschrijving per vestiging en die
+  codes verschillen vaak in het vierde cijfer — dus werden supermarkten,
+  tankstations en banken stelselmatig verwijderd, en bleef er een index over
+  die wél een eenmanszaak kende en níet Colruyt. De index bewaart nu de
+  dominante activiteit mét hoe dominant ze is; de app zwijgt onder 60%.
+- **Het zoeken liep de verkeerde kant op.** Er werd gezocht naar
+  ingeschreven namen die *beginnen met* de bankregel. Bankregels zijn juist
+  lánger dan de naam — naam plus filiaalnummer plus gemeente — dus
+  `COLRUYT 1234 HALLE` kon `colruyt` nooit vinden. Nu wordt de omgekeerde
+  vraag gesteld: welke ingeschreven naam zit ín deze regel. De langste match
+  wint, en bij gelijke lengte die het meest vooraan staat — een uittreksel
+  begint met de winkel en eindigt met de plaats.
+
+  **Je moet je index één keer opnieuw bouwen** (`node
+  backend/tools/build-kbo-index.mjs <KboOpenData_map>`). De oude index heeft
+  nog geen betrouwbaarheidscijfer, en zonder dat antwoordt de lookup niets —
+  liever stil dan doen alsof elke naam zeker is.
+
 ## [1.12.1] - 2026-10-03
 
 ### Added

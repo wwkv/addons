@@ -8,6 +8,7 @@ import { AUTO_RULES, DESC_RULES, AMT_RULES, MULTI, TYPE_RULES } from './utils/ru
 import { BRANDS, TRADES } from './utils/merchants.js';
 import { parseCounterparty, parseEvidence, merchantKey } from './utils/counterparty.js';
 import { migratePatternKeys } from './utils/patternKeys.js';
+import { buildPredictor } from './utils/predict.js';
 import { rangeFor } from './utils/calendar.js';
 import { computeSavings, ASSIGN_BLOCK } from './utils/savings.js';
 import { knownCards } from './utils/cards.js';
@@ -878,6 +879,12 @@ export default function App() {
   // leaves the machine), so it alone is enough to show the "?" button.
   const [kboAvailable, setKboAvailable] = useState(false);
 
+  /* Your own sorted transactions, as a suggester. Local, instant, free, and
+     the only source that knows where YOU file things rather than what trade a
+     company is registered under. Rebuilt only when the patterns change, so a
+     whole import is scored without re-indexing per row. */
+  const predictor = useMemo(() => buildPredictor({ rules, cats }), [rules, cats]);
+
   const runLookup = useCallback(async (tx) => {
     const cp = parseCounterparty(tx.counterparty);
     const town = parseEvidence(tx).place || cp.place || "";
@@ -887,7 +894,9 @@ export default function App() {
     if (!name) return;
 
     setLookupBusy(s => new Set(s).add(tx.id));
-    setLookupResult({ tx, kbo: null, osm: null, pending: true });
+    // The local suggestion needs no request, so it is on screen before either
+    // source has been asked.
+    setLookupResult({ tx, own: predictor.suggest(tx.counterparty), kbo: null, osm: null, pending: true });
 
     /* Both sources at once, each rendered the moment it lands. The KBO index is
        local and answers in milliseconds; OSM is a network call that may be slow,
@@ -921,7 +930,7 @@ export default function App() {
 
     setLookupBusy(s => { const n = new Set(s); n.delete(tx.id); return n; });
     setLookupResult(r => (r && r.tx.id === tx.id) ? { ...r, kbo, osm, pending: false } : r);
-  }, [settings.lookupEnabled]);
+  }, [settings.lookupEnabled, predictor]);
 
   /* A failed read must never look like an empty app, or the user would start
      entering data on top of a database that is still there. */
@@ -1174,8 +1183,12 @@ export default function App() {
       {/* Lookup result. Never writes anything on its own — the category is a
           button the user presses, and the note is saved explicitly. */}
       {lookupResult && (() => {
-        const { tx, kbo, osm, pending } = lookupResult;
+        const { tx, own, kbo, osm, pending } = lookupResult;
+        /* Own patterns first, and not only because they arrive first: the
+           register can say a company sells food, but only your own history
+           knows you file that one under Lunch op het werk. */
         const rows = [
+          own && { ...own, src: "Jouw eigen patronen", note: own.via === "similarity" ? "vergelijkbare naam" : "eerder geleerd woord" },
           kbo && { ...kbo, src: "KBO / Staatsblad", note: kbo.code ? `NACE ${kbo.code}` : null },
           osm && { ...osm, src: "OpenStreetMap", note: null },
         ].filter(Boolean);
@@ -1209,7 +1222,7 @@ export default function App() {
 
               {rows.length === 0 && (
                 <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, background: "var(--bg)", borderRadius: 9, padding: "10px 12px" }}>
-                  {pending ? "Bezig met opzoeken…" : "Niets gevonden. Veel kleine zaken staan niet in het handelsregister of op de kaart, en afgekorte of online namen zijn moeilijk terug te vinden."}
+                  {pending ? "Bezig met opzoeken…" : "Niets gevonden. Deze naam lijkt op niets wat je al gesorteerd hebt, en veel kleine zaken staan niet in het handelsregister of op de kaart. Sorteer hem één keer met de hand — dan kent de app hem, en ook de volgende die erop lijkt."}
                 </div>
               )}
               {rows.length > 0 && pending && (
@@ -1281,7 +1294,7 @@ export default function App() {
             setSplitTx={setSplitTx} setEditComment={setEditComment} setContextMenu={setContextMenu}
             assign={assign} bulkAssign={bulkAssign} handleRowClick={handleRowClick}
             searchInputRef={searchInputRef} calEvents={calEvents} cardOwners={settings.cardOwners}
-            lookupEnabled={!!settings.lookupEnabled || kboAvailable} lookupBusy={lookupBusy} onLookup={runLookup}
+            lookupEnabled={!!settings.lookupEnabled || kboAvailable || predictor.knownCount > 0} lookupBusy={lookupBusy} onLookup={runLookup}
           />
         )}
 

@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { getState, setState, getAllState, importAll, closeDb } from './db.js';
 import db from './db.js';
 import { scheduleDailyBackup, createBackup, listBackups } from './backup.js';
+import { createKboLookup } from './kboLookup.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -224,59 +225,21 @@ app.get('/api/calendar/events', async (req, res) => {
    tools/build-kbo-index.mjs). Opened read-only at startup; absent simply means
    this half of the lookup never answers. Unlike the OSM half it makes no
    network request at all, so it is not behind the opt-in — there is nothing to
-   consent to. */
+   consent to.
+
+   The matching itself lives in kboLookup.js, which takes the handle rather
+   than opening it, so the rules can be tested against a real index without
+   starting a server. */
 const KBO_PATH = join(process.env.DATA_DIR || join(__dirname, 'data'), 'kbo-index.db');
 let kboDb = null;
 try {
-  if (existsSync(KBO_PATH)) {
-    kboDb = new Database(KBO_PATH, { readonly: true, fileMustExist: true });
-    const n = kboDb.prepare('SELECT COUNT(*) c FROM biz').get().c;
-    console.log(`[KBO] index geladen: ${n.toLocaleString('nl-BE')} namen`);
-  }
+  if (existsSync(KBO_PATH)) kboDb = new Database(KBO_PATH, { readonly: true, fileMustExist: true });
 } catch (e) {
   console.error('[KBO] index kon niet geopend worden:', e.message);
   kboDb = null;
 }
-const kboStmt = kboDb
-  ? kboDb.prepare('SELECT b.code AS code, n.nl AS nl FROM biz b LEFT JOIN nace n ON n.code = b.code WHERE b.name = ?')
-  : null;
-/* The bank truncates the counterparty column, so the exact name often is not
-   the real one: "CAMPAGNE COMPAGN" is "campagne compagnie", "KLIM EN
-   BOULDERZAAL THE I" is cut mid-word. A prefix search recovers those. Two
-   results are taken as no answer — the same rule the index build uses, since a
-   stem matching several businesses cannot say which one this was. */
-const kboPrefixStmt = kboDb
-  ? kboDb.prepare('SELECT b.code AS code, n.nl AS nl FROM biz b LEFT JOIN nace n ON n.code = b.code WHERE b.name LIKE ? LIMIT 2')
-  : null;
-const KBO_MIN_PREFIX = 8;
-
-/* Must mirror build-kbo-index.mjs exactly, or the two sides key differently
-   and nothing ever matches. */
-const LEGAL_FORM = /\b(bv|bvba|nv|vzw|srl|sa|sprl|cvba|cv|vof|comm\.?\s*v|scs|se)\b\.?/gi;
-const kboKey = (s) => String(s || '')
-  .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-  .toLowerCase()
-  .replace(LEGAL_FORM, ' ')
-  .replace(/[^a-z0-9 ]/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-
-function lookupKbo(name) {
-  if (!kboStmt) return null;
-  const k = kboKey(name);
-  if (k.length < 4) return null;
-  try {
-    const exact = kboStmt.get(k);
-    if (exact) return { ...exact, matched: 'exact' };
-    // Only try a prefix once the stem is long enough to mean something; a
-    // four-letter LIKE would match half the register.
-    if (k.length >= KBO_MIN_PREFIX && kboPrefixStmt) {
-      const rows = kboPrefixStmt.all(`${k.replace(/[%_]/g, '')}%`);
-      if (rows.length === 1) return { ...rows[0], matched: 'prefix' };
-    }
-    return null;
-  } catch { return null; }
-}
+const kbo = createKboLookup(kboDb);
+if (kbo.available) console.log(`[KBO] index geladen: ${kbo.count.toLocaleString('nl-BE')} namen`);
 
 // NOMINATIM_URL overrides the endpoint so the offline path can be tested.
 const NOMINATIM = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
@@ -348,9 +311,7 @@ async function lookupOsm(name, town) {
 app.get('/api/lookup/kbo', (req, res) => {
   const name = String(req.query.name || '').trim().slice(0, 80);
   if (!name) return res.status(400).json({ error: 'name required' });
-  let kbo = null;
-  try { kbo = lookupKbo(name); } catch { /* index trouble is "no answer" */ }
-  res.json({ available: !!kboStmt, kbo });
+  res.json({ available: kbo.available, kbo: kbo.lookup(name) });
 });
 
 app.get('/api/lookup/osm', async (req, res) => {
@@ -370,7 +331,7 @@ app.get('/api/lookup/osm', async (req, res) => {
 // Does this install have a KBO index? Lets the UI show the "?" button when the
 // local half works even though the outbound half is switched off.
 app.get('/api/lookup/status', (req, res) => {
-  res.json({ kbo: !!kboStmt });
+  res.json({ kbo: kbo.available });
 });
 
 // ─── Serve frontend build ───

@@ -109,18 +109,30 @@ const nAct = await eachRow('activity.csv', (r) => {
 });
 console.log(`activity.csv: ${nAct.toLocaleString('nl-BE')} rijen → ${entCode.size.toLocaleString('nl-BE')} entiteiten met een NACE ${NACE_VERSION}-code (${secs()}s)`);
 
-/* 2. Name → activity, keeping only names that resolve to exactly ONE activity.
-      A name used by several companies in different trades cannot answer the
-      question, and a confident wrong answer is worse than none. */
-const byName = new Map();
+/* 2. Name → activity, keeping the DOMINANT activity plus how dominant it is.
+      This used to discard any name resolving to more than one activity, on the
+      grounds that a confident wrong answer is worse than none. That reasoning
+      is right but the rule was far too blunt: a chain has one entity per
+      establishment, their MAIN codes differ in the fourth digit often enough,
+      and so every supermarket, filling station and bank — the merchants that
+      dominate a real statement — was deleted from the index. The lookup then
+      answered for one-off sole traders and stayed silent on Colruyt.
+
+      Keeping a confidence instead moves the precision/recall judgement to
+      where it can be made per answer: 14 of 15 Colruyt entities on retail
+      trade is 0.93 and worth saying, while a name split evenly between a
+      bakery and a construction firm is 0.5 and worth suppressing. The server
+      applies the threshold (KBO_MIN_CONF) so it can be retuned without a
+      one-minute rebuild of 2 GB of CSV. */
+const byName = new Map();          // name -> Map(code -> count)
 const nDen = await eachRow('denomination.csv', (r) => {
   const code = entCode.get(r.EntityNumber);
   if (!code) return;
   const n = norm(r.Denomination);
   if (n.length < 4) return;
-  const cur = byName.get(n);
-  if (cur === undefined) byName.set(n, code);
-  else if (cur !== null && cur !== code) byName.set(n, null); // ambiguous
+  let m = byName.get(n);
+  if (!m) { m = new Map(); byName.set(n, m); }
+  m.set(code, (m.get(code) || 0) + 1);
 });
 console.log(`denomination.csv: ${nDen.toLocaleString('nl-BE')} rijen → ${byName.size.toLocaleString('nl-BE')} namen (${secs()}s)`);
 
@@ -128,7 +140,10 @@ console.log(`denomination.csv: ${nDen.toLocaleString('nl-BE')} rijen → ${byNam
 if (existsSync(OUT)) unlinkSync(OUT);
 const db = new Database(OUT);
 db.pragma('journal_mode = OFF');
-db.exec('CREATE TABLE nace(code TEXT PRIMARY KEY, nl TEXT); CREATE TABLE biz(name TEXT PRIMARY KEY, code TEXT);');
+/* `conf` is the share of entities under this name carrying `code`; `n` is how
+   many entities there are. Both travel with the row so the server can decide
+   what to do with a weak or a thin answer. */
+db.exec('CREATE TABLE nace(code TEXT PRIMARY KEY, nl TEXT); CREATE TABLE biz(name TEXT PRIMARY KEY, code TEXT, conf REAL, n INTEGER);');
 
 const insNace = db.prepare('INSERT OR REPLACE INTO nace VALUES (?, ?)');
 let nCodes = 0;
@@ -141,12 +156,16 @@ await eachRow('code.csv', (r) => {
   insNace.run(r.Code, r.Description); nCodes++;
 });
 
-const insBiz = db.prepare('INSERT OR REPLACE INTO biz VALUES (?, ?)');
-let kept = 0;
+const insBiz = db.prepare('INSERT OR REPLACE INTO biz VALUES (?, ?, ?, ?)');
+let kept = 0, unanimous = 0;
 db.transaction(() => {
-  for (const [name, code] of byName) {
-    if (code === null) continue;          // ambiguous
-    insBiz.run(name, code); kept++;
+  for (const [name, codes] of byName) {
+    let best = null, bestN = 0, total = 0;
+    for (const [code, c] of codes) { total += c; if (c > bestN) { best = code; bestN = c; } }
+    if (!best) continue;
+    insBiz.run(name, best, bestN / total, total);
+    kept++;
+    if (codes.size === 1) unanimous++;
   }
 })();
 db.exec('VACUUM');
@@ -154,6 +173,6 @@ db.close();
 
 const mb = (statSync(OUT).size / 1e6).toFixed(0);
 console.log(`\n${OUT}`);
-console.log(`  ${kept.toLocaleString('nl-BE')} ondubbelzinnige namen · ${nCodes.toLocaleString('nl-BE')} NACE-omschrijvingen · ${mb} MB · ${secs()}s`);
+console.log(`  ${kept.toLocaleString('nl-BE')} namen (${unanimous.toLocaleString('nl-BE')} ondubbelzinnig, ${(kept - unanimous).toLocaleString('nl-BE')} met een dominante activiteit) · ${nCodes.toLocaleString('nl-BE')} NACE-omschrijvingen · ${mb} MB · ${secs()}s`);
 console.log(`\nKopieer dit bestand naar /config van je Home Assistant (naast budget.db).`);
 console.log(`Niet committen: het bevat namen van eenmanszaken.`);
