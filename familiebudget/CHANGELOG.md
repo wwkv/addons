@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.12.1] - 2026-10-03
+
+### Added
+- **Het tabblad Patronen is een boom geworden: categorie › subcategorie ›
+  winkel › schrijfwijzen.** Het samenvoegen uit 1.12.0 was het hele punt van
+  de patronendatabank en je zag er niets van — een platte tabel met één regel
+  per winkel verzwijgt juist dát er iets samengevoegd is. Nu staat het er:
+  klap een winkel open en je ziet elke schrijfwijze die de bank ooit
+  aangeleverd heeft, met hoe vaak ze voorkwam.
+
+  Bovenaan staat wat je databank waard is: hoeveel winkels, hoeveel
+  schrijfwijzen, en hoeveel winkels uit meer dan één schrijfwijze bestaan. Een
+  winkel met meerdere spellingen krijgt een label, en per categorie staat
+  hoeveel van haar winkels zijn samengevoegd.
+
+  Zoeken kijkt nu ook ín de schrijfwijzen. Zoek je op "ninove" — een woord dat
+  alleen in een oude bankregel voorkomt en niet in de naam van de winkel — dan
+  vind je de winkel waarin die regel is opgegaan, met de schrijfwijzen
+  uitgeklapt zodat je ziet waarom hij past.
+
+  Categorieën en subcategorieën staan open, winkels dicht: de ordening is wat
+  je wil zien, niet een muur van bankregels. Winkels staan op aantal
+  transacties, dus de winkels waar je echt komt staan bovenaan hun groepje.
+
+### Fixed
+- **Een patroon onder een verwijderde categorie was onbereikbaar.** Het stond
+  nergens in de lijst, maar werkte nog wel — het bleef transacties indelen in
+  een categorie die niet meer bestaat, en je kon het niet weghalen omdat je
+  het niet zag. Zulke patronen staan nu onderaan in een eigen groepje, met de
+  verwijderknop erbij.
+- **"Wis alles" bij patronen gebruikte nog een browservenster.** Dezelfde fout
+  als in 1.11.8, op een plek die toen gemist is — en meteen de gevaarlijkste,
+  want als het venster niet verschijnt kan je de knop niet bevestigen én niet
+  annuleren.
+
 ## [1.12.0] - 2026-10-03
 
 ### Changed

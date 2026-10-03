@@ -1,20 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { X, Plus, Hourglass, User, Check, Ban, Brain, ChevronUp, ChevronDown } from "lucide-react";
 import { useTextPrompt } from '../components/TextPrompt.jsx';
 import CatPicker from '../components/CatPicker.jsx';
+import MerchantTree from '../components/MerchantTree.jsx';
+import { buildMerchantIndex } from '../utils/merchantIndex.js';
 
 export default function PatternsView({
-  cats, rules, pending, settings, blacklist, patternSearch, pendingSort, rulesSort, filteredRulesEntries,
+  cats, rules, pending, txs, settings, blacklist, patternSearch, pendingSort,
   patternSearchInputRef,
-  setRules, setPending, setBlacklist, setToast, setPatternSearch, setPendingSort, setRulesSort,
+  setRules, setPending, setBlacklist, setToast, setPatternSearch, setPendingSort,
 }) {
+  /* Aliases are read back from the transactions — they are not stored
+     anywhere else. See utils/merchantIndex.js. */
+  const index = useMemo(
+    () => buildMerchantIndex({ rules, txs, cats, query: patternSearch }),
+    [rules, txs, cats, patternSearch],
+  );
   /* Adding a rule by hand used to be three window.prompt() calls in a row —
      pattern text, then a raw "Categorie ID", then a raw "Sub ID". Those are
      internal identifiers nobody can be expected to know, and in Electron
      prompt() does not exist at all, so the button did nothing whatsoever.
      Now: ask for the text, then pick the category from the same picker used
      everywhere else in the app. */
-  const { ask, promptEl } = useTextPrompt();
+  const { ask, confirm, promptEl } = useTextPrompt();
   const [manualPattern, setManualPattern] = useState(null);
 
   return (
@@ -24,7 +32,7 @@ export default function PatternsView({
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={async () => { const t = await ask({ title: "Nieuw patroon", label: "Tekst die in de tegenpartij voorkomt", placeholder: "bv. colruyt" }); if (t) setManualPattern(t.toLowerCase()); }} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 10 }}><Plus size={10} />Handmatig</button>
-          <button onClick={() => { if (confirm("Alle patronen wissen?")) setRules({}); }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 10 }}>Wis alles</button>
+          <button onClick={async () => { if (await confirm({ title: "Alle patronen wissen?", message: "Alles wat de app over je winkels geleerd heeft gaat verloren.", confirmLabel: "Wis alles", danger: true })) setRules({}); }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid var(--danger)", background: "transparent", color: "var(--danger)", cursor: "pointer", fontSize: 10 }}>Wis alles</button>
         </div>
       </div>
 
@@ -131,37 +139,12 @@ export default function PatternsView({
               </button>
             )}
           </div>
-          <div style={{ background: "var(--card)", borderRadius: 11, border: "1px solid var(--border)", overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: 400, borderCollapse: "collapse" }}>
-            <thead><tr style={{ borderBottom: "2px solid var(--border)" }}>
-              <th onClick={() => { if (rulesSort.field === "pattern") setRulesSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setRulesSort({ field: "pattern", dir: "asc" }); }} style={{ padding: "6px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Patroon {rulesSort.field === "pattern" ? (rulesSort.dir === "asc" ? <ChevronUp size={9} style={{ display: "inline" }} /> : <ChevronDown size={9} style={{ display: "inline" }} />) : ""}</th>
-              <th onClick={() => { if (rulesSort.field === "category") setRulesSort(s => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" })); else setRulesSort({ field: "category", dir: "asc" }); }} style={{ padding: "6px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", cursor: "pointer", userSelect: "none" }}>Categorie {rulesSort.field === "category" ? (rulesSort.dir === "asc" ? <ChevronUp size={9} style={{ display: "inline" }} /> : <ChevronDown size={9} style={{ display: "inline" }} />) : ""}</th>
-              <th style={{ padding: "6px 8px", textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)" }}>Subcategorie</th>
-              <th style={{ padding: "6px 8px", textAlign: "center", fontSize: 9, fontWeight: 700, color: "var(--text)", background: "var(--card)", width: 40 }}></th>
-            </tr></thead>
-            <tbody>{filteredRulesEntries.map(([p, r]) => {
-              const cat = cats.find(x => x.id === r.catId);
-              const sub = cat ? cat.subs.find(x => x.id === r.subId) : null;
-              return (
-                <tr key={p} style={{ borderBottom: "1px solid var(--bg)" }}>
-                  <td style={{ padding: "5px 8px", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>"{p}"</td>
-                  <td style={{ padding: "5px 8px" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: cat ? cat.color : "var(--neutral)", display: "inline-block" }} />
-                      {cat ? cat.name : "?"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "5px 8px", fontSize: 10, opacity: 0.7 }}>{sub ? sub.name : "?"}</td>
-                  <td style={{ padding: "5px 8px", textAlign: "center" }}>
-                    <button onClick={() => setRules(prev => { const n = { ...prev }; delete n[p]; return n; })} style={{ display: "flex", margin: "0 auto", background: "none", border: "none", color: "var(--danger)", cursor: "pointer", padding: 2 }}><X size={13} /></button>
-                  </td>
-                </tr>
-              );
-            })}</tbody>
-          </table>
-          </div>
-        </div>
+          <MerchantTree
+            tree={index.tree}
+            totals={index.totals}
+            query={patternSearch}
+            onDelete={(key) => setRules(prev => { const n = { ...prev }; delete n[key]; return n; })}
+          />
         </>
       )}
 

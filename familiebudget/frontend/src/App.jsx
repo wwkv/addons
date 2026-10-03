@@ -99,7 +99,6 @@ export default function App() {
   const [blacklist, setBlacklist] = useState([]);
   const [patternSearch, setPatternSearch] = useState("");
   const [pendingSort, setPendingSort] = useState({ field: "count", dir: "desc" });
-  const [rulesSort, setRulesSort] = useState({ field: "pattern", dir: "asc" });
   const [savings, setSavings] = useState({ knownBalance: 0, knownDate: new Date().toISOString().split("T")[0], pots: [] });
   const fRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -791,30 +790,6 @@ export default function App() {
     return s;
   }, [expanded, year, cats]);
 
-  const filteredRulesEntries = useMemo(() => {
-    const entries = Object.entries(rules);
-    entries.sort((a, b) => {
-      let c = 0;
-      if (rulesSort.field === "pattern") c = a[0].localeCompare(b[0]);
-      else if (rulesSort.field === "category") {
-        const catA = cats.find(x => x.id === a[1].catId)?.name || "";
-        const catB = cats.find(x => x.id === b[1].catId)?.name || "";
-        c = catA.localeCompare(catB);
-      }
-      return rulesSort.dir === "asc" ? c : -c;
-    });
-    const q = patternSearch.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(([p, r]) => {
-      const cat = cats.find(x => x.id === r.catId);
-      const sub = cat ? cat.subs.find(x => x.id === r.subId) : null;
-      const catName = cat ? cat.name : "";
-      const subName = sub ? sub.name : "";
-      const hay = `${p} ${catName} ${subName}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [rules, cats, patternSearch, rulesSort]);
-
   const catStats = useMemo(() => {
     /* Signed, so a repayment cancels the expense it came back from instead of
        being dropped. Previously this filtered `t.amount < 0`, which left a
@@ -1318,13 +1293,12 @@ export default function App() {
         {/* ═══ PATTERNS ═══ */}
         {view === "patterns" && (
           <PatternsView
-            cats={cats} rules={rules} pending={pending} settings={settings}
+            cats={cats} rules={rules} pending={pending} txs={txs} settings={settings}
             blacklist={blacklist} patternSearch={patternSearch} pendingSort={pendingSort}
-            rulesSort={rulesSort} filteredRulesEntries={filteredRulesEntries}
             patternSearchInputRef={patternSearchInputRef}
             setRules={setRules} setPending={setPending} setBlacklist={setBlacklist}
             setToast={setToast} setPatternSearch={setPatternSearch}
-            setPendingSort={setPendingSort} setRulesSort={setRulesSort}
+            setPendingSort={setPendingSort}
           />
         )}
 
