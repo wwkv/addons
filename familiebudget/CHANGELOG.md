@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.14.1] - 2026-10-04
+
+### Fixed
+- **Het instellingen-icoon verdween zodra je op A+ drukte.** De zijbalk is
+  precies één scherm hoog, en het tandwiel staat onderaan. Maar vergroten
+  schaalt wél de inhoud van die balk en níet wat "één scherm hoog" betekent —
+  dus werd de balk langer dan het scherm en zakte het onderste icoon eruit. Eén
+  keer A+ was genoeg. De andere iconen staan bovenaan en bleven dus gewoon
+  staan, waardoor het leek alsof alleen dát icoon kwijt was.
+
+  Hetzelfde gebeurde zonder vergroten op een laag venster: de balk heeft
+  ongeveer 400 pixels nodig, en daaronder viel het tandwiel er net zo goed
+  buiten. De balk kon wel schuiven, maar haar schuifbalk is verborgen, dus er
+  was niets op het scherm dat verried dat er nog iets ónder stond.
+
+  De hoogte houdt nu rekening met de vergroting, en alleen de lijst met
+  tabbladen schuift nog — het tandwiel staat buiten dat schuifgebied en kan er
+  dus niet meer uit zakken.
+
 ## [1.14.0] - 2026-10-04
 
 ### Added

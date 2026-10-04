@@ -1013,12 +1013,20 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" style={{ zoom: (settings.zoom || 100) / 100 }}>
+    /* --rail-vh cancels the zoom for viewport units. CSS `zoom` scales what is
+       inside it, but 100vh still resolves to the full viewport, so a zoomed
+       rail renders TALLER than the screen and anything anchored to its bottom
+       — the settings button — falls off. One press of A+ was enough. */
+    <div className="app-shell" style={{ zoom: (settings.zoom || 100) / 100, "--rail-vh": String(100 / (settings.zoom || 100)) }}>
       <div className="app-body">
 
         {/* ─── ICON RAIL ─── */}
         <nav className="app-rail">
           <div className="rail-logo" title="Squirrel"><Squirrel size={17} strokeWidth={1.9} /></div>
+          {/* The tabs scroll, the rail does not. With the whole rail scrolling
+              and its scrollbar hidden, a rail taller than the screen hid the
+              settings button with nothing on screen suggesting it was there. */}
+          <div className="rail-scroll">
           {[
             { id: "dashboard", label: "Overzicht", icon: <LayoutGrid size={19} /> },
             { id: "compare", label: "Vergelijk", icon: <Scale size={19} /> },
@@ -1033,7 +1041,7 @@ export default function App() {
               {tab.id === "savings" && unassignedSavings >= ASSIGN_BLOCK && <span className="rail-dot" />}
             </button>
           ))}
-          <div className="rail-spacer" />
+          </div>
           <button title="Instellingen" onClick={() => setView("settings")} className={`rail-btn mobile-settings${view === "settings" ? " active" : ""}`}><Settings size={18} /></button>
         </nav>
 

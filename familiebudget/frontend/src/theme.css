@@ -138,11 +138,26 @@
   gap: 4px;
   position: sticky;
   top: 0;
-  height: 100vh;
+  /* --rail-vh is 1 normally and 100/zoom when the user has zoomed; see
+     App.jsx. Without it a zoomed rail is taller than the screen. */
+  height: calc(100vh * var(--rail-vh, 1));
+  overflow: hidden;
+}
+/* Only the tab list scrolls, so the settings button below it can never be
+   pushed out of view — the rail's scrollbar is hidden, so an overflowing rail
+   gave no clue that anything was missing. */
+.rail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   overflow-y: auto;
   scrollbar-width: none;
 }
-.app-rail::-webkit-scrollbar { display: none; }
+.rail-scroll::-webkit-scrollbar { display: none; }
 
 .rail-logo {
   width: 26px;
@@ -178,9 +193,6 @@
 .rail-btn.active {
   background: var(--accent-20);
   color: var(--accent);
-}
-.rail-spacer {
-  flex: 1;
 }
 .rail-dot {
   position: absolute;
@@ -764,8 +776,13 @@
     border-top: 1px solid var(--border);
     z-index: 60;
   }
-  .rail-logo, .rail-spacer {
+  .rail-logo {
     display: none;
+  }
+  /* The bottom bar lays the buttons out itself, so the scroll wrapper must not
+     be a box of its own. */
+  .rail-scroll {
+    display: contents;
   }
   .mobile-hide {
     display: none;
