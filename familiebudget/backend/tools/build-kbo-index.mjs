@@ -174,5 +174,13 @@ db.close();
 const mb = (statSync(OUT).size / 1e6).toFixed(0);
 console.log(`\n${OUT}`);
 console.log(`  ${kept.toLocaleString('nl-BE')} namen (${unanimous.toLocaleString('nl-BE')} ondubbelzinnig, ${(kept - unanimous).toLocaleString('nl-BE')} met een dominante activiteit) · ${nCodes.toLocaleString('nl-BE')} NACE-omschrijvingen · ${mb} MB · ${secs()}s`);
-console.log(`\nKopieer dit bestand naar /config van je Home Assistant (naast budget.db).`);
+/* NOT the main /config share. config.yaml maps `addon_config:rw`, so the
+   container's /config is the ADD-ON's own folder, which the host exposes as
+   /addon_configs/<slug>_familiebudget — the one holding budget.db. Saying
+   "/config" sent people to Home Assistant's core configuration directory,
+   where the add-on never looks. */
+console.log(`\nKopieer dit bestand naar de map van de add-on zelf, naast budget.db:`);
+console.log(`  via Samba: de share "addon_configs", map *_familiebudget`);
+console.log(`  op de host: /addon_configs/<slug>_familiebudget/kbo-index.db`);
+console.log(`Daarna de add-on herstarten.`);
 console.log(`Niet committen: het bevat namen van eenmanszaken.`);

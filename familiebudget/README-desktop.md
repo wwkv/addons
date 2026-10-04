@@ -110,7 +110,8 @@ kunnen daar gewoon niet werken:
   betaalde") komen uit de agenda's van Home Assistant. Zonder Home Assistant is
   er geen agenda om te bevragen.
 - De **"?"-knop** die opzoekt wat voor zaak een onbekende naam is, gebruikt
-  deels een lokale kopie van het KBO-register. Die is ~105 MB, moet je zelf
+  deels een lokale kopie van het KBO-register. Die is ~105 MB, hoort in de
+  eigen map van de add-on (naast budget.db, niet in /config), moet je zelf
   aanmaken uit een download waarvoor je je moet registreren, en mag niet zomaar
   meegeleverd worden. Zonder die kopie werkt de OpenStreetMap-helft nog wel.
 
