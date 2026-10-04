@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.15.0] - 2026-10-04
+
+### Added
+- **De drie bronnen monden nu uit in één tot drie voorstellen.** Bovenaan het
+  "?"-venster staat waar je op kan klikken, eronder nog steeds wat elke bron
+  gevonden heeft. Twee bronnen die hetzelfde zeggen zijn samen sterker dan
+  elk apart — ze worden gecombineerd als onafhankelijke meningen, niet door de
+  luidste te nemen — dus een voorstel dat door je eigen patronen én
+  OpenStreetMap gedragen wordt (76% en 75%) komt uit op 94% en gaat vóór een
+  enkele bron van 88%. Bij elk voorstel staat hoeveel bronnen erachter zitten.
+
+  Bronnen die wel iets herkenden maar het niet aan een categorie kunnen
+  koppelen leveren geen voorstel op. Ze staan er wel onder: iets weten zonder
+  er een knop van te kunnen maken is nog altijd nuttig.
+
+### Fixed
+- **Suggesties uit je eigen patronen werden gestuurd door de gemeentenaam.**
+  "AVA ANTWERPEN ANTWERPEN" leek volgens de app op "std bh 301 antwerpen" —
+  enkel omdat ze allebei in Antwerpen staan. Na het wegfilteren van korte
+  woorden en cijfers bleef van allebei precies één woord over, en dat woord
+  was de stad. Een perfecte gelijkenis, op niets gebaseerd.
+
+  Een plaats zegt niets over wat er verkocht wordt. De grootste gemeenten
+  staan nu in de lijst met woorden die genegeerd worden, maar belangrijker:
+  een woord dat in meerdere van je winkels voorkomt telt sowieso niet meer mee
+  voor gelijkenis. Dat wordt uit je eigen gegevens afgeleid, dus ook een
+  opvulwoord dat hier nooit bedacht is stopt vanzelf met meespelen zodra het
+  een paar keer opduikt. Blijft er niets onderscheidends over, dan is er geen
+  gelijkenis — en dus geen suggestie.
+
+  De herkenning op vakwoorden ("slagerij" ging al drie keer naar Bakker) werkt
+  gewoon verder: die eist dat een woord ook ergens naartoe wíjst, en een
+  gemeente doet dat niet.
+- **Een papierwinkel kreeg geen categorie.** `shop/stationery` ontbrak in de
+  OpenStreetMap-tabel.
+
 ## [1.14.2] - 2026-10-04
 
 ### Fixed

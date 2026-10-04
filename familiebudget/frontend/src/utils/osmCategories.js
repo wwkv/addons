@@ -46,6 +46,9 @@ export const OSM_MAP = {
   "shop/gift": { cat: "aankopen", sub: "cadeaus", label: "Cadeauwinkel" },
   "shop/jewelry": { cat: "aankopen", sub: "cadeaus", label: "Juwelier" },
   "shop/books": { cat: "ontspanning", sub: "hobby_volw", label: "Boekhandel" },
+  // A stationer is a household purchase, not an office supplier: pens and
+  // paper for the kitchen drawer land with the other small household buys.
+  "shop/stationery": { cat: "aankopen", sub: "kleine_huishoud", label: "Papierwinkel" },
   "shop/sports": { cat: "ontspanning", sub: "sport", label: "Sportwinkel" },
   "shop/bicycle": { cat: "vervoer", sub: "fiets", label: "Fietsenwinkel" },
   "shop/car_repair": { cat: "vervoer", sub: "brandstof", label: "Garage" },

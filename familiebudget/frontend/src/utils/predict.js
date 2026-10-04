@@ -29,14 +29,40 @@ import { merchantKey, parseCounterparty } from './counterparty.js';
 */
 
 /* Words that carry no information about a trade. Not a stopword list for
-   language — a list of what BANK STRINGS are padded with. */
+   language — a list of what BANK STRINGS are padded with.
+
+   Places are in here because a terminal stamps the town on the line, and a
+   town says nothing about what was sold: "AVA ANTWERPEN ANTWERPEN" and
+   "STD BH 301 ANTWERPEN" reduce to the same single token and scored a perfect
+   similarity on it alone. This is the largest municipalities rather than all
+   581 — the rest are caught by the distinctiveness test below, which needs no
+   list at all. */
 const NOISE = new Set([
   'bvba', 'bv', 'nv', 'sa', 'srl', 'vzw', 'cv', 'cvba', 'vof', 'se', 'comm',
   'de', 'het', 'een', 'van', 'der', 'den', 'ter', 'tot', 'in', 'en', 'the',
   'and', 'aan', 'op', 'bij', 'sint', 'st',
   'betaling', 'aankoop', 'contactloos', 'maestro', 'bancontact', 'visa',
   'mastercard', 'payconiq', 'apple', 'google', 'pay', 'via', 'card', 'be',
+  // places
+  'antwerpen', 'anvers', 'brussel', 'bruxelles', 'brussels', 'gent', 'gand',
+  'brugge', 'bruges', 'leuven', 'louvain', 'mechelen', 'hasselt', 'kortrijk',
+  'oostende', 'aalst', 'genk', 'roeselare', 'turnhout', 'lier', 'sint-niklaas',
+  'niklaas', 'dendermonde', 'vilvoorde', 'halle', 'ninove', 'wavre', 'namur',
+  'namen', 'liege', 'luik', 'charleroi', 'mons', 'bergen', 'tournai', 'doornik',
+  'arlon', 'aarlen', 'eupen', 'waterloo', 'knokke', 'heist', 'deurne',
+  'berchem', 'borgerhout', 'wilrijk', 'merksem', 'ekeren', 'hoboken',
+  'schoten', 'brasschaat', 'mortsel', 'edegem', 'kontich', 'belgie',
+  'belgium', 'belgique', 'nederland', 'netherlands', 'amsterdam', 'rotterdam',
 ]);
+
+/* A token shared by several different merchants cannot be what makes one of
+   them recognisable. Measured from the user's own data rather than declared,
+   so a padding word this file never anticipated stops driving matches on its
+   own once it turns up a few times. Trade words are "generic" by this test
+   too, and that is fine — they drive the trade-word signal below, which
+   checks that they point somewhere, while similarity should rest on what is
+   distinctive about a name. */
+const GENERIC_DF = 3;
 
 const tokens = (s) => String(s || '')
   .toLowerCase()
@@ -66,19 +92,33 @@ const dice = (a, b) => {
  * `rules` is merchantKey -> { catId, subId }.
  */
 export function buildPredictor({ rules, cats }) {
-  const known = [];
   const byToken = new Map();            // token -> Map("catId/subId" -> count)
+  const docFreq = new Map();            // token -> how many merchants use it
+  const raw = [];
 
   for (const [key, rule] of Object.entries(rules || {})) {
     if (!rule || !rule.catId || !rule.subId) continue;
     const label = `${rule.catId}/${rule.subId}`;
-    known.push({ key, label, catId: rule.catId, subId: rule.subId, tri: trigrams(key), toks: new Set(tokens(key)) });
-    for (const t of new Set(tokens(key))) {
+    const toks = new Set(tokens(key));
+    raw.push({ key, label, catId: rule.catId, subId: rule.subId, toks });
+    for (const t of toks) {
       let m = byToken.get(t);
       if (!m) { m = new Map(); byToken.set(t, m); }
       m.set(label, (m.get(label) || 0) + 1);
+      docFreq.set(t, (docFreq.get(t) || 0) + 1);
     }
   }
+
+  const isGeneric = (t) => (docFreq.get(t) || 0) >= GENERIC_DF;
+  /* What is left of a name once the words it shares with everything else are
+     gone. Similarity is measured on this, not on the raw key — otherwise two
+     names that have nothing in common but their town score a perfect match. */
+  const distinctive = (toks) => [...toks].filter(t => !isGeneric(t));
+
+  const known = raw.map(k => {
+    const d = distinctive(k.toks);
+    return { ...k, dtoks: new Set(d), dtri: trigrams(d.join(" ")) };
+  });
 
   const nameOf = (catId, subId) => {
     const cat = (cats || []).find(c => c.id === catId);
@@ -123,14 +163,21 @@ export function buildPredictor({ rules, cats }) {
     const candidates = [];
 
     // ── Signal 1: looks like a merchant already sorted ──
-    const tri = trigrams(key);
     const toks = new Set(tokens(key));
+    const dtoks = new Set(distinctive(toks));
+    const dtri = trigrams([...dtoks].join(" "));
+    /* Nothing distinctive left means nothing to compare. A name that is only
+       a town and a terminal number is not similar to anything, however many
+       characters it happens to share. */
     let bestSim = null;
-    for (const k of known) {
-      // Token overlap and character overlap catch different mistakes; take
-      // whichever is more convinced rather than averaging them away.
-      const score = Math.max(dice(tri, k.tri), dice(toks, k.toks));
-      if (!bestSim || score > bestSim.score) bestSim = { score, k };
+    if (dtoks.size) {
+      for (const k of known) {
+        if (!k.dtoks.size) continue;
+        // Token overlap and character overlap catch different mistakes; take
+        // whichever is more convinced rather than averaging them away.
+        const score = Math.max(dice(dtri, k.dtri), dice(dtoks, k.dtoks));
+        if (!bestSim || score > bestSim.score) bestSim = { score, k };
+      }
     }
     if (bestSim && bestSim.score >= 0.55) {
       candidates.push({

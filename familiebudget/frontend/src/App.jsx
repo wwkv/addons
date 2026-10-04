@@ -1253,10 +1253,7 @@ export default function App() {
            register can say a company sells food, but only your own history
            knows you file that one under Lunch op het werk. */
         const rows = [
-          own && { ...own, src: "Jouw eigen patronen", note: own.via === "similarity" ? "vergelijkbare naam" : "eerder geleerd woord" },
-          /* An answer inferred from related names says so, with the share it
-             rests on — "colruyt" is in the register nowhere by itself, but
-             95% of the 286 names starting with it sell groceries. */
+          own && { ...own, src: "Jouw eigen patronen", conf: own.confidence, note: own.via === "similarity" ? "vergelijkbare naam" : "eerder geleerd woord" },
           kbo && {
             ...kbo,
             src: "KBO / Staatsblad",
@@ -1264,34 +1261,79 @@ export default function App() {
               ? `afgeleid uit ${kbo.relatedNames} verwante namen · ${Math.round(kbo.conf * 100)}% hiervan`
               : (kbo.code ? `NACE ${kbo.code}` : null),
           },
-          osm && { ...osm, src: "OpenStreetMap", note: null },
+          /* OpenStreetMap reports no confidence of its own. A mapped hit has
+             already survived the town check in the backend, so it is not a
+             guess — but this number is an assumption, not a measurement, and
+             is deliberately below what the other two can reach on their own. */
+          osm && { ...osm, src: "OpenStreetMap", conf: 0.75, note: null },
         ].filter(Boolean);
-        const Row = ({ r }) => {
-          const rs = r.catId ? resolveCatSub(cats, r.catId, r.subId) : { cat: null, sub: null };
-          return (
-            <div style={{ marginBottom: 9 }}>
-              <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--muted)", marginBottom: 3 }}>
-                {r.src}{r.note ? ` · ${r.note}` : ""}
-              </div>
-              <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.45, background: "var(--bg)", borderRadius: 9, padding: "9px 11px" }}>{r.summary}</div>
-              {rs.cat && rs.sub && (
-                <button
-                  onClick={() => { assign(tx.id, rs.cat.id, rs.sub.id, false); setLookupResult(null); }}
-                  style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", marginTop: 6, padding: "8px 11px", borderRadius: 9, border: `1px solid ${rs.cat.color}55`, background: `${rs.cat.color}18`, color: "var(--text)", cursor: "pointer", fontSize: 11.5, fontWeight: 600, textAlign: "left" }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: rs.cat.color, flexShrink: 0 }} />
-                  Zet op {rs.cat.name} › {rs.sub.name}
-                </button>
-              )}
+
+        /* The three sources collapsed into the handful of answers they
+           actually propose. Two sources naming the same category is stronger
+           evidence than either alone, so they combine as independent opinions
+           (1 - the chance they are all wrong) rather than by taking the
+           loudest. Sources that recognised something but could not map it to
+           a category contribute nothing here — they still show below. */
+        const byTarget = new Map();
+        for (const r of rows) {
+          if (!r.catId || !r.subId) continue;
+          const k = `${r.catId}/${r.subId}`;
+          const e = byTarget.get(k) || { catId: r.catId, subId: r.subId, backers: [] };
+          e.backers.push({ src: r.src, conf: typeof r.conf === "number" ? r.conf : 0.6 });
+          byTarget.set(k, e);
+        }
+        const choices = [...byTarget.values()]
+          .map(e => ({ ...e, score: Math.min(0.99, 1 - e.backers.reduce((p, b) => p * (1 - Math.min(0.95, b.conf)), 1)) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+
+        const Row = ({ r }) => (
+          <div style={{ marginBottom: 9 }}>
+            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--muted)", marginBottom: 3 }}>
+              {r.src}{r.note ? ` · ${r.note}` : ""}
             </div>
-          );
-        };
+            <div style={{ fontSize: 12.5, color: "var(--text)", lineHeight: 1.45, background: "var(--bg)", borderRadius: 9, padding: "9px 11px" }}>{r.summary}</div>
+          </div>
+        );
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setLookupResult(null)}>
             <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", borderRadius: 16, padding: 18, maxWidth: 420, width: "90%", border: "1px solid var(--border)", boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
               <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 400, fontFamily: "var(--font-display)", color: "var(--text)", display: "flex", alignItems: "center", gap: 7 }}><HelpCircle size={15} strokeWidth={1.8} />Wat voor zaak is dit?</h3>
               <p style={{ margin: "0 0 11px", fontSize: 10, opacity: 0.5, color: "var(--text)" }}>{tx.counterparty.trim()} · {fmt(tx.amount)}</p>
 
+              {choices.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--muted)", marginBottom: 5 }}>
+                    {choices.length === 1 ? "Voorstel" : "Voorstellen"}
+                  </div>
+                  {choices.map(c => {
+                    const rs = resolveCatSub(cats, c.catId, c.subId);
+                    if (!rs.cat || !rs.sub) return null;
+                    return (
+                      <button
+                        key={`${c.catId}/${c.subId}`}
+                        onClick={() => { assign(tx.id, rs.cat.id, rs.sub.id, false); setLookupResult(null); }}
+                        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", marginBottom: 5, padding: "9px 11px", borderRadius: 9, border: `1px solid ${rs.cat.color}55`, background: `${rs.cat.color}18`, color: "var(--text)", cursor: "pointer", fontSize: 11.5, textAlign: "left" }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: rs.cat.color, flexShrink: 0 }} />
+                        <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{rs.cat.name} › {rs.sub.name}</span>
+                        {/* Which sources back it, and how sure that makes it.
+                            Two agreeing sources is the case worth seeing. */}
+                        <span style={{ flexShrink: 0, fontSize: 9.5, color: "var(--muted)", textAlign: "right", lineHeight: 1.35 }}>
+                          {Math.round(c.score * 100)}%<br />
+                          {c.backers.length === 1 ? c.backers[0].src.replace("Jouw eigen patronen", "jouw patronen") : `${c.backers.length} bronnen`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {rows.length > 0 && (
+                <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "var(--muted)", marginBottom: 6, opacity: 0.7 }}>
+                  Wat de bronnen zeggen
+                </div>
+              )}
               {rows.map((r, i) => <Row key={i} r={r} />)}
 
               {rows.length === 0 && (
