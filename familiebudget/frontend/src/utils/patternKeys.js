@@ -21,7 +21,7 @@ import { merchantKey } from './counterparty.js';
    decision, and the rule backed by more transactions wins; ties keep whichever
    was seen first, so the result does not depend on object key order.
 */
-export function migratePatternKeys({ rules, pending, txs, patThreshold = 3, personThreshold = 6 }) {
+export function migratePatternKeys({ rules, pending, txs, patThreshold = 3 }) {
   const oldToNew = new Map();
   const weight = new Map();            // old key -> transactions carrying it
   for (const t of txs || []) {
@@ -79,7 +79,10 @@ export function migratePatternKeys({ rules, pending, txs, patThreshold = 3, pers
   const nextPending = {};
   const promoted = [];
   for (const [k, entry] of Object.entries(merged)) {
-    const needed = entry.person ? personThreshold : patThreshold;
+    /* One threshold. Entries stored before the person heuristic was removed
+       may still carry `person: true`; it is ignored rather than migrated,
+       since the flag was wrong on most merchants anyway. */
+    const needed = patThreshold;
     const count = Number(entry.count) || 0;
     if (count >= needed && entry.catId && entry.subId && !nextRules[k]) {
       nextRules[k] = { catId: entry.catId, subId: entry.subId };

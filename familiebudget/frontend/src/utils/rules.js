@@ -97,3 +97,45 @@ export const MULTI = [
   /bol\.?com/i, /paypal/i, /amazon/i, /aliexpress/i, /vinted/i,
   /2dehands|tweedehands/i, /banksys/i, /corporate\s*benefits/i, /marketplace/i,
 ];
+
+/* The built-in counterparty rules, in the shape the Patronen tree renders.
+
+   These ship with the app and decide a large share of a Belgian statement on
+   their own — Colruyt, Delhaize, Proximus, Netflix. Because they work, those
+   merchants never arrive uncategorised, so the app never learns a pattern for
+   them and they appeared nowhere in Patronen. That looked exactly like a
+   pattern having gone missing, which is what it was reported as.
+
+   `label` is the regex made readable rather than the regex itself: a user
+   looking for "colruyt" should find "colruyt", not `/colruyt/i`. The
+   alternation and word-boundary syntax is the only part that leaks, and it
+   leaks as " / " and nothing, which reads acceptably. */
+/* A regex rendered as something a person would search for.
+
+   Only the FIRST alternative is used. `carrefour|crf\\s*mkt` is one rule about
+   Carrefour, and showing both spellings would present the implementation
+   rather than the merchant. Everything that is syntax rather than text —
+   lookarounds, escapes, quantifiers, character classes — is reduced to the
+   plain reading: `[eé]ch[eé]ance` becomes "echeance", `r\\.?v\\.?a\\.?` becomes
+   "rva". */
+function ruleLabel(re) {
+  return re.source
+    .replace(/\(\?<?[=!][^)]*\)/g, "")          // lookarounds
+    .split("|")[0]
+    .replace(/\[([^\]]*)\]/g, (m, inner) => inner[0] || "")
+    .replace(/\\[a-zA-Z]/g, " ")                 // \s, \b, \d …
+    .replace(/[\\^$.*+?()[\]{}]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+export const BUILTIN_COUNTERPARTY_RULES = AUTO_RULES.map(r => ({
+  label: ruleLabel(r.p),
+  catId: r.c,
+  subId: r.s,
+  confidence: r.v,
+  // Counterparty only. autoCat also reads the description, but the tree lists
+  // counterparties, so attributing on anything else would show rows that do
+  // not explain themselves.
+  test: (raw) => r.p.test(String(raw || "").toLowerCase()),
+}));

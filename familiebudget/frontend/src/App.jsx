@@ -20,7 +20,7 @@ import { knownCards } from './utils/cards.js';
 import { describeHit } from './utils/osmCategories.js';
 import { describeNace } from './utils/naceCategories.js';
 import { detectCommitments } from './utils/recurring.js';
-import { fmt, fD, mN, isPerson } from './utils/formatters.js';
+import { fmt, fD, mN } from './utils/formatters.js';
 import { normalizeCats, isSubExcluded, resolveCatSub, normalizeSavings, isRepayment, spendingAmount, applyDefaultSavingsExclusion } from './utils/helpers.js';
 import { parseCSV } from './utils/csvParser.js';
 import { resolveDataset, compareDatasets, DATASET_KINDS } from './utils/comparison.js';
@@ -167,7 +167,6 @@ export default function App() {
             const m = migratePatternKeys({
               rules: p.rules || {}, pending: p.pending || {}, txs: p.txs || [],
               patThreshold: p.settings?.patternThreshold || 3,
-              personThreshold: p.settings?.personThreshold || 6,
             });
             setRules(m.rules);
             setPending(m.pending);
@@ -395,9 +394,12 @@ export default function App() {
       }
     }
 
-    // 6. Multi-vendor & Person check (MOVED DOWN so they don't block Mededeling/Auto rules)
+    /* 6. Multi-vendor check (kept low so it does not block Mededeling/Auto
+       rules). A person check used to sit here too, suppressing any suggestion
+       for a counterparty that "looked like a name". It asked whether every
+       word was capitalised — true of nearly every bank string — so it was
+       withholding suggestions from ordinary merchants, not from people. */
     for (const p of MULTI) { if (p.test(cpText)) return { flag: "multi" }; }
-    if (isPerson(tx.counterparty)) return { flag: "person" };
 
     return null;
   }, [rules, ruleMatchers, settings.autoLevel, blacklist]);
@@ -502,7 +504,6 @@ export default function App() {
   /* Learn pattern — requires N consistent categorizations before creating rule.
      Force-learn (⌘/⇧+click) bypasses and creates immediately. */
   const patThreshold = settings.patternThreshold || 3;
-  const personThreshold = settings.personThreshold || 6;
 
   const applyRuleToMatching = useCallback((patternKey, catId, subId) => {
     setTxs(prev => prev.map(t => {
@@ -517,12 +518,17 @@ export default function App() {
     if (subId === "te_categoriseren" || catId === "nog_te_verwerken") return;
     if (blacklist.some(b => b.trim().toLowerCase() === tx.counterparty.trim().toLowerCase())) return;
     const cp = tx.counterparty.toLowerCase();
-    const person = isPerson(tx.counterparty);
     const multi = MULTI.some(p => p.test(cp));
     if (multi && !force) return; // Don't auto-learn multi-vendors
     const k = merchantKey(tx.counterparty);
     if (k.length <= 2) return;
-    const needed = person ? personThreshold : patThreshold;
+    /* One threshold for everything. There used to be a higher one for
+       counterparties that "looked like a person", but the test for that was
+       whether every word was capitalised — which nearly every bank string is.
+       It therefore held ordinary merchants to the person threshold, learning
+       them at half speed, while missing actual people whose rows carry the
+       bank's own P2P marker. */
+    const needed = patThreshold;
 
     // --- HANDLE FORCE LEARN ---
     if (force) {
@@ -550,9 +556,9 @@ export default function App() {
       setTimeout(() => setToast(null), 2500);
     } else {
       // Threshold not reached, just safely update the pending count
-      setPending(p => ({ ...p, [k]: { catId, subId, count: newCount, person } }));
+      setPending(p => ({ ...p, [k]: { catId, subId, count: newCount } }));
     }
-  }, [patThreshold, personThreshold, blacklist, applyRuleToMatching, pending]);
+  }, [patThreshold, blacklist, applyRuleToMatching, pending]);
 
   const handleSmartImport = async (event) => {
     const file = event.target.files[0];
@@ -1191,7 +1197,6 @@ export default function App() {
                       <td style={{ padding: "3px 5px", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {tx.counterparty}
                         {tx._v === "multi" && <span style={{ fontSize: 7, marginLeft: 2, padding: "0 3px", borderRadius: 2, background: "var(--accent-30)", color: "var(--accent)" }}>multi</span>}
-                        {tx._v === "person" && <span style={{ fontSize: 7, marginLeft: 2, padding: "0 3px", borderRadius: 2, background: "#7B6B8D30", color: "#7B6B8D" }}>persoon</span>}
                       </td>
                       <td style={{ padding: "3px 5px" }}>{!hideCatPicker && (
                         <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -1586,15 +1591,8 @@ export default function App() {
                       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 }}>Patroon drempels</label>
                       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Normaal</div>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                             {[2, 3, 4, 5].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, patternThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.patternThreshold || 3) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.patternThreshold || 3) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
-                          </div>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, opacity: 0.6, color: "var(--text)", marginBottom: 2 }}>Personen</div>
-                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                            {[3, 4, 6, 8].map(n => <button key={n} onClick={() => setSettings(s => ({ ...s, personThreshold: n }))} style={{ width: 30, height: 26, borderRadius: 5, border: (settings.personThreshold || 6) === n ? "2px solid var(--accent)" : "1px solid var(--border)", background: (settings.personThreshold || 6) === n ? "var(--accent-20)" : "transparent", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{n}×</button>)}
                           </div>
                         </div>
                       </div>

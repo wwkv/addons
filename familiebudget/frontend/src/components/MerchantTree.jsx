@@ -53,6 +53,12 @@ export default function MerchantTree({ tree, totals, query, onDelete }) {
             <span style={{ color: "var(--accent)" }}>{totals.merged} samengevoegd</span>
           </>
         )}
+        {totals.builtin > 0 && (
+          <>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>{totals.builtin} ingebouwd</span>
+          </>
+        )}
         <button
           onClick={() => {
             const allClosed = closedCats.size >= tree.length;
@@ -115,6 +121,11 @@ export default function MerchantTree({ tree, totals, query, onDelete }) {
                                 ? (open ? <ChevronDown size={10} style={{ opacity: 0.45, flexShrink: 0 }} /> : <ChevronRight size={10} style={{ opacity: 0.45, flexShrink: 0 }} />)
                                 : <span style={{ width: 10, flexShrink: 0 }} />}
                               <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.key}</span>
+                              {m.builtin && (
+                                <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 600, padding: "1px 5px", borderRadius: 999, background: "var(--bg)", border: "1px solid var(--border)", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                                  ingebouwd
+                                </span>
+                              )}
                               {m.aliasCount > 1 && (
                                 <span style={{ flexShrink: 0, fontSize: 8.5, fontWeight: 600, padding: "1px 5px", borderRadius: 999, background: "var(--accent-20)", color: "var(--accent)", whiteSpace: "nowrap" }}>
                                   {m.aliasCount} schrijfwijzen
@@ -123,20 +134,28 @@ export default function MerchantTree({ tree, totals, query, onDelete }) {
                               {/* A rule with no transactions behind it is live but
                                   unevidenced — worth saying so rather than showing
                                   a bare "0". */}
-                              {m.aliasCount === 0 && (
+                              {m.aliasCount === 0 && !m.builtin && (
                                 <span style={{ flexShrink: 0, fontSize: 8.5, padding: "1px 5px", borderRadius: 999, background: "var(--bg)", color: "var(--muted)", whiteSpace: "nowrap" }}>
                                   geen transacties
                                 </span>
                               )}
                             </div>
                             <span style={{ fontSize: 9.5, color: "var(--muted)", fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{m.txCount || ""}</span>
-                            <button
-                              onClick={() => onDelete(m.key)}
-                              title={`Patroon "${m.key}" verwijderen`}
-                              style={{ display: "flex", background: "none", border: "none", color: "var(--danger)", cursor: "pointer", padding: 2, flexShrink: 0 }}
-                            >
-                              <X size={12} />
-                            </button>
+                            {/* Built-ins ship with the app; they are not the
+                                user's to delete, so the slot stays empty
+                                rather than offering an action that would
+                                have to be refused. */}
+                            {m.builtin ? (
+                              <span style={{ width: 16, flexShrink: 0 }} />
+                            ) : (
+                              <button
+                                onClick={() => onDelete(m.key)}
+                                title={`Patroon "${m.key}" verwijderen`}
+                                style={{ display: "flex", background: "none", border: "none", color: "var(--danger)", cursor: "pointer", padding: 2, flexShrink: 0 }}
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
                           </div>
 
                           {/* ── Aliases ── */}

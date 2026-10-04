@@ -22,7 +22,7 @@ import { merchantKey } from './counterparty.js';
    the rule is live and will match the next import — so they render with the
    canonical key standing in for itself.
 */
-export function buildMerchantIndex({ rules, txs, cats, query = "" }) {
+export function buildMerchantIndex({ rules, txs, cats, builtins = [], query = "" }) {
   /* Pass 1: every raw spelling seen per canonical key, with how often. */
   const aliasesByKey = new Map();
   for (const t of txs || []) {
@@ -36,6 +36,20 @@ export function buildMerchantIndex({ rules, txs, cats, query = "" }) {
 
   const q = query.trim().toLowerCase();
   const catById = new Map((cats || []).map(c => [c.id, c]));
+
+  /* Distinct counterparties, for attributing transactions to built-in rules.
+     Built-ins match a regex against the raw name rather than a canonical key,
+     so they cannot use aliasesByKey. */
+  const seen = new Map();                 // raw counterparty -> count
+  for (const t of txs || []) {
+    const raw = String(t.counterparty || "").trim();
+    if (raw) seen.set(raw, (seen.get(raw) || 0) + 1);
+  }
+  /* A learned rule beats a built-in in autoCat, so a counterparty the user has
+     taught the app is not evidence for the built-in that also matches it.
+     Excluding those keeps the counts honest about what each rule actually
+     decides. */
+  const learned = new Set(Object.keys(rules || {}));
 
   /* Pass 2: hang each rule under its (sub)category. */
   const byCat = new Map();
@@ -84,6 +98,45 @@ export function buildMerchantIndex({ rules, txs, cats, query = "" }) {
     sEntry.merchants.push({ key, aliases, txCount, aliasCount: aliases.length });
   }
 
+  /* Pass 2b: the rules that ship WITH the app.
+
+     These were invisible, and their absence was read as data loss: Colruyt is
+     categorised by a built-in rule, has therefore never needed a learned
+     pattern, and so never appeared here — which looked exactly like a pattern
+     that had gone missing. They are shown in the same tree, marked, and
+     cannot be deleted; they are not the user's to remove. */
+  for (const b of builtins) {
+    if (!b || !b.catId) continue;
+    const cat = catById.get(b.catId) || null;
+    const sub = cat ? (cat.subs || []).find(x => x.id === b.subId) || null : null;
+
+    const aliases = [];
+    for (const [raw, count] of seen) {
+      if (learned.has(merchantKey(raw))) continue;        // a learned rule decides this one
+      if (b.test(raw)) aliases.push({ raw, count });
+    }
+    aliases.sort((a, z) => z.count - a.count || a.raw.localeCompare(z.raw));
+
+    if (q) {
+      const hay = [b.label, ...aliases.map(a => a.raw), cat?.name || "", sub?.name || ""].join(" ").toLowerCase();
+      if (!hay.includes(q)) continue;
+    }
+
+    const catKey = cat ? cat.id : "_orphan";
+    let cEntry = byCat.get(catKey);
+    if (!cEntry) {
+      cEntry = { id: catKey, name: cat ? cat.name : "Categorie bestaat niet meer", color: cat ? cat.color : "var(--neutral)", orphan: !cat, subs: new Map() };
+      byCat.set(catKey, cEntry);
+    }
+    const subKey = sub ? sub.id : "_nosub";
+    let sEntry = cEntry.subs.get(subKey);
+    if (!sEntry) { sEntry = { id: subKey, name: sub ? sub.name : "Zonder subcategorie", merchants: [] }; cEntry.subs.set(subKey, sEntry); }
+    sEntry.merchants.push({
+      key: b.label, builtin: true, confidence: b.confidence,
+      aliases, txCount: aliases.reduce((n2, a) => n2 + a.count, 0), aliasCount: aliases.length,
+    });
+  }
+
   /* Pass 3: order. Merchants and subcategories by weight — the shops you
       actually use belong at the top of their group; alphabetical would bury
       them. Categories follow the order the user arranged in Categorieën,
@@ -92,7 +145,8 @@ export function buildMerchantIndex({ rules, txs, cats, query = "" }) {
   const tree = [...byCat.values()].map(c => {
     const subs = [...c.subs.values()].map(s => ({
       ...s,
-      merchants: s.merchants.sort((a, b) => b.txCount - a.txCount || a.key.localeCompare(b.key)),
+      // Learned rules first: they are the user's own and the ones they can act on.
+      merchants: s.merchants.sort((a, b) => (a.builtin ? 1 : 0) - (b.builtin ? 1 : 0) || b.txCount - a.txCount || a.key.localeCompare(b.key)),
       merchantCount: s.merchants.length,
       txCount: s.merchants.reduce((n, m) => n + m.txCount, 0),
     })).sort((a, b) => b.txCount - a.txCount || a.name.localeCompare(b.name));
@@ -109,12 +163,16 @@ export function buildMerchantIndex({ rules, txs, cats, query = "" }) {
   });
 
   const allMerchants = tree.flatMap(c => c.subs.flatMap(s => s.merchants));
+  const own = allMerchants.filter(m => !m.builtin);
   return {
     tree,
     totals: {
-      merchants: allMerchants.length,
-      aliases: allMerchants.reduce((n, m) => n + m.aliasCount, 0),
-      merged: allMerchants.filter(m => m.aliasCount > 1).length,
+      // Counts describe what the app learned from YOU. Built-ins are shown for
+      // context — counting them would overstate the database.
+      merchants: own.length,
+      aliases: own.reduce((n, m) => n + m.aliasCount, 0),
+      merged: own.filter(m => m.aliasCount > 1).length,
+      builtin: allMerchants.length - own.length,
     },
   };
 }

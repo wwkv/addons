@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.14.0] - 2026-10-04
+
+### Added
+- **De ingebouwde regels staan nu óók in het tabblad Patronen.** De app wordt
+  geleverd met 28 regels voor tegenpartijen — Colruyt, Delhaize, Proximus,
+  Netflix, De Lijn — en die deden hun werk volledig onzichtbaar. Juist omdát
+  ze werken komen die winkels nooit ongecategoriseerd binnen, hoeft de app er
+  nooit een patroon voor te leren, en stonden ze dus nergens. Zoeken op
+  "Colruyt" leverde niets op, wat niet te onderscheiden was van een patroon
+  dat verdwenen was.
+
+  Ze staan nu in dezelfde boom, op hun eigen categorie, met het label
+  *ingebouwd*. Klap er een open en je ziet welke van jóuw schrijfwijzen hij
+  oppikt. Verwijderen kan niet: ze zijn niet van jou om weg te halen, dus er
+  staat ook geen knop die dat zou moeten weigeren.
+
+  Een tegenpartij waarvoor je zelf een patroon hebt, telt niet mee bij de
+  ingebouwde regel die hem óók zou vangen — jouw patroon beslist, dus de
+  tellingen zeggen wat elke regel werkelijk doet. De koptekst telt voortaan
+  apart: zelf geleerd versus ingebouwd.
+
+### Changed
+- **De aparte drempel voor "personen" is weg.** Er was een tweede, hogere
+  drempel voor tegenpartijen die op een persoonsnaam leken. De test daarvoor
+  was of élk woord met een hoofdletter begon — en dat geldt voor zowat elke
+  regel die een bank aanlevert. In de praktijk hield hij dus gewone winkels
+  op de personendrempel, waardoor die half zo snel geleerd werden, terwijl
+  hij echte personen juist miste: die staan op het uittreksel met de
+  P2P-markering van de bank, en die bevat cijfers.
+
+  Er is nu één drempel voor alles. De instelling "Personen" is verdwenen; de
+  overgebleven instelling geldt voor iedereen. Overboekingen naar personen
+  worden nog steeds overgeslagen waar dat telt — bij de suggesties uit je
+  eigen patronen — maar op de markering van de bank zelf, niet op een
+  gok over hoofdletters.
+
 ## [1.13.2] - 2026-10-03
 
 ### Fixed

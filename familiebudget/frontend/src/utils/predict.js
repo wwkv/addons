@@ -108,11 +108,12 @@ export function buildPredictor({ rules, cats }) {
        a friend's name is the kind of confident nonsense that makes people
        distrust the rest of the app.
 
-       The test is parseCounterparty's `p2p` marker, NOT isPerson(). isPerson
-       asks "is every word capitalised", which is true of almost every bank
-       string — they arrive in caps — so "SLAGERIJ VAN DEN BERGHE" reads as a
-       person and the guard silently disabled this whole feature. p2p keys off
-       the bank's own P2P MOBILE marker, which means what it says. */
+       The test is parseCounterparty's `p2p` marker, which keys off the bank's
+       own P2P MOBILE signal. An earlier guard asked "is every word
+       capitalised" instead, which is true of almost every bank string — they
+       arrive in caps — so "SLAGERIJ VAN DEN BERGHE" read as a person and the
+       guard silently disabled this whole feature. That heuristic is gone from
+       the app entirely. */
     if (parseCounterparty(raw).p2p) return null;
 
     const key = merchantKey(raw);

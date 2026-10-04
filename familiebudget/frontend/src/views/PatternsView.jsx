@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { X, Plus, Hourglass, User, Check, Ban, Brain, ChevronUp, ChevronDown } from "lucide-react";
+import { X, Plus, Hourglass, Check, Ban, Brain, ChevronUp, ChevronDown } from "lucide-react";
 import { useTextPrompt } from '../components/TextPrompt.jsx';
 import CatPicker from '../components/CatPicker.jsx';
 import MerchantTree from '../components/MerchantTree.jsx';
 import { buildMerchantIndex } from '../utils/merchantIndex.js';
+import { BUILTIN_COUNTERPARTY_RULES } from '../utils/rules.js';
 
 export default function PatternsView({
   cats, rules, pending, txs, settings, blacklist, patternSearch, pendingSort,
@@ -13,7 +14,7 @@ export default function PatternsView({
   /* Aliases are read back from the transactions — they are not stored
      anywhere else. See utils/merchantIndex.js. */
   const index = useMemo(
-    () => buildMerchantIndex({ rules, txs, cats, query: patternSearch }),
+    () => buildMerchantIndex({ rules, txs, cats, builtins: BUILTIN_COUNTERPARTY_RULES, query: patternSearch }),
     [rules, txs, cats, patternSearch],
   );
   /* Adding a rule by hand used to be three window.prompt() calls in a row —
@@ -71,7 +72,7 @@ export default function PatternsView({
       )}
 
       <p style={{ fontSize: 11, opacity: 0.5, marginBottom: 12 }}>
-        Patronen worden geleerd na {settings.patternThreshold || 3}× dezelfde categorie ({settings.personThreshold || 6}× voor personen). ⌘+klik of ⇧+klik forceert direct. (Totaal: {Object.keys(rules).length})
+        Patronen worden geleerd na {settings.patternThreshold || 3}× dezelfde categorie. ⌘+klik of ⇧+klik forceert direct. (Zelf geleerd: {Object.keys(rules).length} · ingebouwd: {index.totals.builtin})
       </p>
 
       {/* Pending Patterns */}
@@ -100,12 +101,12 @@ export default function PatternsView({
               }).map(([p, r]) => {
                 const cat = cats.find(x => x.id === r.catId);
                 const sub = cat ? cat.subs.find(x => x.id === r.subId) : null;
-                const needed = r.person ? (settings.personThreshold || 6) : (settings.patternThreshold || 3);
+                const needed = settings.patternThreshold || 3;
                 const count = r.count || 1;
                 return (
                   <tr key={p} style={{ borderBottom: "1px solid var(--bg)" }}>
                     <td style={{ padding: "5px 8px", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>"{p}" {r.person && <User size={9} style={{ opacity: 0.5 }} />}</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>"{p}"</span>
                     </td>
                     <td style={{ padding: "5px 8px" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10 }}>
