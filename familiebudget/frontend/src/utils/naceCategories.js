@@ -118,12 +118,38 @@ export const NACE_MAP = {
   "49320": { cat: "vervoer", sub: "taxi", label: "Taxibedrijf" },
 };
 
+/* The 4-digit level, derived from the table above rather than written out.
+
+   NACE is revised periodically and the last digit is where the revisions
+   land: this table was written against an older vintage and holds 47110 for a
+   supermarket, while the 2025 codes the index is built from say 47112. Every
+   grocery answer therefore mapped to nothing, and a correct lookup offered no
+   category to apply — which is most of the point of looking it up.
+
+   Only prefixes whose entries AGREE are kept. 4722 is a butcher under both
+   47221 and 47222, so it is safe; a prefix whose children disagree is left
+   out rather than resolved by a coin flip. */
+const NACE_MAP_4 = (() => {
+  const byPrefix = new Map();
+  for (const [code, v] of Object.entries(NACE_MAP)) {
+    if (code.length < 4) continue;
+    const p4 = code.slice(0, 4);
+    const seen = byPrefix.get(p4);
+    if (seen === undefined) byPrefix.set(p4, v);
+    else if (seen && (seen.cat !== v.cat || seen.sub !== v.sub)) byPrefix.set(p4, null);
+  }
+  const out = {};
+  for (const [p4, v] of byPrefix) if (v) out[p4] = v;
+  return out;
+})();
+
 /** The category a NACE code maps to, or null. Falls back to the 5-digit prefix
- *  so 7-digit sub-codes (4755901) resolve via 47559. */
+ *  so 7-digit sub-codes (4755901) resolve via 47559, then to the 4-digit
+ *  group so a code that moved a digit between NACE vintages still lands. */
 export function naceCategory(code) {
   if (!code) return null;
   const c = String(code);
-  return NACE_MAP[c] || NACE_MAP[c.slice(0, 5)] || null;
+  return NACE_MAP[c] || NACE_MAP[c.slice(0, 5)] || NACE_MAP_4[c.slice(0, 4)] || null;
 }
 
 /**
@@ -134,11 +160,18 @@ export function naceCategory(code) {
 export function describeNace(kbo) {
   if (!kbo || !kbo.code) return null;
   const mapped = naceCategory(kbo.code);
+  /* How the answer was reached travels with it. A name found in the register
+     outright and one inferred from the names built on top of it are not
+     equally certain, and presenting them identically would make the weaker
+     one feel like a fact. */
   return {
     summary: kbo.nl || (mapped ? mapped.label : null) || `NACE ${kbo.code}`,
     label: mapped ? mapped.label : null,
     catId: mapped ? mapped.cat : null,
     subId: mapped ? mapped.sub : null,
     code: kbo.code,
+    conf: typeof kbo.conf === "number" ? kbo.conf : null,
+    matched: kbo.matched || null,
+    relatedNames: kbo.relatedNames || null,
   };
 }

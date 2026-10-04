@@ -17,6 +17,27 @@
    it is rebuilt, rather than answering as if every name were certain. */
 export const KBO_MIN_CONF = 0.6;
 
+/* A name with no entry of its own can still be answered from the names built
+   on top of it. "COLRUYT" is registered nowhere as exactly that — the register
+   holds "colruyt group", "colruyt food retail", "colruyt waremme" and several
+   sole traders called Colruyt — so an exact lookup finds nothing and the token
+   windows have nothing shorter to try. Answering nothing there is the wrong
+   failure: 95% of the 286 names beginning with "colruyt " are the same trade,
+   and saying so with a lower confidence is far more useful than silence.
+
+   Measured on a real August 2026 export, counting distinct NAMES rather than
+   entities (entity counts let one large group dominate):
+     colruyt      286 names → 95% supermarket
+     delhaize      50 names → 92% supermarket
+     ikea          14 names → 64% furniture retail
+     bakkerij de   50 names → 56% bakery
+     brico        142 names → 55% hardware
+   so a majority of the related names is a real signal down to about 55%. */
+const KBO_RELATED_MIN_NAMES = 3;     // two names agreeing is a coincidence
+const KBO_RELATED_MIN_SHARE = 0.5;
+const KBO_RELATED_MIN_KEY = 4;       // "de ..." would match half the register
+const KBO_RELATED_MAX_ROWS = 400;
+
 /* Only try a prefix once the stem is long enough to mean something; a
    four-letter LIKE would match half the register. */
 const KBO_MIN_PREFIX = 8;
@@ -88,6 +109,13 @@ export function createKboLookup(db) {
     'SELECT b.code AS code, b.conf AS conf, b.n AS n, x.nl AS nl FROM biz b LEFT JOIN nace x ON x.code = b.code WHERE b.name = ?');
   const prefixStmt = db.prepare(
     'SELECT b.code AS code, b.conf AS conf, b.n AS n, x.nl AS nl FROM biz b LEFT JOIN nace x ON x.code = b.code WHERE b.name LIKE ? LIMIT 2');
+  /* A range scan rather than LIKE, so the PRIMARY KEY index is used: every
+     name that starts with "<key> " sorts between "<key> " and "<key>!".
+     Bounded by LIMIT, so a common stem cannot turn one lookup into a table
+     scan of 1.8 million rows. */
+  const relatedStmt = db.prepare(
+    `SELECT b.code AS code, b.n AS n, x.nl AS nl FROM biz b LEFT JOIN nace x ON x.code = b.code
+      WHERE b.name > ? AND b.name < ? LIMIT ${KBO_RELATED_MAX_ROWS}`);
 
   let count = 0;
   try { count = db.prepare('SELECT COUNT(*) c FROM biz').get().c; } catch { /* reported as 0 */ }
@@ -115,6 +143,36 @@ export function createKboLookup(db) {
         if (w.text === k) continue;                // already tried as exact
         const hit = exactStmt.get(w.text);
         if (usable(hit)) return { ...hit, matched: 'tokens', matchedText: w.text };
+      }
+
+      /* Last resort: what do the names built on this one do for a living?
+         Reported with the share as its confidence, so a 95% answer and a 55%
+         answer are not presented as equally certain. */
+      if (k.length >= KBO_RELATED_MIN_KEY) {
+        const rows = relatedStmt.all(`${k} `, `${k}!`);
+        if (rows.length >= KBO_RELATED_MIN_NAMES) {
+          const byCode = new Map();
+          for (const r of rows) {
+            if (!r.code) continue;
+            const e = byCode.get(r.code) || { names: 0, nl: r.nl };
+            e.names++;
+            byCode.set(r.code, e);
+          }
+          let best = null, bestCode = null, total = 0;
+          for (const [code, e] of byCode) {
+            total += e.names;
+            if (!best || e.names > best.names) { best = e; bestCode = code; }
+          }
+          if (best && total > 0) {
+            const share = best.names / total;
+            if (share >= KBO_RELATED_MIN_SHARE) {
+              return {
+                code: bestCode, nl: best.nl, conf: share, n: total,
+                matched: 'related', matchedText: k, relatedNames: total,
+              };
+            }
+          }
+        }
       }
       return null;
     } catch {

@@ -1254,7 +1254,16 @@ export default function App() {
            knows you file that one under Lunch op het werk. */
         const rows = [
           own && { ...own, src: "Jouw eigen patronen", note: own.via === "similarity" ? "vergelijkbare naam" : "eerder geleerd woord" },
-          kbo && { ...kbo, src: "KBO / Staatsblad", note: kbo.code ? `NACE ${kbo.code}` : null },
+          /* An answer inferred from related names says so, with the share it
+             rests on — "colruyt" is in the register nowhere by itself, but
+             95% of the 286 names starting with it sell groceries. */
+          kbo && {
+            ...kbo,
+            src: "KBO / Staatsblad",
+            note: kbo.matched === "related"
+              ? `afgeleid uit ${kbo.relatedNames} verwante namen · ${Math.round(kbo.conf * 100)}% hiervan`
+              : (kbo.code ? `NACE ${kbo.code}` : null),
+          },
           osm && { ...osm, src: "OpenStreetMap", note: null },
         ].filter(Boolean);
         const Row = ({ r }) => {

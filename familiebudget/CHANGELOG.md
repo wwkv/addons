@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.14.2] - 2026-10-04
+
+### Fixed
+- **"COLRUYT" alleen gaf geen antwoord, "COLRUYT 1234 HALLE" wel.** In het
+  handelsregister bestaat geen bedrijf dat exact "colruyt" heet — er staan
+  *colruyt group*, *colruyt food retail*, *colruyt waremme* en een handvol
+  eenmanszaken van mensen die Colruyt heten. Een exacte zoekactie vond dus
+  niets, en zwijgen is daar het verkeerde antwoord: van de 286 namen die met
+  "colruyt " beginnen verkoopt 95% voeding.
+
+  Als er niets exact gevonden wordt, kijkt de opzoeking nu naar de namen die
+  op deze naam voortbouwen en neemt hun gemeenschappelijke activiteit over —
+  met de mate van overeenstemming als betrouwbaarheid, zodat 95% en 55% niet
+  als even zeker op je scherm komen. Er staat bij waar het vandaan komt:
+  "afgeleid uit 286 verwante namen · 95% hiervan".
+
+  Gemeten op een echte export: colruyt 95%, delhaize 92%, ikea 64%, bakkerij
+  56%, brico 55%. Onder de helft overeenstemming, of minder dan drie verwante
+  namen, blijft het stil — dan is het gokken.
+
+- **Een kloppend antwoord leverde vaak geen categorieknop op.** De vertaaltabel
+  van activiteitscode naar categorie was geschreven tegen een oudere versie van
+  de NACE-nomenclatuur: die noemt een supermarkt 47110, de versie waaruit de
+  index gebouwd wordt noemt hem 47112. Elk boodschappen-antwoord viel daardoor
+  tussen wal en schip — het register zei het juiste, en er verscheen geen knop
+  om het toe te passen.
+
+  Codes vallen nu terug op hun viercijferige groep, maar alleen waar de
+  bestaande ingangen het eens zijn: 47221 en 47222 zijn allebei een slagerij,
+  dus 4722 is veilig. Waar ze elkaar tegenspreken gebeurt er niets — dan is
+  een gok erger dan geen knop.
+
 ## [1.14.1] - 2026-10-04
 
 ### Fixed
